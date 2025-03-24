@@ -99,16 +99,19 @@ export const updateMemberExercise = async (params: UpdateMemberExerciseRequest):
  * 운동 정보 목록 조회
  * @param memId 회원 ID
  * @param yearMonth 년월 (YYYYMM)
+ * @param period 기간 (day, week, month, year)
  * @returns 
  */
 export const getMemberExerciseList = async (
   memId: number,
   yearMonth: string,
+  period: string = 'day',
 ): Promise<MemberExerciseListResponse> => {
   try {
     const response = await axiosInstance.post('/member-exercise/getMemberExerciseList', {
       mem_id: memId,
       year_month: yearMonth,
+      period: period,
     });
     return response.data;
   } catch (error: any) {

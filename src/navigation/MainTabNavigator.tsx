@@ -1,18 +1,71 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
-import {Platform, View, Text, StyleSheet, Dimensions} from 'react-native';
+import {Platform, View, Text, StyleSheet, Dimensions, Image} from 'react-native';
 import Home from '../screens/Home';
 import Shopping from '../screens/Shopping';
 import Reservation from '../screens/Reservation';
 import MyPage from '../screens/MyPage';
 import Attendance from '../screens/Attendance';
+import IMAGES from '../utils/images';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {getInquiryList} from '../api/services/inquiryService';
+import {getNoticesAppList} from '../api/services/noticesAppService';
 
 const Tab = createBottomTabNavigator();
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 // 커스텀 탭 바 컴포넌트
 const CustomTabBar = ({ state, descriptors, navigation }) => {
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+
+  // 읽지 않은 알림이 있는지 체크
+  const checkUnreadNotifications = async () => {
+    try {
+      // 읽은 공지사항 가져오기
+      const readNoticesStr = await AsyncStorage.getItem('readNotices');
+      const readNotices = readNoticesStr ? JSON.parse(readNoticesStr) : [];
+      
+      // 읽은 문의 가져오기
+      const readInquiriesStr = await AsyncStorage.getItem('readInquiries');
+      const readInquiries = readInquiriesStr ? JSON.parse(readInquiriesStr) : [];
+      
+      // 공지사항 목록 가져오기
+      const noticesResponse = await getNoticesAppList();
+      let hasUnreadNotice = false;
+      if (noticesResponse.success && noticesResponse.data) {
+        hasUnreadNotice = noticesResponse.data.some(notice => 
+          !readNotices.includes(notice.notices_app_id)
+        );
+      }
+      
+      // 문의 목록 가져오기
+      const inquiriesResponse = await getInquiryList();
+      let hasUnreadInquiry = false;
+      if (inquiriesResponse.success && inquiriesResponse.data) {
+        hasUnreadInquiry = inquiriesResponse.data.some(inquiry => 
+          inquiry.answer && !readInquiries.includes(inquiry.inquiry_app_id)
+        );
+      }
+      
+      // 하나라도 읽지 않은 알림이 있으면 true로 설정
+      setHasUnreadNotifications(hasUnreadNotice || hasUnreadInquiry);
+    } catch (error) {
+      console.error('알림 확인 에러:', error);
+    }
+  };
+
+  useEffect(() => {
+    checkUnreadNotifications();
+    
+    // 10초마다 알림 체크 (옵션)
+    const interval = setInterval(() => {
+      checkUnreadNotifications();
+    }, 10000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <View style={styles.tabBarContainer}>
       <View style={styles.tabBar}>
@@ -48,10 +101,9 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
                     styles.homeIconBackground,
                     { backgroundColor: isFocused ? '#6BC46A' : '#333333' }
                   ]}>
-                    <Icon 
-                      name="home" 
-                      size={24} 
-                      color={isFocused ? '#FFFFFF' : '#8E8E93'} 
+                    <Image
+                      source={isFocused ? IMAGES.icons.homeWhite : IMAGES.icons.homeGray}
+                      style={{width: 20, height: 20}}
                     />
                     <Text style={[
                       styles.homeText,
@@ -59,6 +111,38 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
                     ]}>홈</Text>
                   </View>
                   <View style={styles.homeButtonTouchable} onTouchEnd={onPress} />
+                </View>
+              </View>
+            );
+          }
+
+          // 마이페이지 탭
+          if (route.name === 'MyPage') {
+            return (
+              <View key={index} style={styles.tabItemContainer}>
+                <View
+                  style={styles.tabItem}
+                  onTouchEnd={onPress}
+                >
+                  <View style={styles.iconContainer}>
+                    {options.tabBarIcon && options.tabBarIcon({
+                      color: isFocused ? '#6BC46A' : '#8E8E93',
+                      focused: isFocused,
+                    })}
+                    {hasUnreadNotifications && (
+                      <View style={styles.notificationBadge} />
+                    )}
+                  </View>
+                  {label !== null && (
+                    <Text
+                      style={[
+                        styles.tabLabel,
+                        { color: isFocused ? '#6BC46A' : '#8E8E93' }
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                  )}
                 </View>
               </View>
             );
@@ -115,10 +199,9 @@ const MainTabNavigator = () => {
           title: '출석',
           tabBarLabel: '출석',
           tabBarIcon: ({color, focused}) => (
-            <Icon 
-              name={focused ? "calendar" : "calendar-outline"} 
-              size={24} 
-              color={color} 
+            <Image
+              source={focused ? IMAGES.icons.calendarGreen : IMAGES.icons.calendarGray}
+              style={{width: 20, height: 20}}
             />
           ),
         }}
@@ -130,10 +213,9 @@ const MainTabNavigator = () => {
           title: '예약',
           tabBarLabel: '예약',
           tabBarIcon: ({color, focused}) => (
-            <Icon 
-              name={focused ? "time" : "time-outline"} 
-              size={24} 
-              color={color} 
+            <Image
+              source={focused ? IMAGES.icons.clockGreen : IMAGES.icons.clockGray}
+              style={{width: 20, height: 20}}
             />
           ),
         }}
@@ -145,10 +227,9 @@ const MainTabNavigator = () => {
           headerShown: false,
           tabBarLabel: () => null,
           tabBarIcon: ({color, focused}) => (
-            <Icon 
-              name="home" 
-              size={24} 
-              color="#FFFFFF" 
+            <Image 
+              source={focused ? IMAGES.icons.homeWhite : IMAGES.icons.homeGray} 
+              style={{width: 20, height: 20}} 
             />
           ),
         }}
@@ -160,10 +241,9 @@ const MainTabNavigator = () => {
           title: '쇼핑',
           tabBarLabel: '쇼핑',
           tabBarIcon: ({color, focused}) => (
-            <Icon 
-              name={focused ? "cart" : "cart-outline"} 
-              size={24} 
-              color={color} 
+            <Image 
+              source={focused ? IMAGES.icons.cartGreen : IMAGES.icons.cartGray} 
+              style={{width: 20, height: 20}} 
             />
           ),
         }}
@@ -174,11 +254,11 @@ const MainTabNavigator = () => {
         options={{
           title: '마이페이지',
           tabBarLabel: '마이페이지',
+          headerShown: false,
           tabBarIcon: ({color, focused}) => (
-            <Icon 
-              name={focused ? "person" : "person-outline"} 
-              size={24} 
-              color={color} 
+            <Image 
+              source={focused ? IMAGES.icons.profileGreen : IMAGES.icons.profileGray} 
+              style={{width: 20, height: 20}} 
             />
           ),
         }}
@@ -243,12 +323,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 8,
-    borderColor: '#242527',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 5,
-    elevation: 8,
+    borderColor: '#202020',
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   homeButtonTouchable: {
     position: 'absolute',
@@ -260,7 +340,19 @@ const styles = StyleSheet.create({
   homeText: {
     fontSize: 10,
     marginTop: 1,
-  }
+  },
+  iconContainer: {
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FF0000',
+  },
 });
 
 export default MainTabNavigator; 

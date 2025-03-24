@@ -11,6 +11,7 @@ import {
   ToastAndroid,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
 import {validateMemberNumber, insertCheckinLog} from '../api/services/checkinService';
 import {getMemberOrdersList, GetMemberOrderResponse} from '../api/services/orderService';
@@ -20,6 +21,8 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {AuthStackParamList} from '../navigation/AuthStackNavigator';
 import CommonPopup from '../components/CommonPopup';
 import {MemberOrder} from '../types/order.types';
+import { scale } from '../utils/responsive';
+import IMAGES from '../utils/images';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -43,6 +46,12 @@ const Attendance = () => {
   });
 
   const navigation = useNavigation<NavigationProp>();
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
 
   useEffect(() => {
     const fn_getMemberOrders = async () => {
@@ -145,6 +154,8 @@ const Attendance = () => {
         mem_checkin_number: inputNumber,
       });
 
+      console.log('validateResponse::', validateResponse);
+
       if (!validateResponse.success) {
         showAlert({
           visible: true,
@@ -169,7 +180,7 @@ const Attendance = () => {
 
       showAlert({
         visible: true,
-        message: '회원권을 선택해주세요.',
+        message: '회원권 선택',
         showOrders: true,
         confirmText: '선택',
         onConfirm: async () => {
@@ -265,6 +276,8 @@ const Attendance = () => {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.dateText}>{new Date().getFullYear()}년 {new Date().getMonth() + 1}월 {new Date().getDate()}일</Text>
+      
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#007AFF" />
@@ -274,27 +287,15 @@ const Attendance = () => {
       <Text style={styles.subtitle}>출석 체크를 위해 출입 번호를 입력해 주세요.</Text>
       
       <View style={styles.inputContainer}>
-        <View style={styles.inputDisplay}>
-          {inputNumber.split('').map((digit, index) => (
-            <View
-              key={index}
-              style={[
-                styles.inputDigit,
-                { backgroundColor: digit === '0' ? '#333639' : '#007AFF' },
-              ]}
-            />
-          ))}
-        </View>
         <TextInput
           style={styles.input}
           value={inputNumber}
           editable={false}
-          placeholder="출입 번호 입력"
           placeholderTextColor="#999"
         />
       </View>
 
-      <View style={styles.keypadContainer}>
+      <View>
         <View style={styles.keypadRow}>
           {[1, 2, 3].map(num => (
             <TouchableOpacity
@@ -326,8 +327,11 @@ const Attendance = () => {
           ))}
         </View>
         <View style={styles.keypadRow}>
-          <TouchableOpacity style={styles.keypadButton} onPress={handleDelete}>
-            <Text style={styles.keypadText}>←</Text>
+          <TouchableOpacity style={[styles.keypadButton, {backgroundColor: '#C4C4C4'}]} onPress={handleDelete}>
+            <Image
+              source={IMAGES.icons.arrowLeftFullWhite}
+              style={styles.arrowKeypad}
+            />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.keypadButton}
@@ -340,6 +344,13 @@ const Attendance = () => {
             disabled={loading}>
             <Text style={styles.submitText}>출석</Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.logoContainer}>
+          <Image
+            source={IMAGES.logo.jumpingBlack}
+            style={styles.logoImage}
+          />  
         </View>
       </View>
 
@@ -358,8 +369,10 @@ const Attendance = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#242527',
+    backgroundColor: '#FFFFFF',
     padding: 20,
+    flexDirection: 'column',
+    justifyContent: 'center',
   },
   inputContainer: {
     alignItems: 'center',
@@ -369,16 +382,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     marginBottom: 20,
-  },
-  inputDigit: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#333639',
-    marginHorizontal: 8,
-  },
-  inputDigitFilled: {
-    backgroundColor: '#007AFF',
   },
   orderTitle: {
     fontSize: 16,
@@ -392,24 +395,20 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: scale(14),
     textAlign: 'center',
-    marginBottom: 20,
-    color: '#AAAAAA',
+    marginBottom: scale(20),
+    color: '#000000',
+    fontWeight: 'bold',
   },
   input: {
-    height: 50,
-    backgroundColor: '#333639',
+    backgroundColor: '#F0F0F0',
     borderRadius: 8,
-    fontSize: 24,
+    fontSize: scale(24),
+    fontWeight: '500',
     textAlign: 'center',
-    marginBottom: 20,
-    color: '#FFFFFF',
-  },
-  keypadContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    maxHeight: 280,
+    color: '#000000',
+    width: '100%',
   },
   keypadRow: {
     flexDirection: 'row',
@@ -418,18 +417,24 @@ const styles = StyleSheet.create({
   },
   keypadButton: {
     width: (Dimensions.get('window').width - 80) / 3,
-    height: 60,
-    backgroundColor: '#333639',
+    height: scale(58),
+    backgroundColor: '#F0F0F0',
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  arrowKeypad: {
+    width: scale(20),
+    height: scale(20),
+    resizeMode: 'contain',
+  },
   keypadText: {
-    fontSize: 24,
-    color: '#FFFFFF',
+    fontSize: scale(22),
+    fontWeight: '500',
+    color: '#000000',
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4CAF50',
   },
   submitText: {
     fontSize: 20,
@@ -466,6 +471,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+  },
+  logoContainer: {
+    alignItems: 'flex-end',
+    marginTop: scale(80),
+  },
+  logoImage: {
+    width: scale(80),
+    height: scale(40),
+    resizeMode: 'contain',
+  },
+  dateText: {
+    fontSize: scale(14),
+    textAlign: 'center',
+    marginBottom: scale(10),
+    color: '#000000',
   },
 });
 

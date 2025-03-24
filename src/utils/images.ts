@@ -24,6 +24,11 @@ const IMAGES = {
     profileGreen: require('../assets/images/icon/icon_profile_green.png'),
     runWhite: require('../assets/images/icon/icon_run_white.png'),
     heartWhite: require('../assets/images/icon/icon_heart_white.png'),
+    arrowLeftFullWhite: require('../assets/images/icon/icon_arrow_left_full_white.png'),
+  },
+  logo: {
+    jumpingBlack: require('../assets/images/logo/logo_jumping_black.png'),
+    jumpingWhite: require('../assets/images/logo/logo_jumping_white.png'),
   },
 };
 

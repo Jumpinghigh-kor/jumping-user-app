@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "748017416417",
+    "project_id": "jumpinghigh-user-app",
+    "storage_bucket": "jumpinghigh-user-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:748017416417:android:e8969f4b6503fbf6495fa0",
+        "android_client_info": {
+          "package_name": "com.jumpinguserapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDPie80KAkcilNJpgEKiY3zbT9NFluL3Ig"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

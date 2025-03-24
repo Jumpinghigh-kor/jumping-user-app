@@ -1,56 +1,237 @@
-import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Alert} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {View, Text, StyleSheet, TouchableOpacity, Alert, Image, Platform, ScrollView, Modal} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
+import IMAGES from '../utils/images';
+import {useAuth} from '../hooks/useAuth';
+import {scale} from '../utils/responsive';
+import {privacyPolicyText, termsOfServiceText} from '../utils/termsData';
+import {getInquiryList} from '../api/services/inquiryService';
+import {getNoticesAppList} from '../api/services/noticesAppService';
+import {getUpdateLogAppInfo, UpdateLogInfo} from '../api/services/updateLogAppService';
+import { formatDateYYYYMMDD } from '../utils/commonFunctions';
+
+// Package.json 버전 정보 가져오기
+const appVersion = require('../../package.json').version;
 
 const MyPage = () => {
   const navigation = useNavigation();
+  const {memberInfo, loadMemberInfo} = useAuth();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalContent, setModalContent] = useState('');
+  const [hasUnreadNotices, setHasUnreadNotices] = useState(false);
+  const [hasUnreadInquiries, setHasUnreadInquiries] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<UpdateLogInfo | null>(null);
 
-  const handleLogout = async () => {
-    Alert.alert(
-      '로그아웃',
-      '정말 로그아웃 하시겠습니까?',
-      [
-        {
-          text: '취소',
-          style: 'cancel',
-        },
-        {
-          text: '로그아웃',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // 모든 저장된 데이터 삭제
-              await AsyncStorage.multiRemove([
-                'accessToken',
-                'refreshToken',
-                'memberId',
-                // 필요한 경우 다른 데이터도 여기에 추가
-              ]);
-              
-              // 로그인 화면으로 이동
-              navigation.reset({
-                index: 0,
-                routes: [{name: 'Login'}],
-              });
-            } catch (error) {
-              Alert.alert('오류', '로그아웃 중 문제가 발생했습니다.');
-            }
-          },
-        },
-      ],
-      {cancelable: true},
-    );
+  useFocusEffect(
+    React.useCallback(() => {
+      loadMemberInfo();
+      checkUnreadNotices();
+      checkUnreadInquiries();
+      fetchUpdateInfo();
+    }, [])
+  );
+
+  const fetchUpdateInfo = async () => {
+    try {
+      const response = await getUpdateLogAppInfo();
+      console.log(response);
+      if (response.success && response.data) {
+        setUpdateInfo(response.data);
+      }
+    } catch (error) {
+      console.error('업데이트 정보 조회 에러:', error);
+    }
+  };
+
+  const checkUnreadNotices = async () => {
+    try {
+      const readNoticesStr = await AsyncStorage.getItem('readNotices');
+      const readNotices = readNoticesStr ? JSON.parse(readNoticesStr) : [];
+      
+      const response = await getNoticesAppList();
+      if (response.success && response.data) {
+        const unreadExists = response.data.some(notice => 
+          !readNotices.includes(notice.notices_app_id)
+        );
+        setHasUnreadNotices(unreadExists);
+      }
+    } catch (error) {
+      console.error('공지사항 확인 에러:', error);
+    }
+  };
+
+  const checkUnreadInquiries = async () => {
+    try {
+      const readInquiriesStr = await AsyncStorage.getItem('readInquiries');
+      const readInquiries = readInquiriesStr ? JSON.parse(readInquiriesStr) : [];
+      
+      const response = await getInquiryList();
+      if (response.success && response.data) {
+        const unreadExists = response.data.some(inquiry => 
+          inquiry.answer && !readInquiries.includes(inquiry.inquiry_app_id)
+        );
+        setHasUnreadInquiries(unreadExists);
+      }
+    } catch (error) {
+      console.error('문의 확인 에러:', error);
+    }
+  };
+
+  const showModal = (title: string, content: string) => {
+    setModalTitle(title);
+    setModalContent(content);
+    setModalVisible(true);
   };
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.logoutButton}
-        onPress={handleLogout}
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.profileIconContainer}>
+          <View style={styles.profileIconCircle}>
+            <Image 
+              source={IMAGES.icons.profileGray} 
+              style={styles.profileIcon} 
+            />
+            <View style={styles.editIconContainer}>
+              <Image 
+                source={IMAGES.icons.editCircleBlue}
+                style={styles.editIcon}
+              />
+            </View>
+          </View>
+          <Text style={styles.nickname}>{memberInfo?.mem_nickname}</Text>
+          <Text style={styles.emailId}>{memberInfo?.mem_email_id}</Text>
+        </View>
+        
+        <View style={styles.statsContainer}>
+          <Text style={styles.statsText}>키</Text>
+          <Text style={styles.statsDivider}>|</Text>
+          <Text style={styles.statsText}>포인트</Text>
+          <Text style={styles.statsDivider}>|</Text>
+          <Text style={styles.statsText}>몸무게</Text>
+        </View>
+
+        <Text style={styles.sectionTitle}>고객센터</Text>
+        <View style={styles.menuContainer}>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('NoticesAppList' as never)}
+          >
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuText}>공지사항</Text>
+              {hasUnreadNotices && (
+                <View style={styles.notificationDot} />
+              )}
+            </View>
+            <Image 
+              source={IMAGES.icons.arrowRightWhite} 
+              style={styles.menuArrow} 
+            />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('InquiryAppList' as never)}
+          >
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuText}>문의</Text>
+              {hasUnreadInquiries && (
+                <View style={styles.notificationDot} />
+              )}
+            </View>
+            <Image 
+              source={IMAGES.icons.arrowRightWhite} 
+              style={styles.menuArrow} 
+            />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.sectionTitle}>약관 및 정책</Text>
+        <View style={styles.menuContainer}>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => showModal('개인정보 처리방침', privacyPolicyText)}
+          >
+            <Text style={styles.menuText}>개인정보 처리방침</Text>
+            <Image 
+              source={IMAGES.icons.arrowRightWhite} 
+              style={styles.menuArrow} 
+            />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => showModal('이용약관', termsOfServiceText)}
+          >
+            <Text style={styles.menuText}>이용약관</Text>
+            <Image 
+              source={IMAGES.icons.arrowRightWhite} 
+              style={styles.menuArrow} 
+            />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.sectionTitle}>설정</Text>
+        <View style={styles.menuContainer}>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Settings' as never)}
+          >
+            <Text style={styles.menuText}>환경설정</Text>
+            <Image 
+              source={IMAGES.icons.arrowRightWhite} 
+              style={styles.menuArrow} 
+            />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => {
+              const content = updateInfo 
+                ? `${updateInfo.up_app_desc}`
+                : `최신 버전입니다.`;
+              showModal('현재 버전', content);
+            }}
+          >
+            <Text style={styles.menuText}>현재 버전</Text>
+            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+              {updateInfo && (
+                <Text style={styles.updateVersionText}>{updateInfo.up_app_version}</Text>
+              )}
+            </View>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.bottomPadding}></View>
+      </ScrollView>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
       >
-        <Text style={styles.logoutText}>로그아웃</Text>
-      </TouchableOpacity>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{modalTitle}</Text>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalScrollView}>
+              <Text style={modalTitle === '현재 버전' ? styles.modalVersionText : styles.modalText}>{modalContent}</Text>
+              {modalTitle === '현재 버전' && updateInfo && (
+                <Text style={styles.registrationDateText}>{formatDateYYYYMMDD(updateInfo.reg_dt)}</Text>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -58,20 +239,172 @@ const MyPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    padding: 16,
+    backgroundColor: '#202020',
+    padding: scale(16),
   },
-  logoutButton: {
-    backgroundColor: '#FF4444',
-    padding: 15,
-    borderRadius: 8,
+  profileIconContainer: {
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: scale(20),
+    marginBottom: scale(20),
   },
-  logoutText: {
+  profileIconCircle: {
+    width: scale(80),
+    height: scale(80),
+    borderRadius: scale(40),
+    backgroundColor: '#333333',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#444444',
+    position: 'relative',
+  },
+  profileIcon: {
+    width: scale(40),
+    height: scale(40),
+  },
+  nickname: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: scale(16),
     fontWeight: 'bold',
+    marginTop: scale(10),
+  },
+  emailId: {
+    color: '#aaaaaa',
+    fontSize: scale(12),
+    marginTop: scale(5),
+  },
+  editIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+  },
+  editIcon: {
+    width: scale(24),
+    height: scale(24),
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#43B546',
+    borderRadius: scale(8),
+    padding: scale(12),
+    marginTop: scale(20),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statsText: {
+    color: '#ffffff',
+    fontSize: scale(12),
+    fontWeight: 'bold',
+    paddingHorizontal: scale(10),
+  },
+  statsDivider: {
+    color: '#ffffff',
+    fontSize: scale(12),
+  },
+  sectionTitle: {
+    color: '#ffffff',
+    fontSize: scale(16),
+    fontWeight: 'bold',
+    marginTop: scale(25),
+    marginBottom: scale(10),
+  },
+  menuContainer: {
+    borderRadius: scale(8),
+    backgroundColor: '#373737',
+    overflow: 'hidden',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: scale(15),
+    paddingHorizontal: scale(16),
+  },
+  menuText: {
+    color: '#ffffff',
+    fontSize: scale(12),
+  },
+  versionText: {
+    color: '#999999',
+    fontSize: scale(12),
+  },
+  updateVersionText: {
+    color: '#43B546',
+    fontSize: scale(12),
+  },
+  menuArrow: {
+    width: scale(16),
+    height: scale(16),
+    tintColor: '#999999',
+  },
+  bottomPadding: {
+    height: scale(80),
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#333333',
+    borderTopLeftRadius: scale(20),
+    borderTopRightRadius: scale(20),
+    width: '100%',
+    maxHeight: '80%',
+    padding: scale(20),
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: scale(15),
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: scale(18),
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    padding: scale(5),
+  },
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontSize: scale(20),
+  },
+  modalScrollView: {
+    maxHeight: '90%',
+    marginBottom: scale(10),
+  },
+  modalText: {
+    color: '#FFFFFF',
+    fontSize: scale(14),
+    lineHeight: scale(22),
+    paddingBottom: scale(20),
+  },
+  modalVersionText: {
+    color: '#FFFFFF',
+    fontSize: scale(12),
+    lineHeight: scale(20),
+    paddingBottom: scale(20),
+  },
+  registrationDateText: {
+    color: '#676D75',
+    fontSize: scale(10),
+    textAlign: 'right',
+    marginTop: scale(10),
+    paddingBottom: scale(20),
+  },
+  menuTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  notificationDot: {
+    width: scale(6),
+    height: scale(6),
+    borderRadius: scale(3),
+    backgroundColor: '#FF0000',
+    marginLeft: scale(5),
   },
 });
 
