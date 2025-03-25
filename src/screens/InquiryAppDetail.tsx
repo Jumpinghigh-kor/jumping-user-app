@@ -63,7 +63,6 @@ const InquiryAppDetail = () => {
         await AsyncStorage.setItem('readInquiries', JSON.stringify(readInquiries));
       }
     } catch (error) {
-      console.error('문의 읽음 표시 에러:', error);
     }
   };
 
@@ -83,7 +82,6 @@ const InquiryAppDetail = () => {
 
   const handleUpdate = async () => {
     if (isSubmitting) {
-      console.log('Preventing duplicate submission');
       return; // 중복 클릭 방지
     }
     
@@ -116,7 +114,6 @@ const InquiryAppDetail = () => {
         Alert.alert('알림', response.message || '문의 수정에 실패했습니다.');
       }
     } catch (error) {
-      console.error('문의 수정 에러:', error);
       Alert.alert('알림', '문의 수정 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);

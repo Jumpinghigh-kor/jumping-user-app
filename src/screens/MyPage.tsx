@@ -10,6 +10,10 @@ import {getInquiryList} from '../api/services/inquiryService';
 import {getNoticesAppList} from '../api/services/noticesAppService';
 import {getUpdateLogAppInfo, UpdateLogInfo} from '../api/services/updateLogAppService';
 import { formatDateYYYYMMDD } from '../utils/commonFunctions';
+import ProfileImagePicker from '../components/ProfileImagePicker';
+import { getMemberImageFile } from '../api/services/profileService';
+import { supabase } from '../utils/supabaseClient';
+import { useProfileImage } from '../hooks/useProfileImage';
 
 // Package.json 버전 정보 가져오기
 const appVersion = require('../../package.json').version;
@@ -17,6 +21,7 @@ const appVersion = require('../../package.json').version;
 const MyPage = () => {
   const navigation = useNavigation();
   const {memberInfo, loadMemberInfo} = useAuth();
+  const { profileImageUrl, loadProfileImage } = useProfileImage(memberInfo?.mem_id);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalContent, setModalContent] = useState('');
@@ -30,18 +35,19 @@ const MyPage = () => {
       checkUnreadNotices();
       checkUnreadInquiries();
       fetchUpdateInfo();
-    }, [])
+      loadProfileImage();
+    }, [memberInfo?.mem_id]),
   );
 
   const fetchUpdateInfo = async () => {
     try {
       const response = await getUpdateLogAppInfo();
-      console.log(response);
+      
       if (response.success && response.data) {
         setUpdateInfo(response.data);
       }
     } catch (error) {
-      console.error('업데이트 정보 조회 에러:', error);
+      
     }
   };
 
@@ -58,7 +64,7 @@ const MyPage = () => {
         setHasUnreadNotices(unreadExists);
       }
     } catch (error) {
-      console.error('공지사항 확인 에러:', error);
+      
     }
   };
 
@@ -75,7 +81,7 @@ const MyPage = () => {
         setHasUnreadInquiries(unreadExists);
       }
     } catch (error) {
-      console.error('문의 확인 에러:', error);
+      
     }
   };
 
@@ -89,18 +95,11 @@ const MyPage = () => {
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.profileIconContainer}>
-          <View style={styles.profileIconCircle}>
-            <Image 
-              source={IMAGES.icons.profileGray} 
-              style={styles.profileIcon} 
-            />
-            <View style={styles.editIconContainer}>
-              <Image 
-                source={IMAGES.icons.editCircleBlue}
-                style={styles.editIcon}
-              />
-            </View>
-          </View>
+          <ProfileImagePicker
+            memId={memberInfo?.mem_id}
+            currentImageUrl={profileImageUrl}
+            onImageUpdate={loadProfileImage}
+          />
           <Text style={styles.nickname}>{memberInfo?.mem_nickname}</Text>
           <Text style={styles.emailId}>{memberInfo?.mem_email_id}</Text>
         </View>
@@ -247,31 +246,15 @@ const styles = StyleSheet.create({
     marginTop: scale(20),
     marginBottom: scale(20),
   },
-  profileIconCircle: {
-    width: scale(80),
-    height: scale(80),
-    borderRadius: scale(40),
-    backgroundColor: '#333333',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#444444',
-    position: 'relative',
-  },
-  profileIcon: {
-    width: scale(40),
-    height: scale(40),
-  },
   nickname: {
-    color: '#ffffff',
-    fontSize: scale(16),
+    fontSize: scale(12),
     fontWeight: 'bold',
-    marginTop: scale(10),
+    color: '#FFFFFF',
+    marginVertical: scale(10),
   },
   emailId: {
     color: '#aaaaaa',
     fontSize: scale(12),
-    marginTop: scale(5),
   },
   editIconContainer: {
     position: 'absolute',
@@ -303,7 +286,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: '#ffffff',
-    fontSize: scale(16),
+    fontSize: scale(14),
     fontWeight: 'bold',
     marginTop: scale(25),
     marginBottom: scale(10),

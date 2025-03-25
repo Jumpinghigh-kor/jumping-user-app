@@ -64,8 +64,6 @@ export const insertMemberExercise = async (params: InsertMemberExerciseRequest):
     const response = await axiosInstance.post('/member-exercise/insertMemberExercise', params);
     return response.data;
   } catch (error: any) {
-    console.log(error.response?.data);
-    console.error('운동 정보 저장 오류:', error);
     throw error;
   }
 };
@@ -78,8 +76,6 @@ export const getMemberExerciseInfo = async (mem_id: number, exercise_dt: string)
     });
     return response.data;
   } catch (error: any) {
-    console.log(error.response?.data || error);
-    console.error('운동 정보 조회 오류:', error);
     throw error;
   }
 };
@@ -89,8 +85,6 @@ export const updateMemberExercise = async (params: UpdateMemberExerciseRequest):
     const response = await axiosInstance.post('/member-exercise/updateMemberExercise', params);
     return response.data;
   } catch (error: any) {
-    console.log(error.response?.data);
-    console.error('운동 정보 업데이트 오류:', error);
     throw error;
   }
 };
@@ -115,7 +109,6 @@ export const getMemberExerciseList = async (
     });
     return response.data;
   } catch (error: any) {
-    console.error('운동 정보 목록 조회 오류:', error);
     throw error;
   }
 };

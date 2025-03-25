@@ -51,7 +51,6 @@ const InquiryAppRegister = () => {
 
   const handleSubmit = async () => {
     if (isSubmitting) {
-      console.log('Preventing duplicate submission');
       return; // 중복 클릭 방지
     }
     
@@ -83,7 +82,6 @@ const InquiryAppRegister = () => {
         Alert.alert('알림', response.message || '문의 등록에 실패했습니다.');
       }
     } catch (error) {
-      console.error('문의 등록 에러:', error);
       Alert.alert('알림', '문의 등록 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);

@@ -25,12 +25,15 @@ import AttendancePopup from '../components/AttendancePopup';
 import LinearGradient from 'react-native-linear-gradient';
 import {getMemberExerciseInfo, getMemberExerciseList} from '../api/services/memberExercise';
 import IMAGES from '../utils/images';
+import { useProfileImage } from '../hooks/useProfileImage';
+import ProfileImagePicker from '../components/ProfileImagePicker';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList>;
 
 const Home = () => {
   const insets = useSafeAreaInsets();
   const {memberInfo, loadMemberInfo} = useAuth();
+  const { profileImageUrl, loadProfileImage } = useProfileImage(memberInfo?.mem_id);
   const [checkinLogs, setCheckinLogs] = useState<string[]>([]);
   const navigation = useNavigation<NavigationProp>();
   const [showPopup, setShowPopup] = useState(false);
@@ -50,6 +53,13 @@ const Home = () => {
   const [bannerImages, setBannerImages] = useState<string[]>([]);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [loadingBanner, setLoadingBanner] = useState(false);
+
+  // 프로필 이미지 로드
+  useFocusEffect(
+    React.useCallback(() => {
+      loadProfileImage();
+    }, [memberInfo?.mem_id]),
+  );
 
   // 이번 달 날짜 데이터 생성
   const currentMonthDates = useMemo(() => {
@@ -297,10 +307,7 @@ const Home = () => {
             // 누적 운동량 데이터 가져오기
             const allDataResponse = await getMemberExerciseList(Number(memberInfo.mem_id), 'all_date');
             
-            console.log('누적 운동량 데이터 응답:', allDataResponse);
-            
             if (allDataResponse.success) {
-              console.log('누적 운동량 데이터:', allDataResponse.data);
               
               const allExerciseData = Array.isArray(allDataResponse.data) ? allDataResponse.data || [] : [allDataResponse.data || {}];
               
@@ -398,12 +405,6 @@ const Home = () => {
               
               // 누적 데이터 설정
               setAccumulatedData({
-                totalCalories,
-                totalDistance,
-                averageHeartRate,
-              });
-              
-              console.log('설정된 누적 데이터:', {
                 totalCalories,
                 totalDistance,
                 averageHeartRate,
@@ -1133,12 +1134,12 @@ const Home = () => {
           ]}>
           <View style={styles.emptySpace} />
           <View style={styles.profileSection}>
-            <View style={styles.profileImageContainer}>
-              {/* 프로필 이미지가 들어갈 자리 */}
-            </View>
-            <Text style={styles.nickname}>
-              {memberInfo?.mem_nickname || '사용자'}
-            </Text>
+            <ProfileImagePicker
+              memId={memberInfo?.mem_id}
+              currentImageUrl={profileImageUrl}
+              onImageUpdate={loadProfileImage}
+              showEditIcon={false}
+            />
           </View>
           <TouchableOpacity style={styles.notificationButton}>
             <Image 
@@ -1618,7 +1619,7 @@ const Home = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#242527',
+    backgroundColor: '#202020',
   },
   scrollViewContent: {
     flexGrow: 1,
@@ -1628,31 +1629,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: scale(12),
-    backgroundColor: '#242527', // 배경색 명시적 지정
+    marginBottom: scale(10),
+    marginTop: scale(20),
   },
   emptySpace: {
-    width: scale(40),
+    width: '33.3%',
   },
   profileSection: {
     alignItems: 'center',
-    marginTop: scale(30),
-  },
-  profileImageContainer: {
-    width: scale(60),
-    height: scale(60),
-    borderRadius: scale(50),
-    backgroundColor: '#444444',
-    marginBottom: scale(4),
-  },
-  nickname: {
-    fontSize: scale(12),
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginVertical: scale(10),
+    width: '33.3%',
   },
   notificationButton: {
-    padding: scale(8),
+    width: '33.3%',
   },
   content: {
     alignItems: 'center',
@@ -1929,6 +1917,8 @@ const styles = StyleSheet.create({
   bellIcon: {
     width: scale(24),
     height: scale(24),
+    resizeMode: 'contain',
+    alignSelf: 'flex-end'
   },
   arrowRightIcon: {
     width: scale(16),

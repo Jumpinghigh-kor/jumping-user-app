@@ -25,6 +25,12 @@ const IMAGES = {
     runWhite: require('../assets/images/icon/icon_run_white.png'),
     heartWhite: require('../assets/images/icon/icon_heart_white.png'),
     arrowLeftFullWhite: require('../assets/images/icon/icon_arrow_left_full_white.png'),
+    arrowRightFullWhite: require('../assets/images/icon/icon_arrow_right_full_white.png'),
+    arrowLeftFullGray: require('../assets/images/icon/icon_arrow_left_full_gray.png'),
+    arrowRightFullGray: require('../assets/images/icon/icon_arrow_right_full_gray.png'),
+    xWhite: require('../assets/images/icon/icon_x_white.png'),
+    garbageRed: require('../assets/images/icon/icon_garbage_red.png'),
+    pictureWhite: require('../assets/images/icon/icon_picture_white.png'),
   },
   logo: {
     jumpingBlack: require('../assets/images/logo/logo_jumping_black.png'),

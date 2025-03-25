@@ -38,7 +38,7 @@ const NoticesAppList = () => {
         setReadNotices(JSON.parse(readNoticesStr));
       }
     } catch (error) {
-      console.error('읽은 공지사항 로드 에러:', error);
+      
     }
   };
 
@@ -52,7 +52,7 @@ const NoticesAppList = () => {
         Alert.alert('알림', '공지사항을 불러오는데 실패했습니다.');
       }
     } catch (error) {
-      console.error('공지사항 로드 에러:', error);
+      
       Alert.alert('알림', '공지사항을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
@@ -71,7 +71,7 @@ const NoticesAppList = () => {
         await AsyncStorage.setItem('readNotices', JSON.stringify(newReadNotices));
       }
     } catch (error) {
-      console.error('공지사항 읽음 표시 에러:', error);
+      
     }
   };
 

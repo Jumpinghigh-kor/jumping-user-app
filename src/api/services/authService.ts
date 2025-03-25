@@ -48,7 +48,6 @@ class AuthService {
     try {
       await AsyncStorage.removeItem('access_token');
     } catch (error) {
-      console.error('Logout error:', error);
       throw new Error('로그아웃 중 오류가 발생했습니다.');
     }
   }

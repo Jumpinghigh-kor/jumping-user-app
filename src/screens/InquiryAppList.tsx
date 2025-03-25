@@ -42,7 +42,7 @@ const InquiryAppList = () => {
         setReadInquiries(JSON.parse(readInquiriesStr));
       }
     } catch (error) {
-      console.error('읽은 문의 로드 에러:', error);
+    
     }
   };
 
@@ -56,7 +56,7 @@ const InquiryAppList = () => {
         Alert.alert('알림', '문의사항을 불러오는데 실패했습니다.');
       }
     } catch (error) {
-      console.error('문의사항 로드 에러:', error);
+      
       Alert.alert('알림', '문의사항을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
@@ -80,7 +80,7 @@ const InquiryAppList = () => {
       setReadInquiries(newReadInquiries);
       await AsyncStorage.setItem('readInquiries', JSON.stringify(newReadInquiries));
     } catch (error) {
-      console.error('문의 읽음 표시 에러:', error);
+      
     }
   };
 

@@ -16,10 +16,11 @@ import {
 import {validateMemberNumber, insertCheckinLog} from '../api/services/checkinService';
 import {getMemberOrdersList, GetMemberOrderResponse} from '../api/services/orderService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {AuthStackParamList} from '../navigation/AuthStackNavigator';
 import CommonPopup from '../components/CommonPopup';
+import MemberOrdersPopup from '../components/MemberOrdersPopup';
 import {MemberOrder} from '../types/order.types';
 import { scale } from '../utils/responsive';
 import IMAGES from '../utils/images';
@@ -35,6 +36,7 @@ const Attendance = () => {
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
     message: string;
+    type?: 'default' | 'warning' | 'confirm';
     onConfirm: () => void;
     onCancel?: () => void;
     showOrders?: boolean;
@@ -45,6 +47,8 @@ const Attendance = () => {
     onConfirm: () => {},
   });
 
+  const [showMemberOrdersPopup, setShowMemberOrdersPopup] = useState(false);
+
   const navigation = useNavigation<NavigationProp>();
 
   useEffect(() => {
@@ -53,26 +57,32 @@ const Attendance = () => {
     });
   }, [navigation]);
 
-  useEffect(() => {
-    const fn_getMemberOrders = async () => {
-      try {
-        const memId = await AsyncStorage.getItem('mem_id');
-        if (memId) {
-          const memberOrdersResponse = await getMemberOrdersList({
-            mem_id: parseInt(memId, 10),
-          }) as GetMemberOrderResponse;
+  useFocusEffect(
+    React.useCallback(() => {
+      const fn_getMemberOrders = async () => {
+        try {
+          const memId = await AsyncStorage.getItem('mem_id');
+          if (memId) {
+            const memberOrdersResponse = await getMemberOrdersList({
+              mem_id: parseInt(memId, 10),
+            }) as GetMemberOrderResponse;
 
-          if (memberOrdersResponse.success && memberOrdersResponse.data) {
-            setOrderList(memberOrdersResponse.data);
+            if (memberOrdersResponse.success && memberOrdersResponse.data) {
+              setOrderList(memberOrdersResponse.data);
+            }
           }
+        } catch (error) {
+          console.error('Failed to fetch orders:', error);
         }
-      } catch (error) {
-        console.error('Failed to fetch orders:', error);
-      }
-    };
+      };
 
-    fn_getMemberOrders();
-  }, []);
+      fn_getMemberOrders();
+      
+      return () => {
+        // cleanup if needed
+      };
+    }, [])
+  );
   
   const showAlert = (config: typeof alertConfig) => {
     setAlertConfig({...config, visible: true});
@@ -116,7 +126,16 @@ const Attendance = () => {
       if (response.success) {
         hideAlert();
         showToast('출석체크가 완료되었습니다.');
-        navigation.goBack();
+        
+        // 회원권 목록 다시 조회
+        const memberOrdersResponse = await getMemberOrdersList({
+          mem_id: parseInt(memId, 10),
+        }) as GetMemberOrderResponse;
+
+        if (memberOrdersResponse.success && memberOrdersResponse.data) {
+          setOrderList(memberOrdersResponse.data);
+        }
+        
       } else {
         showToast(response.message || '출석 처리 중 오류가 발생했습니다.');
       }
@@ -130,6 +149,7 @@ const Attendance = () => {
       showAlert({
         visible: true,
         message: '4자리 번호 이상 입력해주세요.',
+        type: 'warning',
         onConfirm: hideAlert,
       });
       return;
@@ -161,6 +181,7 @@ const Attendance = () => {
           visible: true,
           message: validateResponse.message || '잘못된 출입 번호입니다.',
           onConfirm: hideAlert,
+          type: 'warning',
         });
         return;
       }
@@ -178,37 +199,10 @@ const Attendance = () => {
         return;
       }
 
-      showAlert({
-        visible: true,
-        message: '회원권 선택',
-        showOrders: true,
-        confirmText: '선택',
-        onConfirm: async () => {
-          console.log('onConfirm selectedOrderId::', selectedOrderId);
-          console.log('onConfirm selectedOrderIdRef::', selectedOrderIdRef.current);
-          
-          // ref를 사용하여 선택된 회원권 ID 확인
-          const currentOrderId = selectedOrderIdRef.current;
-          
-          if (!currentOrderId) {
-            showToast('회원권을 선택해주세요.');
-            return;
-          }
-          
-          // 선택된 회원권 찾기
-          const currentSelectedOrder = orderList.find(order => order.memo_id === currentOrderId);
-          console.log('currentSelectedOrder::', currentSelectedOrder);
-
-          if (!currentSelectedOrder) {
-            showToast('선택된 회원권 정보를 찾을 수 없습니다.');
-            return;
-          }
-          
-          // 출석 처리 함수 호출
-          await processAttendance(memId, currentSelectedOrder);
-        },
-        onCancel: hideAlert,
-      });
+      // MemberOrdersPopup 표시
+      setSelectedOrderId(null);
+      selectedOrderIdRef.current = null;
+      setShowMemberOrdersPopup(true);
 
     } catch (error: any) {
       showAlert({
@@ -223,55 +217,30 @@ const Attendance = () => {
     }
   };
 
-  // selectedOrderId가 변경될 때마다 로그 출력
-  useEffect(() => {
-    if (selectedOrderId !== null) {
-      console.log('selectedOrderId changed:', selectedOrderId);
+  // 회원권 선택 완료 처리
+  const handleOrderConfirm = async () => {
+    if (!selectedOrderId) {
+      showToast('회원권을 선택해주세요.');
+      return;
     }
-  }, [selectedOrderId]);
-
-  const renderOrderInfo = () => {
-    if (!alertConfig.showOrders || orderList.length === 0) return null;
-
-    return (
-      <ScrollView 
-        style={styles.orderScrollView}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-        contentContainerStyle={styles.orderScrollContent}
-      >
-        <Text style={styles.orderTitle}>
-          이용하실 회원권을 선택해주세요.
-        </Text>
-        {orderList.map((order, index) => (
-          <TouchableOpacity
-            key={order.memo_id || index}
-            style={[
-              styles.orderItem,
-              selectedOrderId === order.memo_id && styles.selectedOrder,
-            ]}
-            onPress={() => {
-              console.log('Order selected:', order.memo_id);
-              setSelectedOrderId(order.memo_id);
-              selectedOrderIdRef.current = order.memo_id;
-            }}>
-            <Text style={styles.orderText}>
-              상품명: {order.memo_pro_name || order.product_name}
-            </Text>
-            {order.pro_type === '회차권' ? (
-              <Text style={styles.orderText}>
-                남은 횟수: {order.memo_remaining_counts}회
-              </Text>
-            ) : (
-              <Text style={styles.orderText}>
-                기간: {order.memo_start_date || order.start_date} ~{' '}
-                {order.memo_end_date || order.end_date}
-              </Text>
-            )}
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    );
+    
+    // 선택된 회원권 찾기
+    const currentSelectedOrder = orderList.find(order => order.memo_id === selectedOrderId);
+    
+    if (!currentSelectedOrder) {
+      showToast('선택된 회원권 정보를 찾을 수 없습니다.');
+      return;
+    }
+    
+    const memId = await AsyncStorage.getItem('mem_id');
+    if (!memId) {
+      showToast('로그인 정보를 찾을 수 없습니다.');
+      return;
+    }
+    
+    // 출석 처리 함수 호출
+    await processAttendance(memId, currentSelectedOrder);
+    setShowMemberOrdersPopup(false);
   };
 
   return (
@@ -357,11 +326,24 @@ const Attendance = () => {
       <CommonPopup
         visible={alertConfig.visible}
         message={alertConfig.message}
+        type={alertConfig.type}
         onConfirm={alertConfig.onConfirm}
         onCancel={alertConfig.onCancel}
-      >
-        {renderOrderInfo()}
-      </CommonPopup>
+      />
+
+      <MemberOrdersPopup
+        visible={showMemberOrdersPopup}
+        message="이용하실 회원권을 선택해주세요."
+        orderList={orderList}
+        selectedOrderId={selectedOrderId}
+        onSelect={(orderId) => {
+          console.log('Order selected:', orderId);
+          setSelectedOrderId(orderId);
+          selectedOrderIdRef.current = orderId;
+        }}
+        onConfirm={handleOrderConfirm}
+        onCancel={() => setShowMemberOrdersPopup(false)}
+      />
     </View>
   );
 };
@@ -474,7 +456,7 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'flex-end',
-    marginTop: scale(80),
+    marginTop: scale(20),
   },
   logoImage: {
     width: scale(80),

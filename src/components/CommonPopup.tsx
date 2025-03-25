@@ -1,10 +1,15 @@
 import React, {ReactNode} from 'react';
-import {Modal, View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import {Modal, View, Text, TouchableOpacity, StyleSheet, Image} from 'react-native';
+import { scale } from '../utils/responsive';
+import IMAGES from '../utils/images';
+
+type PopupType = 'default' | 'warning' | 'confirm';
 
 interface CommonPopupProps {
   visible: boolean;
   title?: string;
   message: string;
+  type?: PopupType;
   onConfirm: () => void;
   onCancel?: () => void;
   confirmText?: string;
@@ -16,6 +21,7 @@ const CommonPopup = ({
   visible,
   title,
   message,
+  type = 'default',
   onConfirm,
   onCancel,
   confirmText = '확인',
@@ -31,10 +37,21 @@ const CommonPopup = ({
       <View style={styles.overlay}>
         <View style={styles.container}>
           {title && <Text style={styles.title}>{title}</Text>}
+          <View style={styles.messageContainer}>
+          {type === 'warning' && (
+            <View style={styles.iconContainer}>
+              <Image 
+                source={IMAGES.icons.exclamationMarkRed} 
+                style={styles.warningIcon} 
+                resizeMode="contain"
+              />
+            </View>
+          )}
           <Text style={styles.message}>{message}</Text>
+          </View>
           {children}
           <View style={styles.buttonContainer}>
-            {onCancel && (
+            {(onCancel || type === 'confirm') && (
               <TouchableOpacity
                 style={[styles.button, styles.cancelButton]}
                 onPress={onCancel}>
@@ -63,9 +80,22 @@ const styles = StyleSheet.create({
   container: {
     width: '80%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 20,
+    borderRadius: scale(10),
+    padding: scale(20),
     alignItems: 'center',
+  },
+  messageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: scale(15),
+  },
+  iconContainer: {
+  },
+  warningIcon: {
+    width: scale(18),
+    height: scale(18),
+    marginRight: scale(5),
   },
   title: {
     fontSize: 18,
@@ -74,8 +104,7 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   message: {
-    fontSize: 16,
-    marginBottom: 20,
+    fontSize: scale(14),
     textAlign: 'center',
     color: '#333333',
   },
@@ -86,10 +115,10 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 5,
+    paddingVertical: scale(7),
+    borderRadius: scale(5),
     alignItems: 'center',
-    marginHorizontal: 5,
+    marginHorizontal: scale(5),
   },
   cancelButton: {
     backgroundColor: '#DDDDDD',
@@ -104,6 +133,7 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
+    fontSize: scale(12),
   },
 });
 

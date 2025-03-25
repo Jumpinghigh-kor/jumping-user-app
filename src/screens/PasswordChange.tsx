@@ -111,7 +111,6 @@ const PasswordChange = () => {
         Alert.alert('오류', response.message || '비밀번호 변경에 실패했습니다.');
       }
     } catch (error) {
-      console.error('비밀번호 변경 에러:', error);
       Alert.alert('오류', '비밀번호 변경 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
