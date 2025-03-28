@@ -41,7 +41,7 @@ const Home = () => {
   const [selectedDate, setSelectedDate] = useState('');
   const [activeCategory, setActiveCategory] = useState('칼로리');
   const [exerciseData, setExerciseData] = useState<any[]>([]);
-  const [selectedPeriod, setSelectedPeriod] = useState('일');
+  const [selectedPeriod, setSelectedPeriod] = useState<'일' | '주' | '월' | '연'>('일');
   const [showPeriodSelect, setShowPeriodSelect] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [accumulatedData, setAccumulatedData] = useState({
@@ -1134,12 +1134,14 @@ const Home = () => {
           ]}>
           <View style={styles.emptySpace} />
           <View style={styles.profileSection}>
-            <ProfileImagePicker
-              memId={memberInfo?.mem_id}
-              currentImageUrl={profileImageUrl}
-              onImageUpdate={loadProfileImage}
-              showEditIcon={false}
-            />
+            <View pointerEvents="none">
+              <ProfileImagePicker
+                memId={memberInfo?.mem_id}
+                currentImageUrl={profileImageUrl}
+                onImageUpdate={loadProfileImage}
+                showEditIcon={false}
+              />
+            </View>
           </View>
           <TouchableOpacity style={styles.notificationButton}>
             <Image 
@@ -1364,43 +1366,60 @@ const Home = () => {
                       // 값을 그래프 높이에 맞게 스케일링
                       let heightPercent = 0;
                       
-                      if (selectedPeriod === '일' && activeCategory === '칼로리') {
-                        // 일 선택 시 칼로리 Y축 스케일 맞춤
-                        heightPercent = (value / 1250) * 150;
-                      } else if (selectedPeriod === '일') {
-                        // 일 선택 시 Y축 스케일 맞춤
-                        heightPercent = (value / 25) * 200;
-                      } else if (selectedPeriod === '주' && activeCategory === '뛴거리') {
-                        // 주 선택 시 뛴거리 Y축 0-75 스케일에 맞춤
-                        console.log(`뛴거리 주간 데이터: ${value}km, 인덱스: ${index}`);
-                        heightPercent = value * 15;
-                      } else if (selectedPeriod === '주') {
-                        // 주 선택 시 Y축 0-5000 스케일에 맞춤
-                        heightPercent = (value / 5000) * 300;
-                      } else if (selectedPeriod === '월' && activeCategory === '칼로리') {
-                        // 월 선택 시 칼로리 Y축 0-50000 스케일에 맞춤
-                        heightPercent = (value / 50000) * 300;
-                      } else if (selectedPeriod === '월') {
-                        // 월 선택 시 Y축 0-500 스케일에 맞춤
-                        heightPercent = (value / 500) * 150;
-                      } else if (activeCategory === '뛴거리') {
-                        // 뛴거리: Y축 0-25 스케일에 맞춤 (1km = 6px)
-                        heightPercent = (value / 25) * 150;
-                      } else if (activeCategory === '칼로리') {
-                        // 칼로리: Y축 0-1250 스케일에 맞춤 (1250kcal = 150px)
-                        heightPercent = (value / 1250) * 150;
-                      } else if (activeCategory === '심박수') {
-                        // 심박수: Y축 0-200 스케일에 맞춤 (200bpm = 150px)
-                        heightPercent = (value / 200) * 150;
-                      } else if (selectedPeriod === '연' && activeCategory === '칼로리') {
-                        // 연 선택 시 칼로리 Y축 0-500000 스케일에 맞춤
-                        heightPercent = (value / 500000) * 300;
-                      } else if (selectedPeriod === '연') {
-                        // 연 선택 시 Y축 0-750000 스케일에 맞춤
-                        heightPercent = (value / 750000) * 300;
-                      } else if (selectedPeriod === '연' && activeCategory === '뛴거리') {
-                        // 연 선택 시 뛴거리 Y축 0-100 스케일에 맞춤
-                        heightPercent = (value / 100) * 300;
+                      // Using switch statement for safer type checking
+                      switch(selectedPeriod) {
+                        case '일':
+                          if (activeCategory === '칼로리') {
+                            // 일 선택 시 칼로리 Y축 스케일 맞춤
+                            heightPercent = (value / 1250) * 150;
+                          } else {
+                            // 일 선택 시 Y축 스케일 맞춤
+                            heightPercent = (value / 25) * 200;
+                          }
+                          break;
+                        case '주':
+                          if (activeCategory === '뛴거리') {
+                            // 주 선택 시 뛴거리 Y축 0-75 스케일에 맞춤
+                            console.log(`뛴거리 주간 데이터: ${value}km, 인덱스: ${index}`);
+                            heightPercent = value * 15;
+                          } else {
+                            // 주 선택 시 Y축 0-5000 스케일에 맞춤
+                            heightPercent = (value / 5000) * 300;
+                          }
+                          break;
+                        case '월':
+                          if (activeCategory === '칼로리') {
+                            // 월 선택 시 칼로리 Y축 0-50000 스케일에 맞춤
+                            heightPercent = (value / 50000) * 300;
+                          } else {
+                            // 월 선택 시 Y축 0-500 스케일에 맞춤
+                            heightPercent = (value / 500) * 150;
+                          }
+                          break;
+                        case '연':
+                          if (activeCategory === '칼로리') {
+                            // 연 선택 시 칼로리 Y축 0-500000 스케일에 맞춤
+                            heightPercent = (value / 500000) * 300;
+                          } else if (activeCategory === '뛴거리') {
+                            // 연 선택 시 뛴거리 Y축 0-100 스케일에 맞춤
+                            heightPercent = (value / 100) * 300;
+                          } else {
+                            // 연 선택 시 Y축 0-750000 스케일에 맞춤
+                            heightPercent = (value / 750000) * 300;
+                          }
+                          break;
+                        default:
+                          // 기본 스케일링 로직
+                          if (activeCategory === '뛴거리') {
+                            // 뛴거리: Y축 0-25 스케일에 맞춤 (1km = 6px)
+                            heightPercent = (value / 25) * 150;
+                          } else if (activeCategory === '칼로리') {
+                            // 칼로리: Y축 0-1250 스케일에 맞춤 (1250kcal = 150px)
+                            heightPercent = (value / 1250) * 150;
+                          } else if (activeCategory === '심박수') {
+                            // 심박수: Y축 0-200 스케일에 맞춤 (200bpm = 150px)
+                            heightPercent = (value / 200) * 150;
+                          }
                       }
                       
                       // 높이 조정 (최대 150으로 제한)
@@ -1427,13 +1446,17 @@ const Home = () => {
                             </View>
                       </View>
                       <Text style={styles.graphDateLabel}>{item.date}</Text>
-                          <Text style={styles.graphXLabel}>{
-                            selectedPeriod === '주' ? '' : 
-                            selectedPeriod === '월' ? '' : 
-                            selectedPeriod === '연' ? '' : 
-                            selectedPeriod === '일' ? item.day : 
-                            item.day
-                          }</Text>
+                          <Text style={styles.graphXLabel}>
+                            {(() => {
+                              switch(selectedPeriod) {
+                                case '주': return '';
+                                case '월': return '';
+                                case '연': return '';
+                                case '일': return item.day;
+                                default: return item.day;
+                              }
+                            })()}
+                          </Text>
                     </View>
                   );
                 })}
@@ -1450,33 +1473,40 @@ const Home = () => {
                     // 값을 그래프 높이에 맞게 스케일링
                     let heightPercent = 0;
                     
-                    if (selectedPeriod === '주') {
-                      // 주 선택 시 Y축 0-5000 스케일에 맞춤
-                      heightPercent = (value / 5000) * 150;
-                    } else if (selectedPeriod === '월') {
-                      // 월 선택 시 Y축 0-500 스케일에 맞춤
-                      heightPercent = (value / 500) * 150;
-                    } else if (selectedPeriod === '연') {
-                      // 연 선택 시 Y축 0-750000 스케일에 맞춤
-                      heightPercent = (value / 750000) * 150;
-                    } else if (activeCategory === '뛴거리') {
-                      // 뛴거리: Y축 0-25 스케일에 맞춤 (1km = 6px)
-                      heightPercent = (value / 25) * 150;
-                    } else if (activeCategory === '칼로리') {
-                      // 칼로리: Y축 0-1250 스케일에 맞춤 (1250kcal = 150px)
-                      heightPercent = (value / 1250) * 150;
-                    } else if (activeCategory === '심박수') {
-                      // 심박수: Y축 0-200 스케일에 맞춤 (200bpm = 150px)
-                      heightPercent = (value / 200) * 150;
-                    } else if (selectedPeriod === '연' && activeCategory === '칼로리') {
-                      // 연 선택 시 칼로리 Y축 0-500000 스케일에 맞춤
-                      heightPercent = (value / 500000) * 300;
-                    } else if (selectedPeriod === '연') {
-                      // 연 선택 시 Y축 0-750000 스케일에 맞춤
-                      heightPercent = (value / 750000) * 150;
-                    } else if (selectedPeriod === '연' && activeCategory === '뛴거리') {
-                      // 연 선택 시 뛴거리 Y축 0-100 스케일에 맞춤
-                      heightPercent = (value / 100) * 300;
+                    // Using switch statement for safer type checking
+                    switch(selectedPeriod) {
+                      case '주':
+                        // 주 선택 시 Y축 0-5000 스케일에 맞춤
+                        heightPercent = (value / 5000) * 150;
+                        break;
+                      case '월':
+                        // 월 선택 시 Y축 0-500 스케일에 맞춤
+                        heightPercent = (value / 500) * 150;
+                        break;
+                      case '연':
+                        if (activeCategory === '칼로리') {
+                          // 연 선택 시 칼로리 Y축 0-500000 스케일에 맞춤
+                          heightPercent = (value / 500000) * 300;
+                        } else if (activeCategory === '뛴거리') {
+                          // 연 선택 시 뛴거리 Y축 0-100 스케일에 맞춤
+                          heightPercent = (value / 100) * 300;
+                        } else {
+                          // 연 선택 시 Y축 0-750000 스케일에 맞춤
+                          heightPercent = (value / 750000) * 150;
+                        }
+                        break;
+                      default:
+                        // 기본 스케일링 로직
+                        if (activeCategory === '뛴거리') {
+                          // 뛴거리: Y축 0-25 스케일에 맞춤 (1km = 6px)
+                          heightPercent = (value / 25) * 150;
+                        } else if (activeCategory === '칼로리') {
+                          // 칼로리: Y축 0-1250 스케일에 맞춤 (1250kcal = 150px)
+                          heightPercent = (value / 1250) * 150;
+                        } else if (activeCategory === '심박수') {
+                          // 심박수: Y축 0-200 스케일에 맞춤 (200bpm = 150px)
+                          heightPercent = (value / 200) * 150;
+                        }
                     }
                     
                     // 높이 조정 (최대 150으로 제한)
@@ -1512,13 +1542,17 @@ const Home = () => {
                           </View>
                         </View>
                         <Text style={styles.graphDateLabel}>{item.date}</Text>
-                        <Text style={styles.graphXLabel}>{
-                          selectedPeriod === '주' ? '' : 
-                          selectedPeriod === '월' ? '' : 
-                          selectedPeriod === '연' ? '' : 
-                          selectedPeriod === '일' ? item.day : 
-                          item.day
-                        }</Text>
+                        <Text style={styles.graphXLabel}>
+                          {(() => {
+                            switch(selectedPeriod) {
+                              case '주': return '';
+                              case '월': return '';
+                              case '연': return '';
+                              case '일': return item.day;
+                              default: return item.day;
+                            }
+                          })()}
+                        </Text>
                       </View>
                     );
                   })}
@@ -1981,6 +2015,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: scale(5),
+  },
+  profileImageContainer: {
+    width: scale(70),
+    height: scale(70),
+    borderRadius: scale(50),
+    backgroundColor: '#D9D9D9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
 });
 

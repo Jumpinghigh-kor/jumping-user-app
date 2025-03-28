@@ -13,6 +13,7 @@ export interface LoginResponse {
       mem_email_id: string;
       mem_name: string;
       center_id: number;
+      mem_app_status?: string;
     };
     message?: string;
   };

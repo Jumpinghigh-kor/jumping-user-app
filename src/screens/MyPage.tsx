@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Alert, Image, Platform, ScrollView, Modal} from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity, Alert, Image, Platform, ScrollView} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import IMAGES from '../utils/images';
@@ -14,6 +14,7 @@ import ProfileImagePicker from '../components/ProfileImagePicker';
 import { getMemberImageFile } from '../api/services/profileService';
 import { supabase } from '../utils/supabaseClient';
 import { useProfileImage } from '../hooks/useProfileImage';
+import CommonModal from '../components/CommonModal';
 
 // Package.json 버전 정보 가져오기
 const appVersion = require('../../package.json').version;
@@ -205,32 +206,17 @@ const MyPage = () => {
         <View style={styles.bottomPadding}></View>
       </ScrollView>
 
-      <Modal
-        animationType="slide"
-        transparent={true}
+      <CommonModal
         visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{modalTitle}</Text>
-              <TouchableOpacity 
-                style={styles.closeButton}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.closeButtonText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.modalScrollView}>
-              <Text style={modalTitle === '현재 버전' ? styles.modalVersionText : styles.modalText}>{modalContent}</Text>
-              {modalTitle === '현재 버전' && updateInfo && (
-                <Text style={styles.registrationDateText}>{formatDateYYYYMMDD(updateInfo.reg_dt)}</Text>
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+        title={modalTitle}
+        content={
+          modalTitle === '현재 버전' && updateInfo
+            ? `${modalContent}\n\n${formatDateYYYYMMDD(updateInfo.reg_dt)}`
+            : modalContent
+        }
+        onClose={() => setModalVisible(false)}
+        showCloseButton={true}
+      />
     </View>
   );
 };
@@ -322,61 +308,6 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: scale(80),
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#333333',
-    borderTopLeftRadius: scale(20),
-    borderTopRightRadius: scale(20),
-    width: '100%',
-    maxHeight: '80%',
-    padding: scale(20),
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: scale(15),
-  },
-  modalTitle: {
-    color: '#FFFFFF',
-    fontSize: scale(18),
-    fontWeight: 'bold',
-  },
-  closeButton: {
-    padding: scale(5),
-  },
-  closeButtonText: {
-    color: '#FFFFFF',
-    fontSize: scale(20),
-  },
-  modalScrollView: {
-    maxHeight: '90%',
-    marginBottom: scale(10),
-  },
-  modalText: {
-    color: '#FFFFFF',
-    fontSize: scale(14),
-    lineHeight: scale(22),
-    paddingBottom: scale(20),
-  },
-  modalVersionText: {
-    color: '#FFFFFF',
-    fontSize: scale(12),
-    lineHeight: scale(20),
-    paddingBottom: scale(20),
-  },
-  registrationDateText: {
-    color: '#676D75',
-    fontSize: scale(10),
-    textAlign: 'right',
-    marginTop: scale(10),
-    paddingBottom: scale(20),
   },
   menuTextContainer: {
     flexDirection: 'row',

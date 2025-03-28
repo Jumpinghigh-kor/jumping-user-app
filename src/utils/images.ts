@@ -31,6 +31,9 @@ const IMAGES = {
     xWhite: require('../assets/images/icon/icon_x_white.png'),
     garbageRed: require('../assets/images/icon/icon_garbage_red.png'),
     pictureWhite: require('../assets/images/icon/icon_picture_white.png'),
+    checkGray: require('../assets/images/icon/icon_circle_check_gray.png'),
+    checkGreen: require('../assets/images/icon/icon_circle_check_green.png'),
+    smallBarGray: require('../assets/images/icon/icon_small_bar_gray.png'),
   },
   logo: {
     jumpingBlack: require('../assets/images/logo/logo_jumping_black.png'),

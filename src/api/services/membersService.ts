@@ -55,4 +55,29 @@ export const updateMemberAppPassword = async (
     console.log(error.response.data);
     throw error;
   }
+};
+
+// 닉네임 중복 체크 API
+export const checkNicknameDuplicate = async (nickname: string) => {
+  try {
+    const response = await axiosInstance.post('/members/checkNicknameDuplicate', {
+      mem_nickname: nickname,
+    });
+    return response.data;
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+// 회원가입 완료 API
+export const completeSignup = async (memId: string, nickname: string) => {
+  try {
+    const response = await axiosInstance.post('/members/completeSignup', {
+      mem_id: memId,
+      mem_nickname: nickname,
+    });
+    return response.data;
+  } catch (error: any) {
+    throw error;
+  }
 }; 

@@ -19,6 +19,7 @@ type RootStackParamList = {
   Login: undefined;
   MainTab: undefined;
   ForgotCredentials: undefined;
+  SignUp: undefined;
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -60,10 +61,24 @@ const Login = () => {
           ['mem_email_id', response.data.user.mem_email_id],
         ]);
         
-        navigation.reset({
-          index: 0,
-          routes: [{name: 'MainTab'}],
-        });
+        // 사용자 상태에 따라 다른 화면으로 이동
+        if (response.data.user.mem_app_status === 'ACTIVE') {
+          navigation.reset({
+            index: 0,
+            routes: [{name: 'MainTab' as keyof RootStackParamList}],
+          });
+        } else if (response.data.user.mem_app_status === 'PROCEED') {
+          navigation.reset({
+            index: 0,
+            routes: [{name: 'SignUp' as keyof RootStackParamList}],
+          });
+        } else {
+          // 기타 상태일 경우 기본적으로 MainTab으로 이동
+          navigation.reset({
+            index: 0,
+            routes: [{name: 'MainTab' as keyof RootStackParamList}],
+          });
+        }
       } else {
         const message = response.data?.message || '로그인에 실패했습니다.';
         setError(message);

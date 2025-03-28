@@ -11,10 +11,12 @@ import InquiryAppRegister from '../screens/InquiryAppRegister';
 import InquiryAppDetail from '../screens/InquiryAppDetail';
 import Settings from '../screens/Settings';
 import PasswordChange from '../screens/PasswordChange';
+import SignUp from '../screens/SignUp';
 
 export type AuthStackParamList = {
   Login: undefined;
   ForgotCredentials: undefined;
+  SignUp: undefined;
   MainTab: {
     screen?: string;
   };
@@ -54,6 +56,11 @@ const AuthStackNavigator = () => {
         name="ForgotCredentials"
         component={ForgotCredentials}
         options={{title: '비밀번호 찾기'}}
+      />
+      <Stack.Screen
+        name="SignUp"
+        component={SignUp}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="MainTab"
