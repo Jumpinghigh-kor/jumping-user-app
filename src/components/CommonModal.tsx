@@ -8,7 +8,6 @@ import {
   Image,
   PanResponder,
   Animated,
-  TouchableOpacity,
 } from 'react-native';
 import {scale} from '../utils/responsive';
 import IMAGES from '../utils/images';
@@ -18,7 +17,6 @@ interface CommonModalProps {
   title: string;
   content: string;
   onClose: () => void;
-  showCloseButton?: boolean;
 }
 
 const CommonModal: React.FC<CommonModalProps> = ({
@@ -26,7 +24,6 @@ const CommonModal: React.FC<CommonModalProps> = ({
   title,
   content,
   onClose,
-  showCloseButton = false,
 }) => {
   const pan = React.useRef(new Animated.ValueXY()).current;
   
@@ -93,11 +90,6 @@ const CommonModal: React.FC<CommonModalProps> = ({
           
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{title}</Text>
-            {showCloseButton && (
-              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                <Text style={styles.closeButtonText}>✕</Text>
-              </TouchableOpacity>
-            )}
           </View>
           
           <ScrollView style={styles.modalScrollView}>
@@ -135,6 +127,7 @@ const styles = StyleSheet.create({
   modalBarContainer: {
     alignItems: 'center',
     width: '100%',
+    marginBottom: scale(15),
   },
   modalBar: {
     width: scale(40),
@@ -152,15 +145,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: scale(18),
     fontWeight: 'bold',
-  },
-  closeButton: {
-    position: 'absolute',
-    right: 0,
-    padding: scale(5),
-  },
-  closeButtonText: {
-    color: '#FFFFFF',
-    fontSize: scale(20),
   },
   modalScrollView: {
     maxHeight: '90%',

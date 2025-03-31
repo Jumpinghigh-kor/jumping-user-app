@@ -6,9 +6,9 @@ import MainTabNavigator from './MainTabNavigator';
 import Attendance from '../screens/Attendance';
 import AttendanceRecord from '../screens/AttendanceRecord';
 import NoticesAppList from '../screens/NoticesAppList';
-import InquiryAppList from '../screens/InquiryAppList';
-import InquiryAppRegister from '../screens/InquiryAppRegister';
-import InquiryAppDetail from '../screens/InquiryAppDetail';
+import InquiryList from '../screens/InquiryList';
+import InquiryRegister from '../screens/InquiryRegister';
+import InquiryDetail from '../screens/InquiryDetail';
 import Settings from '../screens/Settings';
 import PasswordChange from '../screens/PasswordChange';
 import SignUp from '../screens/SignUp';
@@ -23,9 +23,9 @@ export type AuthStackParamList = {
   Attendance: undefined;
   AttendanceRecord: undefined;
   NoticesAppList: undefined;
-  InquiryAppList: undefined;
-  InquiryAppRegister: undefined;
-  InquiryAppDetail: {
+  InquiryList: undefined;
+  InquiryRegister: undefined;
+  InquiryDetail: {
     inquiry: any;
   };
   Settings: undefined;
@@ -75,7 +75,7 @@ const AuthStackNavigator = () => {
       <Stack.Screen
         name="AttendanceRecord"
         component={AttendanceRecord}
-        options={{title: '출석 기록'}}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="NoticesAppList"
@@ -83,18 +83,18 @@ const AuthStackNavigator = () => {
         options={{headerShown: false}}
       />
       <Stack.Screen
-        name="InquiryAppList"
-        component={InquiryAppList}
+        name="InquiryList"
+        component={InquiryList}
         options={{headerShown: false}}
       />
       <Stack.Screen
-        name="InquiryAppRegister"
-        component={InquiryAppRegister}
+        name="InquiryRegister"
+        component={InquiryRegister}
         options={{headerShown: false}}
       />
       <Stack.Screen
-        name="InquiryAppDetail"
-        component={InquiryAppDetail}
+        name="InquiryDetail"
+        component={InquiryDetail}
         options={{headerShown: false}}
       />
       <Stack.Screen

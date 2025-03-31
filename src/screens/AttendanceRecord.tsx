@@ -6,12 +6,24 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
+  ScrollView,
+  Image,
+  Platform,
+  Alert,
+  ToastAndroid,
 } from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {getCheckinLogList} from '../api/services/checkinService';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {scale} from '../utils/responsive';
+import IMAGES from '../utils/images';
+import CommonHeader from '../components/CommonHeader';
+import ExerciseSummary from '../components/ExerciseSummary';
+import AttendancePopup from '../components/AttendancePopup';
+import {getMemberExerciseList} from '../api/services/memberExercise';
+import {useAuth} from '../hooks/useAuth';
 
 type RootStackParamList = {
   Home: undefined;
@@ -19,6 +31,7 @@ type RootStackParamList = {
   Shopping: undefined;
   Reservation: undefined;
   MyPage: undefined;
+  MainTab: { screen: string };
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -40,6 +53,14 @@ const AttendanceRecord = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigation = useNavigation<NavigationProp>();
+  const [accumulatedData, setAccumulatedData] = useState({
+    totalCalories: 0,
+    totalDistance: 0,
+    averageHeartRate: 0,
+  });
+  const {memberInfo} = useAuth();
+  const [showAttendancePopup, setShowAttendancePopup] = useState(false);
+  const [clickedDate, setClickedDate] = useState('');
 
   const fetchCheckinLog = async () => {
     try {
@@ -78,9 +99,140 @@ const AttendanceRecord = () => {
     }
   };
 
+  const fetchExerciseData = async () => {
+    if (!memberInfo?.mem_id) return;
+    
+    try {
+      setLoading(true);
+      
+      const year = selectedDate.getFullYear();
+      const month = selectedDate.getMonth() + 1;
+      
+      // 현재 월의 yearMonth 포맷 생성 (YYYYMM)
+      const yearMonth = `${year}${month < 10 ? '0' + month : month}`;
+      
+      // 운동 정보 API 호출
+      const response = await getMemberExerciseList(Number(memberInfo.mem_id), yearMonth, 'month');
+      
+      if (response.success) {
+        const exerciseData = Array.isArray(response.data) ? response.data || [] : [response.data || {}];
+        
+        // 누적 데이터 계산
+        let totalCalories = 0;
+        let totalDistance = 0;
+        let totalHeartRate = 0;
+        let heartRateCount = 0;
+        
+        exerciseData.forEach(data => {
+          // 칼로리 계산
+          let baseCalories = 0;
+          switch (data.intensity_level) {
+            case 'LOW':
+              baseCalories = 300;
+              break;
+            case 'MODERATE':
+              baseCalories = 400;
+              break;
+            case 'HIGH':
+              baseCalories = 500;
+              break;
+            default:
+              baseCalories = 0;
+          }
+          
+          // 운동 시간에 따른 칼로리 조정
+          if (data.exercise_time) {
+            const hours = parseInt(data.exercise_time.substring(0, 2), 10);
+            const minutes = parseInt(data.exercise_time.substring(2, 4), 10);
+            const totalMinutes = hours * 60 + minutes;
+            
+            const timeRatio = totalMinutes / 60;
+            totalCalories += Math.round(baseCalories * timeRatio);
+          } else {
+            totalCalories += baseCalories;
+          }
+          
+          // 뛴거리 계산
+          let baseDistance = 0;
+          switch (data.intensity_level) {
+            case 'LOW':
+              baseDistance = 1.5;
+              break;
+            case 'MODERATE':
+              baseDistance = 4.5;
+              break;
+            case 'HIGH':
+              baseDistance = 9.5;
+              break;
+            default:
+              baseDistance = 0;
+          }
+          
+          // 운동 시간에 따른 거리 조정
+          if (data.exercise_time) {
+            const hours = parseInt(data.exercise_time.substring(0, 2), 10);
+            const minutes = parseInt(data.exercise_time.substring(2, 4), 10);
+            const totalMinutes = hours * 60 + minutes;
+            
+            const timeRatio = totalMinutes / 60;
+            totalDistance += baseDistance * timeRatio;
+          } else {
+            totalDistance += baseDistance;
+          }
+          
+          // 심박수 계산
+          let heartRate = 0;
+          if (data.heart_rate && parseInt(data.heart_rate, 10) > 0) {
+            heartRate = parseInt(data.heart_rate, 10);
+          } else {
+            switch (data.intensity_level) {
+              case 'LOW':
+                heartRate = 110;
+                break;
+              case 'MODERATE':
+                heartRate = 135;
+                break;
+              case 'HIGH':
+                heartRate = 165;
+                break;
+              default:
+                heartRate = 0;
+            }
+          }
+          
+          if (heartRate > 0) {
+            totalHeartRate += heartRate;
+            heartRateCount++;
+          }
+        });
+        
+        // 평균 심박수 계산
+        const averageHeartRate = heartRateCount > 0 ? Math.round(totalHeartRate / heartRateCount) : 0;
+        
+        // 누적 데이터 설정
+        setAccumulatedData({
+          totalCalories,
+          totalDistance,
+          averageHeartRate,
+        });
+      }
+    } catch (error) {
+      console.error('운동 정보 조회 실패:', error);
+      // 오류 발생 시 사용자에게 알림
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('운동 정보를 불러오는데 실패했습니다.', ToastAndroid.SHORT);
+      } else {
+        Alert.alert('알림', '운동 정보를 불러오는데 실패했습니다.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       fetchCheckinLog();
+      fetchExerciseData();
     }, [selectedDate])
   );
 
@@ -137,7 +289,6 @@ const AttendanceRecord = () => {
     const dayStyle = [
       styles.dayCell,
       !item.isCurrentMonth && styles.otherMonthDay,
-      isCheckedIn && styles.checkedInDay,
     ];
 
     const textStyle = [
@@ -148,82 +299,106 @@ const AttendanceRecord = () => {
       isCheckedIn && styles.checkedInText,
     ];
 
+    const handleDayPress = () => {
+      if (isCheckedIn && item.isCurrentMonth) {
+        // 출석한 날짜의 일(day)만 추출하여 저장
+        const day = item.date.getDate().toString();
+        setClickedDate(day);
+        setShowAttendancePopup(true);
+      }
+    };
+
     return (
       <TouchableOpacity 
         style={dayStyle}
-        onPress={() => console.log(dateString, checkinTime)}
+        onPress={handleDayPress}
         disabled={!item.isCurrentMonth}
       >
-        <Text style={textStyle}>
-          {item.date.getDate()}
-        </Text>
-        {isCheckedIn && (
-          <>
-            <View style={styles.checkedInDot} />
-            <Text style={styles.timeText}>{checkinTime}</Text>
-          </>
+        {isCheckedIn ? (
+          <View style={styles.checkedInCircle}>
+            <Text style={styles.checkedInText}>
+              {item.date.getDate()}
+            </Text>
+          </View>
+        ) : (
+          <Text style={textStyle}>
+            {item.date.getDate()}
+          </Text>
         )}
       </TouchableOpacity>
     );
   };
 
   const renderCalendar = () => (
-    <>
+    <View>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => changeMonth(-1)}>
-          <Text style={styles.headerButton}>{'<'}</Text>
+          <Image source={IMAGES.icons.arrowLeftGray} style={styles.headerButton} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
           {selectedDate.getFullYear()}년 {selectedDate.getMonth() + 1}월
         </Text>
         <TouchableOpacity onPress={() => changeMonth(1)}>
-          <Text style={styles.headerButton}>{'>'}</Text>
+          <Image source={IMAGES.icons.arrowRightGray} style={styles.headerButton} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.weekDays}>
-        {DAYS.map((day, index) => (
-          <Text 
-            key={index} 
-            style={[
-              styles.weekDayText,
-              index === 0 && styles.sundayText,
-              index === 6 && styles.saturdayText,
-            ]}
-          >
-            {day}
-          </Text>
-        ))}
-      </View>
+      <View style={styles.calendarContainer}>
+        <View style={styles.weekDays}>
+          {DAYS.map((day, index) => (
+            <Text 
+              key={index} 
+              style={[
+                styles.weekDayText,
+                index === 0 && styles.sundayText,
+                index === 6 && styles.saturdayText,
+              ]}
+            >
+              {day}
+            </Text>
+          ))}
+        </View>
 
-      <FlatList
-        data={getDaysInMonth(selectedDate)}
-        renderItem={renderDay}
-        numColumns={7}
-        scrollEnabled={false}
-        keyExtractor={(item) => item.date.toISOString()}
-      />
-    </>
+        <FlatList
+          data={getDaysInMonth(selectedDate)}
+          renderItem={renderDay}
+          numColumns={7}
+          scrollEnabled={false}
+          keyExtractor={(item) => item.date.toISOString()}
+        />
+      </View>
+    </View>
   );
 
   return (
-    <View style={styles.container}>
-      {loading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#0000ff" />
-        </View>
-      )}
-      {error && (
-        <Text style={styles.errorText}>{error}</Text>
-      )}
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{paddingBottom: scale(40)}}
+    >
+      <CommonHeader title="출석 기록" />
       {renderCalendar()}
+      
+      {/* 월별 누적 운동량 컴포넌트 추가 */}
+      <ExerciseSummary 
+        data={accumulatedData} 
+        title={`${selectedDate.getMonth() + 1}월 누적 운동량`}
+      />
+      
       <TouchableOpacity 
         style={styles.attendanceButton}
-        onPress={() => navigation.navigate('Attendance')}
+        onPress={() => navigation.navigate('MainTab', { screen: 'Attendance' })}
       >
         <Text style={styles.attendanceButtonText}>출석하러 가기</Text>
       </TouchableOpacity>
-    </View>
+
+      {/* 운동 정보 팝업 */}
+      <AttendancePopup
+        visible={showAttendancePopup}
+        date={clickedDate}
+        onClose={() => setShowAttendancePopup(false)}
+      />
+    </ScrollView>
   );
 };
 
@@ -241,19 +416,19 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: scale(15),
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontSize: scale(12),
+    color: '#848484',
+    marginHorizontal: scale(5),
   },
   headerButton: {
-    fontSize: 24,
-    padding: 10,
-    color: '#FFFFFF',
+    width: scale(12),
+    height: scale(12),
+    resizeMode: 'contain',
   },
   weekDays: {
     flexDirection: 'row',
@@ -270,13 +445,12 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 8,
-    margin: 2,
-    padding: 2,
-    backgroundColor: '#333639',
+    borderRadius: scale(8),
+    margin: scale(2),
+    padding: scale(2),
   },
   dayText: {
-    fontSize: 16,
+    fontSize: scale(14),
     color: '#FFFFFF',
   },
   otherMonthDay: {
@@ -286,60 +460,44 @@ const styles = StyleSheet.create({
     color: '#999999',
   },
   sundayText: {
-    color: '#FF6B6B',
+    color: '#FF5F5F',
   },
   saturdayText: {
-    color: '#6B9AFF',
+    color: '#50ABFF',
   },
   checkedInDay: {
-    backgroundColor: '#2E4A3D',
+    position: 'relative',
   },
   checkedInText: {
-    color: '#4ADE80',
+    color: '#FFFFFF',
     fontWeight: 'bold',
-  },
-  checkedInDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#4ADE80',
-    position: 'absolute',
-    bottom: '15%',
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(36, 37, 39, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  errorText: {
-    color: '#FF6B6B',
-    fontSize: 14,
-    textAlign: 'center',
-    padding: 8,
-    marginBottom: 8,
-  },
-  timeText: {
-    fontSize: 10,
-    color: '#4ADE80',
-    marginTop: 2,
+    fontSize: scale(14),
   },
   attendanceButton: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 10,
-    marginTop: 20,
+    backgroundColor: '#40B649',
+    padding: scale(15),
+    borderRadius: scale(10),
     alignItems: 'center',
   },
   attendanceButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: scale(14),
+    fontWeight: '500',
+  },
+  calendarContainer: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: scale(10),
+    marginBottom: scale(30),
+    padding: scale(10),
+    paddingTop: scale(20),
+  },
+  checkedInCircle: {
+    width: scale(23),
+    height: scale(23),
+    borderRadius: scale(30),
+    backgroundColor: '#43B546',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

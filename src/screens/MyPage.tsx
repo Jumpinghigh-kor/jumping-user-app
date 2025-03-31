@@ -133,7 +133,7 @@ const MyPage = () => {
           
           <TouchableOpacity 
             style={styles.menuItem}
-            onPress={() => navigation.navigate('InquiryAppList' as never)}
+            onPress={() => navigation.navigate('InquiryList' as never)}
           >
             <View style={styles.menuTextContainer}>
               <Text style={styles.menuText}>문의</Text>
