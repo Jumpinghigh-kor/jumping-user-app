@@ -8,12 +8,20 @@ interface CommonHeaderProps {
   onBackPress?: () => void;
   showBackButton?: boolean;
   title: string;
+  backIcon?: any; // Allow custom back icon
+  titleColor?: string; // Allow custom title color
+  rightIcon?: React.ReactNode; // Add right icon support
+  backgroundColor?: string; // Add background color prop
 }
 
 const CommonHeader: React.FC<CommonHeaderProps> = ({ 
   onBackPress, 
   showBackButton = true,
-  title
+  title,
+  backIcon = IMAGES.icons.arrowLeftWhite,
+  titleColor = '#FFFFFF',
+  rightIcon,
+  backgroundColor = '#202020'
 }) => {
   const navigation = useNavigation();
 
@@ -26,17 +34,19 @@ const CommonHeader: React.FC<CommonHeaderProps> = ({
   };
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor }]}>
       {showBackButton && (
         <TouchableOpacity
           style={styles.backButton}
           onPress={handleBackPress}
         >
-          <Image source={IMAGES.icons.arrowLeftWhite} style={styles.backIcon} />
+          <Image source={backIcon} style={styles.backIcon} />
         </TouchableOpacity>
       )}
-      <Text style={styles.title}>{title}</Text>
-      <View style={styles.emptyArea} />
+      <Text style={[styles.title, { color: titleColor }]}>{title}</Text>
+      <View style={styles.emptyArea}>
+        {rightIcon}
+      </View>
     </View>
   );
 };
@@ -46,7 +56,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: scale(20),
+    paddingVertical: scale(20),
+    paddingHorizontal: scale(16),
   },
   backButton: {
     width: '33.3%',
@@ -59,12 +70,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: scale(16),
     fontWeight: '500',
-    color: '#FFFFFF',
     width: '33.3%',
     textAlign: 'center',
   },
   emptyArea: {
     width: '33.3%',
+    alignItems: 'flex-end',
   },
 });
 

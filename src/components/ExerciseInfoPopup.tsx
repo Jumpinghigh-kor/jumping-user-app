@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import {scale} from '../utils/responsive';
 import {useAuth} from '../hooks/useAuth';
-import {insertMemberExercise, getMemberExerciseInfo, updateMemberExercise} from '../api/services/memberExercise';
+import {insertMemberExercise, getMemberExerciseInfo, updateMemberExercise} from '../api/services/memberExerciseService';
 
 interface ExerciseInfoPopupProps {
   visible: boolean;

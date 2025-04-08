@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 // 테스트용 서버 IP
-const SERVER_IP = 'http://192.168.0.171:3000/'; // 실제 서버 IP
+const SERVER_IP = 'http://192.168.0.173:3000/'; // 실제 서버 IP
 
 const BASE_URL = SERVER_IP;
 

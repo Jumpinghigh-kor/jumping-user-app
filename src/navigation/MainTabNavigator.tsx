@@ -1,9 +1,9 @@
 import React, {useEffect, useState} from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
-import {Platform, View, Text, StyleSheet, Dimensions, Image} from 'react-native';
+import {Platform, View, Text, StyleSheet, Dimensions, Image, TouchableOpacity} from 'react-native';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import Home from '../screens/Home';
-import Shopping from '../screens/Shopping';
 import Reservation from '../screens/Reservation';
 import MyPage from '../screens/MyPage';
 import Attendance from '../screens/Attendance';
@@ -11,13 +11,17 @@ import IMAGES from '../utils/images';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {getInquiryList} from '../api/services/inquiryService';
 import {getNoticesAppList} from '../api/services/noticesAppService';
-
+import ShoppingList from '../screens/ShoppingList';
 const Tab = createBottomTabNavigator();
+const ShoppingStack = createNativeStackNavigator();
 const SCREEN_WIDTH = Dimensions.get('window').width;
+import { scale } from '../utils/responsive';
 
 // 커스텀 탭 바 컴포넌트
 const CustomTabBar = ({ state, descriptors, navigation }) => {
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+  const currentRoute = state.routes[state.index].name;
+  const isShoppingTab = currentRoute === 'Shopping';
 
   // 읽지 않은 알림이 있는지 체크
   const checkUnreadNotifications = async () => {
@@ -67,77 +71,180 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
   }, []);
 
   return (
-    <View style={styles.tabBarContainer}>
-      <View style={styles.tabBar}>
-        {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
-          const label =
-            options.tabBarLabel !== undefined
-              ? options.tabBarLabel
-              : options.title !== undefined
-              ? options.title
-              : route.name;
+    <View style={[
+      styles.tabBarContainer, 
+      isShoppingTab && styles.shoppingTabBarContainer
+    ]}>
+      {isShoppingTab ? (
+        // 쇼핑탭 전용 네비게이션 바
+        <View style={styles.shoppingTabBar}>
+          <TouchableOpacity
+            style={styles.shoppingTabItem}
+            onPress={() => navigation.navigate('Shopping')}
+          >
+            <Image 
+              source={currentRoute === 'Shopping' ? IMAGES.icons.shopHomeFillGray : IMAGES.icons.shopHomeGray} 
+              style={{width: 20, height: 20}} 
+              resizeMode='contain'
+            />
+            <Text style={styles.tabLabel}>홈</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.shoppingTabItem}
+            onPress={() => {
+              // 찜 목록 페이지로 이동
+              navigation.navigate('ShoppingZZim')
+            }}
+          >
+            <Image 
+              source={currentRoute === 'ShoppingZZim' ? IMAGES.icons.shopHeartFillGray : IMAGES.icons.shopHeartGray} 
+              style={{width: 20, height: 20}} 
+              resizeMode='contain'
+            />
+            <Text style={styles.tabLabel}>찜</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.shoppingTabItem}
+            onPress={() => {
+              // 검색 페이지로 이동
+              navigation.navigate('ShoppingSearch')
+            }}
+          >
+            <Image 
+              source={currentRoute === 'ShoppingSearch' ? IMAGES.icons.shopSearchFillGray : IMAGES.icons.shopSearchGray} 
+              style={{width: 20, height: 20}} 
+              resizeMode='contain'
+            />
+            <Text style={styles.tabLabel}>검색</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.shoppingTabItem}
+            onPress={() => navigation.navigate('ShoppingMypage')}
+          >
+            <Image 
+              source={currentRoute === 'ShoppingMypage' ? IMAGES.icons.shopMyPageFillGray : IMAGES.icons.shopMyPageGray}
+              style={{width: 20, height: 20}}
+              resizeMode='contain'
+            />
+            <Text style={styles.tabLabel}>마이페이지</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.logoContainer}
+            onPress={() => navigation.navigate('Home')}
+          >
+            <Image 
+              source={IMAGES.logo.jumpingBlack}
+              style={styles.logoImage}
+            />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        // 기존 네비게이션 바
+        <View style={styles.tabBar}>
+          {state.routes.map((route, index) => {
+            const { options } = descriptors[route.key];
+            const label =
+              options.tabBarLabel !== undefined
+                ? options.tabBarLabel
+                : options.title !== undefined
+                ? options.title
+                : route.name;
 
-          const isFocused = state.index === index;
+            const isFocused = state.index === index;
 
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
+            const onPress = () => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
 
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
-            }
-          };
+              if (!isFocused && !event.defaultPrevented) {
+                navigation.navigate(route.name);
+              }
+            };
 
-          // 홈 버튼인 경우 (가운데 탭)
-          if (index === 2) {
-            return (
-              <View key={index} style={styles.homeTabContainer}>
-                <View style={styles.homeIconContainer}>
-                  <View style={[
-                    styles.homeIconBackground,
-                    { backgroundColor: isFocused ? '#6BC46A' : '#333333' }
-                  ]}>
-                    <Image
-                      source={isFocused ? IMAGES.icons.homeWhite : IMAGES.icons.homeGray}
-                      style={{width: 20, height: 20}}
-                    />
-                    <Text style={[
-                      styles.homeText,
-                      { color: isFocused ? '#FFFFFF' : '#8E8E93' }
-                    ]}>홈</Text>
+            // 홈 버튼인 경우 (가운데 탭)
+            if (index === 2) {
+              return (
+                <View key={index} style={styles.homeTabContainer}>
+                  <View style={[styles.homeIconContainer, isShoppingTab && styles.shoppingHomeIconContainer]}>
+                    <View style={[
+                      styles.homeIconBackground,
+                      { backgroundColor: isFocused ? '#6BC46A' : '#333333' },
+                      isShoppingTab && styles.shoppingHomeIconBackground
+                    ]}>
+                      <Image
+                        source={isFocused ? IMAGES.icons.homeWhite : IMAGES.icons.homeGray}
+                        style={{width: 20, height: 20}}
+                      />
+                      <Text style={[
+                        styles.homeText,
+                        { color: isFocused ? '#FFFFFF' : '#8E8E93' }
+                      ]}>홈</Text>
+                    </View>
+                    <View style={[styles.homeButtonTouchable, isShoppingTab && styles.shoppingHomeButtonTouchable]} onTouchEnd={onPress} />
                   </View>
-                  <View style={styles.homeButtonTouchable} onTouchEnd={onPress} />
                 </View>
-              </View>
-            );
-          }
+              );
+            }
 
-          // 마이페이지 탭
-          if (route.name === 'MyPage') {
+            // 마이페이지 탭
+            if (route.name === 'MyPage') {
+              return (
+                <View key={index} style={styles.tabItemContainer}>
+                  <View
+                    style={styles.tabItem}
+                    onTouchEnd={onPress}
+                  >
+                    <View style={styles.iconContainer}>
+                      {options.tabBarIcon && options.tabBarIcon({
+                        color: isFocused ? (isShoppingTab ? '#FF6347' : '#6BC46A') : '#8E8E93',
+                        focused: isFocused,
+                      })}
+                      {hasUnreadNotifications && (
+                        <View style={styles.notificationBadge} />
+                      )}
+                    </View>
+                    {label !== null && (
+                      <Text
+                        style={[
+                          styles.tabLabel,
+                          { color: isFocused ? (isShoppingTab ? '#FF6347' : '#6BC46A') : '#8E8E93' }
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              );
+            }
+
+            // 일반 탭 버튼
             return (
               <View key={index} style={styles.tabItemContainer}>
                 <View
                   style={styles.tabItem}
                   onTouchEnd={onPress}
                 >
-                  <View style={styles.iconContainer}>
-                    {options.tabBarIcon && options.tabBarIcon({
-                      color: isFocused ? '#6BC46A' : '#8E8E93',
-                      focused: isFocused,
-                    })}
-                    {hasUnreadNotifications && (
-                      <View style={styles.notificationBadge} />
-                    )}
-                  </View>
+                  {options.tabBarIcon && options.tabBarIcon({
+                    color: isFocused ? (isShoppingTab ? '#FF6347' : '#6BC46A') : '#8E8E93',
+                    focused: isFocused,
+                  })}
                   {label !== null && (
                     <Text
                       style={[
                         styles.tabLabel,
-                        { color: isFocused ? '#6BC46A' : '#8E8E93' }
+                        { color: isFocused ? (isShoppingTab ? '#FF6347' : '#6BC46A') : '#8E8E93' }
                       ]}
                     >
                       {label}
@@ -146,37 +253,13 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
                 </View>
               </View>
             );
-          }
-
-          // 일반 탭 버튼
-          return (
-            <View key={index} style={styles.tabItemContainer}>
-              <View
-                style={styles.tabItem}
-                onTouchEnd={onPress}
-              >
-                {options.tabBarIcon && options.tabBarIcon({
-                  color: isFocused ? '#6BC46A' : '#8E8E93',
-                  focused: isFocused,
-                })}
-                {label !== null && (
-                  <Text
-                    style={[
-                      styles.tabLabel,
-                      { color: isFocused ? '#6BC46A' : '#8E8E93' }
-                    ]}
-                  >
-                    {label}
-                  </Text>
-                )}
-              </View>
-            </View>
-          );
-        })}
-      </View>
+          })}
+        </View>
+      )}
     </View>
   );
 };
+
 
 const MainTabNavigator = () => {
   return (
@@ -236,10 +319,11 @@ const MainTabNavigator = () => {
       />
       <Tab.Screen
         name="Shopping"
-        component={Shopping}
+        component={ShoppingList}
         options={{
           title: '쇼핑',
           tabBarLabel: '쇼핑',
+          headerShown: false,
           tabBarIcon: ({color, focused}) => (
             <Image 
               source={focused ? IMAGES.icons.cartGreen : IMAGES.icons.cartGray} 
@@ -352,6 +436,82 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: '#FF0000',
+  },
+  shoppingTabBarContainer: {
+    backgroundColor: 'transparent',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  shoppingTabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#EEEEEE',
+    borderTopLeftRadius: scale(15),
+    borderTopRightRadius: scale(15),
+    width: '100%',
+    height: scale(60),
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: scale(10),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -5 },
+    shadowOpacity: 0.3,
+    shadowRadius: scale(6),
+    elevation: 10,
+  },
+  shoppingTabItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 5,
+    flex: 1,
+  },
+  dividerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+    height: '100%',
+  },
+  dividerLine: {
+    width: 1,
+    height: '70%',
+    backgroundColor: '#D9D9D9',
+  },
+  dividerText: {
+    color: '#8E8E93',
+    fontSize: 16,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  logoImage: {
+    width: scale(50),
+    height: scale(30),
+    resizeMode: 'contain',
+  },
+  logoText: {
+    color: '#333333',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  shoppingHomeIconContainer: {
+    top: 0,
+    position: 'relative',
+  },
+  shoppingHomeIconBackground: {
+    backgroundColor: '#111111',
+    borderRadius: 0,
+    borderWidth: 0,
+    width: 'auto',
+    height: 'auto',
+    padding: 5,
+  },
+  shoppingHomeButtonTouchable: {
+    borderRadius: 0,
+    width: 'auto',
+    height: 'auto',
   },
 });
 

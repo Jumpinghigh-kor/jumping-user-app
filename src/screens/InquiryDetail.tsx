@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { updateInquiry, Inquiry } from '../api/services/inquiryService';
+import { updateInquiry, Inquiry, deleteInquiry } from '../api/services/inquiryService';
 import { scale } from '../utils/responsive';
 import IMAGES from '../utils/images';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,8 +21,8 @@ import CommonPopup from '../components/CommonPopup';
 import { formatDateYYYYMMDD } from '../utils/commonFunctions';
 import type { AuthStackParamList } from '../navigation/AuthStackNavigator';
 
-const MAX_TITLE_LENGTH = 300; // varchar(300) 제한
-const MAX_CONTENT_LENGTH = 1000;
+const MAX_TITLE_LENGTH = 20;
+const MAX_CONTENT_LENGTH = 3000;
 
 type InquiryAppDetailRouteProp = RouteProp<AuthStackParamList, 'InquiryAppDetail'>;
 
@@ -38,8 +38,6 @@ const InquiryAppDetail = () => {
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
   const [isEditing, setIsEditing] = useState(false);
-  
-  const canEdit = !inquiry.answer;
 
   useEffect(() => {
     if (inquiry) {
@@ -68,12 +66,14 @@ const InquiryAppDetail = () => {
 
   const validateForm = () => {
     if (!title.trim()) {
-      Alert.alert('알림', '제목을 입력해주세요.');
+      setPopupMessage('제목을 입력해주세요.');
+      setPopupVisible(true);
       return false;
     }
     
     if (!content.trim()) {
-      Alert.alert('알림', '내용을 입력해주세요.');
+      setPopupMessage('내용을 입력해주세요.');
+      setPopupVisible(true);
       return false;
     }
     
@@ -93,13 +93,6 @@ const InquiryAppDetail = () => {
       
       const memId = await AsyncStorage.getItem('mem_id');
       
-      if (!memId) {
-        Alert.alert('알림', '로그인이 필요합니다.');
-        setIsSubmitting(false);
-        setLoading(false);
-        return;
-      }
-      
       const response = await updateInquiry({
         title: title.trim(),
         content: content.trim(),
@@ -111,35 +104,67 @@ const InquiryAppDetail = () => {
         setPopupMessage('문의가 수정되었습니다.');
         setPopupVisible(true);
       } else {
-        Alert.alert('알림', response.message || '문의 수정에 실패했습니다.');
+        setPopupMessage(response.message || '문의 수정에 실패했습니다.');
+        setPopupVisible(true);
       }
     } catch (error) {
-      Alert.alert('알림', '문의 수정 중 오류가 발생했습니다.');
+      setPopupMessage('문의 수정 중 오류가 발생했습니다.');
+      setPopupVisible(true);
     } finally {
       setLoading(false);
       setIsSubmitting(false);
     }
   };
 
-  const handlePopupConfirm = () => {
-    setPopupVisible(false);
-    navigation.goBack();
-  };
-
-  const toggleEdit = () => {
-    if (!canEdit) {
-      Alert.alert('알림', '답변이 등록된 문의는 수정할 수 없습니다.');
-      return;
+  const handleDelete = async () => {
+    if (isSubmitting) {
+      return; // 중복 클릭 방지
     }
-    setIsEditing(!isEditing);
+    
+    try {
+      setIsSubmitting(true);
+      setLoading(true);
+      
+      const memId = await AsyncStorage.getItem('mem_id');
+      
+      const response = await deleteInquiry({
+        inquiry_app_id: inquiry.inquiry_app_id,
+        mem_id: parseInt(memId, 10),
+      });
+      
+      if (response.success) {
+        setPopupMessage('문의가 삭제되었습니다.');
+        setPopupVisible(true);
+      } else {
+        setPopupMessage(response.message || '문의 삭제에 실패했습니다.');
+        setPopupVisible(true);
+      }
+    } catch (error) {
+      setPopupMessage('문의 삭제 중 오류가 발생했습니다.');
+      setPopupVisible(true);
+    } finally {
+      setLoading(false);
+      setIsSubmitting(false);
+    }
   };
-
+  console.log('i', isSubmitting != null)
+  console.log('loading', loading)
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
+      <CommonPopup
+        visible={popupVisible}
+        message={popupMessage}
+        onConfirm={() => {
+          setPopupVisible(false);
+          if (popupMessage === '문의가 삭제되었습니다.') {
+            navigation.goBack();
+          }
+        }}
+      />
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -148,16 +173,7 @@ const InquiryAppDetail = () => {
           <Image source={IMAGES.icons.arrowLeftWhite} style={styles.backIcon} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>문의 상세</Text>
-        {canEdit ? (
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={toggleEdit}
-          >
-            <Text style={styles.editButtonText}>{isEditing ? '취소' : '수정'}</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.editButton} />
-        )}
+        <View style={styles.headerRight} />
       </View>
 
       <ScrollView
@@ -166,27 +182,29 @@ const InquiryAppDetail = () => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>제목</Text>
-          <TextInput
-            style={[styles.titleInput, !isEditing && styles.readOnlyInput]}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="제목을 입력해주세요 (최대 300자)"
-            placeholderTextColor="#999999"
-            maxLength={MAX_TITLE_LENGTH}
-            editable={isEditing && canEdit}
-          />
-          {isEditing && (
-            <Text style={styles.counter}>
-              {title.length}/{MAX_TITLE_LENGTH}
+          <View style={styles.titleRow}>
+            <Text style={styles.label}>문의 제목<Text style={{color: '#FF0000'}}> *</Text></Text>
+            <Text style={styles.dateText}>{formatDateYYYYMMDD(inquiry.reg_dt)}</Text>
+          </View>
+          <View style={styles.titleInputContainer}>
+            <TextInput
+              style={styles.titleInput}
+              value={title}
+              onChangeText={setTitle}
+              placeholder="제목을 입력해주세요 (20자 이내)"
+              placeholderTextColor="#717171"
+              maxLength={MAX_TITLE_LENGTH}
+            />
+            <Text style={styles.titleCounter}>
+              <Text style={{color: '#4C78E0'}}>{title.length}</Text> / {MAX_TITLE_LENGTH}
             </Text>
-          )}
+          </View>
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>내용</Text>
+          <Text style={styles.label}>문의 내용<Text style={{color: '#FF0000'}}> *</Text></Text>
           <TextInput
-            style={[styles.contentInput, !isEditing && styles.readOnlyInput]}
+            style={styles.contentInput}
             value={content}
             onChangeText={(text) => {
               if (text.length <= MAX_CONTENT_LENGTH) {
@@ -194,22 +212,16 @@ const InquiryAppDetail = () => {
               }
             }}
             placeholder="문의 내용을 입력해주세요"
-            placeholderTextColor="#999999"
+            placeholderTextColor="#717171"
             multiline
             textAlignVertical="top"
             maxLength={MAX_CONTENT_LENGTH}
-            editable={isEditing && canEdit}
           />
-          {isEditing && (
-            <Text style={styles.counter}>
-              {content.length}/{MAX_CONTENT_LENGTH}
-            </Text>
-          )}
-          <View style={styles.infoContainer}>
-            <Text style={styles.infoText}>{formatDateYYYYMMDD(inquiry.reg_dt)}</Text>
-          </View>
+          <Text style={styles.counter}>
+            <Text style={{color: '#4C78E0'}}>{content.length}</Text> / {MAX_CONTENT_LENGTH}
+          </Text>
         </View>
-        
+
         {inquiry.answer && (
           <View style={styles.answerContainer}>
             <Text style={styles.answerLabel}>답변</Text>
@@ -225,26 +237,23 @@ const InquiryAppDetail = () => {
         )}
       </ScrollView>
 
-      {isEditing && canEdit && (
-        <TouchableOpacity
-          style={[styles.submitButton, (loading || isSubmitting) && styles.disabledButton]}
+      <View style={styles.bottomButtonContainer}>
+        <TouchableOpacity 
+          style={[styles.submitButton, (loading || isSubmitting || inquiry.answer !== null) && styles.disabledButton]}
           onPress={handleUpdate}
+          disabled={loading || isSubmitting || inquiry.answer !== null}
+        >
+          <Text style={styles.submitButtonText}>수정</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.deleteButton]}
+          onPress={handleDelete}
           disabled={loading || isSubmitting}
         >
-          {loading || isSubmitting ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={styles.submitButtonText}>수정하기</Text>
-          )}
+          <Text style={styles.deleteButtonText}>삭제</Text>
         </TouchableOpacity>
-      )}
-
-      <CommonPopup
-        visible={popupVisible}
-        message={popupMessage}
-        onConfirm={handlePopupConfirm}
-        confirmText="확인"
-      />
+      </View>
     </KeyboardAvoidingView>
   );
 };
@@ -279,15 +288,139 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     fontWeight: 'bold',
   },
-  editButton: {
-    paddingVertical: scale(5),
-    paddingHorizontal: scale(10),
-    width: scale(50),
+  headerRight: {
+    width: scale(40),
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  editButtonText: {
-    color: '#43B546',
+  listContainer: {
+    padding: scale(16),
+  },
+  inquiryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: scale(12),
+    marginBottom: scale(10),
+  },
+  inquiryContent: {
+    flex: 1,
+  },
+  titleContainer: {
+    alignItems: 'flex-start',
+  },
+  notificationDot: {
+    width: scale(6),
+    height: scale(6),
+    borderRadius: scale(3),
+    backgroundColor: '#FF0000',
+    marginLeft: scale(5),
+  },
+  inquiryTitle: {
+    color: '#FFFFFF',
     fontSize: scale(14),
+    fontWeight: 'bold',
+    marginBottom: scale(5),
+  },
+  inquiryDate: {
+    color: '#999999',
+    fontSize: scale(10),
+  },
+  statusContainer: {
+    borderWidth: 1,
+    borderColor: '#B4B4B4',
+    borderRadius: scale(20),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(3),
+  },
+    statusText: {
+    color: '#B4B4B4',
+    fontSize: scale(12), 
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#999999',
+    fontSize: scale(14),
+  },
+  createButton: {
+    position: 'absolute',
+    bottom: scale(20),
+    right: scale(20),
+    backgroundColor: '#43B546',
+    width: scale(120),
+    height: scale(45),
+    borderRadius: scale(25),
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  createButtonText: {
+    color: '#FFFFFF',
+    fontSize: scale(14),
+    fontWeight: 'bold',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    marginVertical: scale(10),
+    borderBottomWidth: 1,
+    borderBottomColor: '#373737',
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: scale(10),
+    alignItems: 'center',
+    position: 'relative',
+  },
+  activeTabButton: {
+    // 배경색 제거
+  },
+  tabButtonText: {
+    color: '#848484',
+    fontSize: scale(14),
+    fontWeight: '500',
+  },
+  activeTabButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  tabUnderline: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: '#373737',
+  },
+  activeTabUnderline: {
+    backgroundColor: '#FFFFFF',
+  },
+  createInquiryContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: scale(20),
+  },
+  createInquiryButton: {
+    backgroundColor: '#43B546',
+    width: '100%',
+    height: scale(50),
+    borderRadius: scale(10),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  createInquiryButtonText: {
+    color: '#FFFFFF',
+    fontSize: scale(16),
     fontWeight: 'bold',
   },
   formContainer: {
@@ -302,74 +435,103 @@ const styles = StyleSheet.create({
   },
   label: {
     color: '#FFFFFF',
-    fontSize: scale(14),
+    fontSize: scale(12),
     marginBottom: scale(8),
     fontWeight: 'bold',
   },
-  titleInput: {
+  titleInputContainer: {
+    flexDirection: 'row',
+    width: '100%',
     backgroundColor: '#373737',
     borderRadius: scale(8),
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D9D9D9',
+  },
+  titleInput: {
+    flex: 1,
     padding: scale(12),
     color: '#FFFFFF',
-    fontSize: scale(14),
+    fontSize: scale(12),
+  },
+  titleCounter: {
+    paddingRight: scale(12),
+    color: '#717171',
+    fontSize: scale(11),
   },
   contentInput: {
     backgroundColor: '#373737',
     borderRadius: scale(8),
     padding: scale(12),
     color: '#FFFFFF',
-    fontSize: scale(14),
+    fontSize: scale(12),
     minHeight: scale(200),
-  },
-  readOnlyInput: {
-    backgroundColor: '#2A2A2A',
-    borderColor: '#444444',
     borderWidth: 1,
+    borderColor: '#D9D9D9',
   },
   counter: {
-    color: '#999999',
-    fontSize: scale(12),
+    color: '#717171',
+    fontSize: scale(11),
+    marginRight: scale(12),
     textAlign: 'right',
-    marginTop: scale(4),
+    marginTop: scale(7),
   },
-  submitButton: {
-    position: 'absolute',
-    bottom: scale(20),
-    left: scale(16),
-    right: scale(16),
-    backgroundColor: '#43B546',
-    height: scale(50),
-    borderRadius: scale(8),
+  bottomButtonContainer: {
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingBottom: Platform.OS === 'ios' ? scale(24) : scale(16),
+    paddingVertical: scale(12),
   },
-  disabledButton: {
-    backgroundColor: '#666666',
+  submitButton: {
+    backgroundColor: '#848484',
+    borderRadius: scale(8),
+    width: '44.5%',
+    paddingVertical: scale(10),
+    marginRight: scale(5),
   },
   submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: scale(16),
+    color: '#F6F6F6',
+    fontSize: scale(14),
     fontWeight: 'bold',
+    textAlign: 'center',
   },
-  infoContainer: {
-    marginTop: scale(5),
+  deleteButton: {
+    backgroundColor: '#40B649',
+    borderRadius: scale(8),
+    alignItems: 'center',
+    width: '44.5%',
+    paddingVertical: scale(10),
+    marginLeft: scale(5),
   },
-  infoText: {
-    color: '#999999',
-    fontSize: scale(12),
-    textAlign: 'right',
+  deleteButtonText: {
+    color: '#FFFFFF',
+    fontSize: scale(14),
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  disabledButton: {
+    opacity: 0.7,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: scale(8),
+  },
+  dateText: {
+    color: '#717171',
+    fontSize: scale(11),
   },
   answerContainer: {
     marginTop: scale(20),
-    backgroundColor: '#2E2E2E',
+    backgroundColor: '#2A2A2A',
     borderRadius: scale(8),
-    padding: scale(16),
-    borderLeftWidth: 4,
-    borderLeftColor: '#43B546',
+    padding: scale(12),
   },
   answerLabel: {
-    color: '#43B546',
-    fontSize: scale(14),
+    color: '#FFFFFF',
+    fontSize: scale(12),
     fontWeight: 'bold',
     marginBottom: scale(8),
   },
@@ -380,15 +542,15 @@ const styles = StyleSheet.create({
   },
   answerText: {
     color: '#FFFFFF',
-    fontSize: scale(14),
-    lineHeight: scale(20),
+    fontSize: scale(12),
+    lineHeight: scale(18),
   },
   answerDate: {
-    color: '#999999',
-    fontSize: scale(12),
-    marginTop: scale(10),
+    color: '#717171',
+    fontSize: scale(11),
+    marginTop: scale(8),
     textAlign: 'right',
-  },
+  }
 });
 
 export default InquiryAppDetail; 

@@ -17,6 +17,9 @@ import {scale} from '../utils/responsive';
 import IMAGES from '../utils/images';
 import {formatDateYYYYMMDD, formatDateYYYYMMDDHHII} from '../utils/commonFunctions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import CommonHeader from '../components/CommonHeader';
+import { FONTS } from '../utils/fonts';
+import CommonModal from '../components/CommonModal';
 
 const NoticesAppList = () => {
   const navigation = useNavigation();
@@ -81,114 +84,61 @@ const NoticesAppList = () => {
     setModalVisible(true);
   };
 
-  const renderNoticeItem = ({item}: {item: Notice}) => (
-    <TouchableOpacity style={styles.noticeItem} onPress={() => handleNoticePress(item)}>
-      <View style={styles.noticeContent}>
-        <View style={styles.titleContainer}>
-          <Text style={styles.noticeTitle}>{item.title}</Text>
-          {!isNoticeRead(item.notices_app_id) && (
-            <View style={styles.notificationDot} />
-          )}
+  const renderNoticeItem = ({item}: {item: Notice}) => {
+    return (
+      <TouchableOpacity style={styles.noticeItem} onPress={() => handleNoticePress(item)}>
+        <View style={styles.noticeContent}>
+          <Text style={styles.noticeType}>{item.notices_type === 'NOTICE' ? '공지' : item.notices_type === 'EVENT' ? '이벤트' : '가이드'}</Text>
+          <View style={{flexDirection: 'row', alignItems: 'center', width: scale(250)}}>
+            <Text style={styles.noticeTitle} numberOfLines={1} ellipsizeMode="tail">{item.title}</Text>
+            {!isNoticeRead(item.notices_app_id) && (
+              <View style={styles.notificationDot} />
+            )}
+            </View>
+          <Text style={styles.noticeDate}>{formatDateYYYYMMDD(item.reg_dt)}</Text>
         </View>
-        <Text style={styles.noticeDate}>{formatDateYYYYMMDD(item.reg_dt)}</Text>
-      </View>
-      <Image source={IMAGES.icons.arrowRightWhite} style={styles.arrowIcon} />
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Image source={IMAGES.icons.arrowLeftWhite} style={styles.backIcon} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>공지사항</Text>
-        <View style={styles.headerRight} />
-      </View>
+    <>
+      <CommonHeader title="공지사항" />
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#43B546" />
-        </View>
-      ) : notices.length > 0 ? (
-        <FlatList
-          data={notices}
-          renderItem={renderNoticeItem}
-          keyExtractor={(item) => item.notices_app_id.toString()}
-          contentContainerStyle={styles.listContainer}
-        />
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>등록된 공지사항이 없습니다.</Text>
-        </View>
-      )}
-
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{selectedNotice?.title}</Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.closeButtonText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.titleDivider} />
-            <ScrollView style={styles.modalScrollView}>
-              <Text style={styles.modalText}>{selectedNotice?.content}</Text>
-              <View style={styles.modalFooter}>
-                <Text style={styles.modalDate}>{selectedNotice ? formatDateYYYYMMDD(selectedNotice.reg_dt) : ''}</Text>
-              </View>
-            </ScrollView>
+      <View style={styles.container}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#43B546" />
           </View>
-        </View>
-      </Modal>
-    </View>
+        ) : notices.length > 0 ? (
+          <FlatList
+            data={notices}
+            renderItem={renderNoticeItem}
+            keyExtractor={(item) => item.notices_app_id.toString()}
+            contentContainerStyle={styles.listContainer}
+          />
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>등록된 공지사항이 없습니다.</Text>
+          </View>
+        )}
+
+        <CommonModal
+          visible={modalVisible}
+          title={selectedNotice?.title || ''}
+          content={selectedNotice?.content || ''}
+          onClose={() => setModalVisible(false)}
+        />
+      </View>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: scale(12),
     backgroundColor: '#202020',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: scale(12),
-    paddingHorizontal: scale(16),
-    borderBottomWidth: 0,
-    borderBottomColor: '#333333',
-    backgroundColor: '#202020',
-    marginTop: scale(5),
-  },
-  backButton: {
-    width: scale(30),
-    height: scale(30),
-    justifyContent: 'center',
-  },
-  backIcon: {
-    width: scale(20),
-    height: scale(20),
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: scale(14),
-    fontWeight: 'bold',
-  },
-  headerRight: {
-    width: scale(40),
   },
   loadingContainer: {
     flex: 1,
@@ -196,13 +146,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   listContainer: {
-    padding: scale(16),
+    paddingVertical: scale(16),
   },
   noticeItem: {
-    backgroundColor: '#373737',
-    borderRadius: scale(8),
-    padding: scale(16),
-    marginBottom: scale(10),
+    borderBottomWidth: 1,
+    borderBottomColor: '#333333',
+    paddingVertical: scale(14),
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -210,9 +159,10 @@ const styles = StyleSheet.create({
   noticeContent: {
     flex: 1,
   },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  noticeType: {
+    color: '#43B546',
+    fontSize: scale(12),
+    fontFamily: 'Pretendard-Bold',
   },
   notificationDot: {
     width: scale(6),
@@ -220,12 +170,13 @@ const styles = StyleSheet.create({
     borderRadius: scale(3),
     backgroundColor: '#FF0000',
     marginLeft: scale(5),
+    marginBottom: scale(15),
   },
   noticeTitle: {
     color: '#FFFFFF',
     fontSize: scale(14),
     fontWeight: 'bold',
-    marginBottom: scale(5),
+    marginVertical: scale(5),
   },
   noticeDate: {
     color: '#999999',

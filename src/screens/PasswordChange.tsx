@@ -16,6 +16,7 @@ import {scale} from '../utils/responsive';
 import IMAGES from '../utils/images';
 import CommonPopup from '../components/CommonPopup';
 import {updateMemberAppPassword} from '../api/services/membersService';
+import CommonHeader from '../components/CommonHeader';
 
 interface PasswordErrors {
   currentPassword?: string;
@@ -41,8 +42,8 @@ const PasswordChange = () => {
   };
 
   const validatePassword = (password: string): boolean => {
-    // 비밀번호는 8자 이상, 영문, 숫자, 특수문자를 포함해야 함
-    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+    // 비밀번호는 8자 이상, 대소문자, 숫자, 특수문자를 포함해야 함
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
     return passwordRegex.test(password);
   };
 
@@ -56,12 +57,12 @@ const PasswordChange = () => {
     }
 
     if (!validatePassword(newPassword)) {
-      newErrors.newPassword = '비밀번호는 8자 이상, 영문, 숫자, 특수문자를 포함해야 합니다.';
+      newErrors.newPassword = '비밀번호는 대소문자, 숫자, 특수문자를 포함한 8자리 이상이어야 합니다.';
       isValid = false;
     }
 
     if (newPassword !== confirmPassword) {
-      newErrors.confirmPassword = '새 비밀번호와 확인 비밀번호가 일치하지 않습니다.';
+      newErrors.confirmPassword = '새 비밀번호와 일치하지 않습니다.';
       isValid = false;
     }
 
@@ -85,16 +86,11 @@ const PasswordChange = () => {
       // mem_id 가져오기
       const memId = await AsyncStorage.getItem('mem_id');
       
-      if (!memId) {
-        Alert.alert('오류', '로그인 정보를 찾을 수 없습니다.');
-        setLoading(false);
-        return;
-      }
-      
       // API 호출
       const response = await updateMemberAppPassword({
         mem_id: parseInt(memId, 10),
         mem_app_password: newPassword, // 새 비밀번호 전송
+        current_password: currentPassword, // 현재 비밀번호도 전송
       });
       
       if (response.success) {
@@ -108,7 +104,15 @@ const PasswordChange = () => {
         setConfirmPassword('');
         setErrors({});
       } else {
-        Alert.alert('오류', response.message || '비밀번호 변경에 실패했습니다.');
+        // 현재 비밀번호가 맞지 않는 경우에 대한 처리
+        if (response.message && response.message.includes('비밀번호가 맞지 않습니다')) {
+          setErrors({
+            ...errors,
+            currentPassword: '현재 비밀번호가 맞지 않습니다.'
+          });
+        } else {
+          Alert.alert('오류', response.message || '비밀번호 변경에 실패했습니다.');
+        }
       }
     } catch (error) {
       Alert.alert('오류', '비밀번호 변경 중 오류가 발생했습니다.');
@@ -134,89 +138,79 @@ const PasswordChange = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleGoBack}
-        >
-          <Image source={IMAGES.icons.arrowLeftWhite} style={styles.backIcon} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>비밀번호 변경</Text>
-        <View style={styles.headerRight} />
-      </View>
+    <>
+      <CommonHeader title="비밀번호 변경" />
+      <View style={styles.container}>
+        <View style={{flexGrow: 1}}>
+          <View style={styles.formGroup}>
+            <Text style={styles.desc}>주기적으로 비밀번호를 변경하는 것이 안전합니다.{'\n'}<Text style={{color: '#F04D4D'}}>새로운 비밀번호</Text>를 입력해 주세요.</Text>
+            <Text style={styles.label}>현재 비밀번호</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[styles.input]}
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                placeholder="현재 비밀번호를 입력해 주세요."
+                placeholderTextColor="#373737"
+                secureTextEntry={!showCurrentPassword}
+              />
+              <TouchableOpacity 
+                style={styles.eyeIcon} 
+                onPress={toggleShowCurrentPassword}
+              >
+                <Text style={styles.eyeText}>{showCurrentPassword ? '숨기기' : '보기'}</Text>
+              </TouchableOpacity>
+            </View>
+            {errors.currentPassword && (
+              <Text style={styles.errorText}>{errors.currentPassword}</Text>
+            )}
 
-      <ScrollView 
-        style={styles.contentContainer}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>현재 비밀번호</Text>
-          <View style={styles.passwordContainer}>
-            <TextInput
-              style={[styles.input, errors.currentPassword && styles.inputError]}
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              placeholder="현재 비밀번호 입력"
-              placeholderTextColor="#999999"
-              secureTextEntry={!showCurrentPassword}
-            />
-            <TouchableOpacity 
-              style={styles.eyeIcon} 
-              onPress={toggleShowCurrentPassword}
-            >
-              <Text style={styles.eyeText}>{showCurrentPassword ? '숨기기' : '보기'}</Text>
-            </TouchableOpacity>
-          </View>
-          {errors.currentPassword && (
-            <Text style={styles.errorText}>{errors.currentPassword}</Text>
-          )}
+            <Text style={[styles.label, {marginTop: scale(40)}]}>새로운 비밀번호</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[styles.input]}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="새로운 비밀번호를 입력해 주세요."
+                placeholderTextColor="#373737"
+                secureTextEntry={!showNewPassword}
+              />
+              <TouchableOpacity 
+                style={styles.eyeIcon} 
+                onPress={toggleShowNewPassword}
+              >
+                <Text style={styles.eyeText}>{showNewPassword ? '숨기기' : '보기'}</Text>
+              </TouchableOpacity>
+            </View>
+            {errors.newPassword ? (
+              <Text style={styles.errorText}>{errors.newPassword}</Text>
+            ) : (
+              <Text style={styles.helperText}>
+                대소문자+숫자+특수분자 8자리 이상
+              </Text>
+            )}
 
-          <Text style={[styles.label, {marginTop: scale(20)}]}>새 비밀번호</Text>
-          <View style={styles.passwordContainer}>
-            <TextInput
-              style={[styles.input, errors.newPassword && styles.inputError]}
-              value={newPassword}
-              onChangeText={setNewPassword}
-              placeholder="새 비밀번호 입력"
-              placeholderTextColor="#999999"
-              secureTextEntry={!showNewPassword}
-            />
-            <TouchableOpacity 
-              style={styles.eyeIcon} 
-              onPress={toggleShowNewPassword}
-            >
-              <Text style={styles.eyeText}>{showNewPassword ? '숨기기' : '보기'}</Text>
-            </TouchableOpacity>
+            <Text style={[styles.label, {marginTop: scale(40)}]}>비밀번호 확인</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[styles.input]}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="새로운 비밀번호를 다시 입력해 주세요."
+                placeholderTextColor="#373737"
+                secureTextEntry={!showConfirmPassword}
+              />
+              <TouchableOpacity 
+                style={styles.eyeIcon} 
+                onPress={toggleShowConfirmPassword}
+              >
+                <Text style={styles.eyeText}>{showConfirmPassword ? '숨기기' : '보기'}</Text>
+              </TouchableOpacity>
+            </View>
+            {errors.confirmPassword && (
+              <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+            )}
           </View>
-          {errors.newPassword ? (
-            <Text style={styles.errorText}>{errors.newPassword}</Text>
-          ) : (
-            <Text style={styles.helperText}>
-              비밀번호는 8자 이상, 영문, 숫자, 특수문자를 포함해야 합니다.
-            </Text>
-          )}
-
-          <Text style={[styles.label, {marginTop: scale(20)}]}>새 비밀번호 확인</Text>
-          <View style={styles.passwordContainer}>
-            <TextInput
-              style={[styles.input, errors.confirmPassword && styles.inputError]}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              placeholder="새 비밀번호 확인"
-              placeholderTextColor="#999999"
-              secureTextEntry={!showConfirmPassword}
-            />
-            <TouchableOpacity 
-              style={styles.eyeIcon} 
-              onPress={toggleShowConfirmPassword}
-            >
-              <Text style={styles.eyeText}>{showConfirmPassword ? '숨기기' : '보기'}</Text>
-            </TouchableOpacity>
-          </View>
-          {errors.confirmPassword && (
-            <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-          )}
         </View>
 
         <TouchableOpacity
@@ -224,21 +218,18 @@ const PasswordChange = () => {
           onPress={handleChangePassword}
           disabled={loading}
         >
-          {loading ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={styles.submitButtonText}>비밀번호 변경</Text>
-          )}
+          <Text style={styles.submitButtonText}>비밀번호 변경</Text>
         </TouchableOpacity>
-      </ScrollView>
 
-      <CommonPopup
-        visible={popupVisible}
-        message={popupMessage}
-        onConfirm={handlePopupConfirm}
-        confirmText="확인"
-      />
-    </View>
+        <CommonPopup
+          visible={popupVisible}
+          message={popupMessage}
+          onConfirm={handlePopupConfirm}
+          confirmText="확인"
+        />
+
+      </View>
+    </>
   );
 };
 
@@ -246,65 +237,37 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#202020',
+    paddingHorizontal: scale(12),
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: scale(12),
-    paddingHorizontal: scale(16),
-    borderBottomWidth: 0,
-    borderBottomColor: '#333333',
-    backgroundColor: '#202020',
-    marginTop: scale(5),
-  },
-  backButton: {
-    width: scale(30),
-    height: scale(30),
-    justifyContent: 'center',
-  },
-  backIcon: {
-    width: scale(20),
-    height: scale(20),
-  },
-  headerTitle: {
+  desc: {
     color: '#FFFFFF',
-    fontSize: scale(14),
-    fontWeight: 'bold',
-  },
-  headerRight: {
-    width: scale(40),
-  },
-  contentContainer: {
-    flex: 1,
-    padding: scale(16),
+    fontSize: scale(12),
+    marginVertical: scale(20),
   },
   formGroup: {
     marginBottom: scale(20),
   },
   label: {
     color: '#FFFFFF',
-    fontSize: scale(12),
+    fontSize: scale(14),
     marginBottom: scale(8),
     fontWeight: 'bold',
   },
   passwordContainer: {
-    position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#444444',
   },
   input: {
     flex: 1,
-    backgroundColor: '#373737',
-    borderRadius: scale(8),
-    padding: scale(12),
+    paddingVertical: scale(12),
     color: '#FFFFFF',
     fontSize: scale(12),
   },
   eyeIcon: {
-    position: 'absolute',
-    right: scale(10),
     padding: scale(5),
+    marginLeft: scale(10),
   },
   eyeText: {
     color: '#43B546',
@@ -315,26 +278,25 @@ const styles = StyleSheet.create({
     borderColor: '#FF4444',
   },
   errorText: {
-    color: '#FF4444',
+    color: '#F04D4D',
     fontSize: scale(10),
     marginTop: scale(4),
   },
   helperText: {
-    color: '#999999',
+    color: '#B4B4B4',
     fontSize: scale(10),
     marginTop: scale(4),
   },
   submitButton: {
-    backgroundColor: '#43B546',
-    height: scale(50),
+    backgroundColor: '#40B649',
     borderRadius: scale(8),
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: scale(20),
     marginBottom: scale(40),
+    paddingVertical: scale(12),
   },
   disabledButton: {
-    backgroundColor: '#666666',
+    opacity: 0.7,
   },
   submitButtonText: {
     color: '#FFFFFF',

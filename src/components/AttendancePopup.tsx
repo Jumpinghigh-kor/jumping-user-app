@@ -12,12 +12,13 @@ import {
 } from 'react-native';
 import {scale} from '../utils/responsive';
 import {useAuth} from '../hooks/useAuth';
-import {insertMemberExercise, getMemberExerciseInfo, updateMemberExercise} from '../api/services/memberExercise';
+import {insertMemberExercise, getMemberExerciseInfo, updateMemberExercise} from '../api/services/memberExerciseService';
 
 interface AttendancePopupProps {
   visible: boolean;
   date?: string;
   onClose: () => void;
+  onExerciseInfoUpdated?: () => void;
 }
 
 // 셀렉트 박스 옵션 컴포넌트
@@ -44,6 +45,7 @@ const AttendancePopup: React.FC<AttendancePopupProps> = ({
   visible,
   date,
   onClose,
+  onExerciseInfoUpdated
 }) => {
   const {memberInfo} = useAuth();
   const [intensityLevel, setIntensityLevel] = useState<string>('저강도');
@@ -188,7 +190,13 @@ const AttendancePopup: React.FC<AttendancePopupProps> = ({
         Alert.alert('성공', message, [
           {
             text: '확인',
-            onPress: onClose,
+            onPress: () => {
+              // 운동 정보 업데이트 콜백 호출
+              if (onExerciseInfoUpdated) {
+                onExerciseInfoUpdated();
+              }
+              onClose();
+            },
           },
         ]);
         break;

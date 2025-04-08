@@ -7,11 +7,14 @@ import Attendance from '../screens/Attendance';
 import AttendanceRecord from '../screens/AttendanceRecord';
 import NoticesAppList from '../screens/NoticesAppList';
 import InquiryList from '../screens/InquiryList';
-import InquiryRegister from '../screens/InquiryRegister';
 import InquiryDetail from '../screens/InquiryDetail';
 import Settings from '../screens/Settings';
 import PasswordChange from '../screens/PasswordChange';
 import SignUp from '../screens/SignUp';
+import ShoppingDetail from '../screens/ShoppingDetail';
+import ShoppingMypage from '../screens/ShoppingMypage';
+import ShoppingZZim from '../screens/ShoppingZZim';
+import ShoppingSearch from '../screens/ShoppingSearch';
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -30,6 +33,10 @@ export type AuthStackParamList = {
   };
   Settings: undefined;
   PasswordChange: undefined;
+  ShoppingDetail: undefined;
+  ShoppingMypage: undefined;
+  ShoppingZZim: undefined;
+  ShoppingSearch: undefined;
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -88,11 +95,6 @@ const AuthStackNavigator = () => {
         options={{headerShown: false}}
       />
       <Stack.Screen
-        name="InquiryRegister"
-        component={InquiryRegister}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
         name="InquiryDetail"
         component={InquiryDetail}
         options={{headerShown: false}}
@@ -105,6 +107,26 @@ const AuthStackNavigator = () => {
       <Stack.Screen
         name="PasswordChange"
         component={PasswordChange}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingDetail"
+        component={ShoppingDetail}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingMypage"
+        component={ShoppingMypage}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingZZim"
+        component={ShoppingZZim}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingSearch"
+        component={ShoppingSearch}
         options={{headerShown: false}}
       />
     </Stack.Navigator>

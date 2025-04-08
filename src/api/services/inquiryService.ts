@@ -70,3 +70,23 @@ export const updateInquiry = async (params: UpdateInquiryRequest): Promise<Updat
     throw error;
   }
 }; 
+
+// 문의사항 삭제 API
+export interface DeleteInquiryRequest {
+  inquiry_app_id: number;
+  mem_id: number;
+}
+
+export interface DeleteInquiryResponse {
+  success: boolean;
+  message?: string;
+}
+
+export const deleteInquiry = async (params: DeleteInquiryRequest): Promise<DeleteInquiryResponse> => {
+  try {
+    const response = await axiosInstance.post('/inquiry-app/deleteInquiryApp', params);
+    return response.data;
+  } catch (error: any) {
+    throw error;
+  }
+}; 

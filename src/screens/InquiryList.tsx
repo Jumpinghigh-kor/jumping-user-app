@@ -11,7 +11,6 @@ import {
   Alert,
   Image,
   TextInput,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
@@ -23,11 +22,13 @@ import {formatDateYYYYMMDD} from '../utils/commonFunctions';
 import type {AuthStackParamList} from '../navigation/AuthStackNavigator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CommonPopup from '../components/CommonPopup';
+import ProfileImagePicker from '../components/ProfileImagePicker';
+import { useProfileImage } from '../hooks/useProfileImage';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList>;
 
-const MAX_TITLE_LENGTH = 300; // varchar(300) 제한
-const MAX_CONTENT_LENGTH = 1000;
+const MAX_TITLE_LENGTH = 20; // 제목 최대 글자수 수정
+const MAX_CONTENT_LENGTH = 3000; // 내용 최대 글자수 수정
 
 const InquiryList = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -35,7 +36,8 @@ const InquiryList = () => {
   const [loading, setLoading] = useState(true);
   const [readInquiries, setReadInquiries] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<'createInquiry' | 'myInquiries'>('createInquiry');
-  
+  const [memId, setMemId] = useState<string | null>(null);
+
   // 문의하기 관련 상태
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -43,10 +45,14 @@ const InquiryList = () => {
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
 
+
   useFocusEffect(
     React.useCallback(() => {
       loadInquiries();
       loadReadInquiries();
+      AsyncStorage.getItem('mem_id').then(id => {
+        if (id) setMemId(id);
+      });
     }, [])
   );
 
@@ -116,7 +122,7 @@ const InquiryList = () => {
 
   const handleSubmit = async () => {
     if (isSubmitting) {
-      return; // 중복 클릭 방지
+      return;
     }
     
     if (!validateForm()) return;
@@ -124,8 +130,6 @@ const InquiryList = () => {
     try {
       setIsSubmitting(true);
       setLoading(true);
-      
-      const memId = await AsyncStorage.getItem('mem_id');
       
       if (!memId) {
         Alert.alert('알림', '로그인이 필요합니다.');
@@ -162,20 +166,26 @@ const InquiryList = () => {
     loadInquiries();
   };
 
-  const renderInquiryItem = ({item}: {item: Inquiry}) => (
-    <TouchableOpacity style={styles.inquiryItem} onPress={() => handleInquiryPress(item)}>
-      <View style={styles.inquiryContent}>
-        <View style={styles.titleContainer}>
-          <Text style={styles.inquiryTitle}>{item.title}</Text>
-          {item.answer && !isInquiryRead(item.inquiry_app_id) && (
-            <View style={styles.notificationDot} />
-          )}
+  const renderInquiryItem = ({item}: {item: Inquiry}) => {
+    return (
+      <TouchableOpacity style={styles.inquiryItem} onPress={() => handleInquiryPress(item)}>
+        <View style={styles.inquiryContent}>
+          <View style={styles.titleContainer}>
+            <View style={{flexDirection: 'row', alignItems: 'center', width: scale(200)}}>
+              <Text style={styles.inquiryTitle} numberOfLines={1} ellipsizeMode="tail">{item.title}</Text>
+              {item.answer && !isInquiryRead(item.inquiry_app_id) && (
+                <View style={styles.notificationDot} />
+              )}
+            </View>
+            <Text style={styles.inquiryDate}>{formatDateYYYYMMDD(item.reg_dt)}</Text>
+          </View>
         </View>
-        <Text style={styles.inquiryDate}>{formatDateYYYYMMDD(item.reg_dt)}</Text>
-      </View>
-      <Image source={IMAGES.icons.arrowRightWhite} style={styles.arrowIcon} />
-    </TouchableOpacity>
-  );
+        <View style={[styles.statusContainer, {borderColor: item.answer ? '#F04D4D' : '#B4B4B4', backgroundColor: item.answer ? '#F04D4D' : ''}]}>
+          <Text style={[styles.statusText, {color: item.answer ? '#FFFFFF' : '#B4B4B4'}]}>{item.answer ? '답변완료' : '접수'}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderTabContent = () => {
     if (activeTab === 'myInquiries') {
@@ -201,69 +211,71 @@ const InquiryList = () => {
       );
     } else {
       return (
-        <ScrollView
-          style={styles.formContainer}
-          contentContainerStyle={styles.formContentContainer}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>제목</Text>
-            <TextInput
-              style={styles.titleInput}
-              value={title}
-              onChangeText={setTitle}
-              placeholder="제목을 입력해주세요 (최대 300자)"
-              placeholderTextColor="#999999"
-              maxLength={MAX_TITLE_LENGTH}
-            />
-            <Text style={styles.counter}>
-              {title.length}/{MAX_TITLE_LENGTH}
-            </Text>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>내용</Text>
-            <TextInput
-              style={styles.contentInput}
-              value={content}
-              onChangeText={(text) => {
-                if (text.length <= MAX_CONTENT_LENGTH) {
-                  setContent(text);
-                }
-              }}
-              placeholder="문의 내용을 입력해주세요"
-              placeholderTextColor="#999999"
-              multiline
-              textAlignVertical="top"
-              maxLength={MAX_CONTENT_LENGTH}
-            />
-            <Text style={styles.counter}>
-              {content.length}/{MAX_CONTENT_LENGTH}
-            </Text>
-          </View>
-
-      <TouchableOpacity 
-            style={[styles.submitButton, (loading || isSubmitting) && styles.disabledButton]}
-            onPress={handleSubmit}
-            disabled={loading || isSubmitting}
+        <>
+          <ScrollView
+            style={styles.formContainer}
+            contentContainerStyle={styles.formContentContainer}
+            keyboardShouldPersistTaps="handled"
           >
-            {loading || isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.submitButtonText}>등록하기</Text>
-            )}
-          </TouchableOpacity>
-        </ScrollView>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>문의 제목<Text style={{color: '#FF0000'}}> *</Text></Text>
+              <View style={styles.titleInputContainer}>
+                <TextInput
+                  style={styles.titleInput}
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="제목을 입력해주세요 (20자 이내)"
+                  placeholderTextColor="#717171"
+                  maxLength={MAX_TITLE_LENGTH}
+                />
+                <Text style={styles.titleCounter}>
+                  <Text style={{color: '#4C78E0'}}>{title.length}</Text> / {MAX_TITLE_LENGTH}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>문의 내용<Text style={{color: '#FF0000'}}> *</Text></Text>
+              <TextInput
+                style={styles.contentInput}
+                value={content}
+                onChangeText={(text) => {
+                  if (text.length <= MAX_CONTENT_LENGTH) {
+                    setContent(text);
+                  }
+                }}
+                placeholder="문의 내용을 입력해주세요"
+                placeholderTextColor="#717171"
+                multiline
+                textAlignVertical="top"
+                maxLength={MAX_CONTENT_LENGTH}
+              />
+              <Text style={styles.counter}>
+                <Text style={{color: '#4C78E0'}}>{content.length}</Text> / {MAX_CONTENT_LENGTH}
+              </Text>
+            </View>
+          </ScrollView>
+
+          <View style={styles.bottomButtonContainer}>
+            <TouchableOpacity 
+              style={[styles.submitButton, (loading || isSubmitting) && styles.disabledButton]}
+              onPress={handleSubmit}
+              disabled={loading || isSubmitting}
+            >
+              {loading || isSubmitting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.submitButtonText}>문의접수</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </>
       );
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-    >
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -303,7 +315,7 @@ const InquiryList = () => {
           <Text style={[
             styles.tabButtonText,
             activeTab === 'myInquiries' && styles.activeTabButtonText
-          ]}>내 문의 내역</Text>
+          ]}>문의내역</Text>
           <View style={[
             styles.tabUnderline, 
             activeTab === 'myInquiries' && styles.activeTabUnderline
@@ -319,7 +331,7 @@ const InquiryList = () => {
         onConfirm={handlePopupConfirm}
         confirmText="확인"
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 
@@ -365,20 +377,16 @@ const styles = StyleSheet.create({
     padding: scale(16),
   },
   inquiryItem: {
-    backgroundColor: '#373737',
-    borderRadius: scale(8),
-    padding: scale(16),
-    marginBottom: scale(10),
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: scale(12),
+    marginBottom: scale(10),
   },
   inquiryContent: {
     flex: 1,
   },
   titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   notificationDot: {
     width: scale(6),
@@ -386,6 +394,7 @@ const styles = StyleSheet.create({
     borderRadius: scale(3),
     backgroundColor: '#FF0000',
     marginLeft: scale(5),
+    marginBottom: scale(15),
   },
   inquiryTitle: {
     color: '#FFFFFF',
@@ -397,10 +406,14 @@ const styles = StyleSheet.create({
     color: '#999999',
     fontSize: scale(10),
   },
-  arrowIcon: {
-    width: scale(16),
-    height: scale(16),
-    tintColor: '#999999',
+  statusContainer: {
+    borderWidth: 1,
+    borderRadius: scale(20),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(3),
+  },
+    statusText: {
+    fontSize: scale(12), 
   },
   emptyContainer: {
     flex: 1,
@@ -498,45 +511,66 @@ const styles = StyleSheet.create({
   },
   label: {
     color: '#FFFFFF',
-    fontSize: scale(14),
+    fontSize: scale(12),
     marginBottom: scale(8),
     fontWeight: 'bold',
   },
-  titleInput: {
+  titleInputContainer: {
+    flexDirection: 'row',
+    width: '100%',
     backgroundColor: '#373737',
     borderRadius: scale(8),
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D9D9D9',
+  },
+  titleInput: {
+    flex: 1,
     padding: scale(12),
     color: '#FFFFFF',
-    fontSize: scale(14),
+    fontSize: scale(12),
+  },
+  titleCounter: {
+    paddingRight: scale(12),
+    color: '#717171',
+    fontSize: scale(11),
   },
   contentInput: {
     backgroundColor: '#373737',
     borderRadius: scale(8),
     padding: scale(12),
     color: '#FFFFFF',
-    fontSize: scale(14),
+    fontSize: scale(12),
     minHeight: scale(200),
+    borderWidth: 1,
+    borderColor: '#D9D9D9',
   },
   counter: {
-    color: '#999999',
-    fontSize: scale(12),
+    color: '#717171',
+    fontSize: scale(11),
+    marginRight: scale(12),
     textAlign: 'right',
-    marginTop: scale(4),
+    marginTop: scale(7),
   },
   submitButton: {
-    backgroundColor: '#43B546',
+    backgroundColor: '#40B649',
     borderRadius: scale(8),
-    padding: scale(16),
+    padding: scale(12),
     alignItems: 'center',
-    marginTop: scale(20),
   },
   submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: scale(16),
+    color: '#F6F6F6',
+    fontSize: scale(14),
     fontWeight: 'bold',
   },
   disabledButton: {
     opacity: 0.7,
+  },
+  bottomButtonContainer: {
+    width: '100%',
+    padding: scale(16),
+    paddingBottom: Platform.OS === 'ios' ? scale(24) : scale(16),
+    backgroundColor: '#202020',
   },
 });
 

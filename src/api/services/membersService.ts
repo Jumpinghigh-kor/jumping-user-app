@@ -26,6 +26,7 @@ interface MemberInfoRequest {
 export interface UpdatePasswordRequest {
   mem_id: number;
   mem_app_password: string;
+  current_password?: string;
 }
 
 export interface UpdatePasswordResponse {

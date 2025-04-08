@@ -22,7 +22,7 @@ import IMAGES from '../utils/images';
 import CommonHeader from '../components/CommonHeader';
 import ExerciseSummary from '../components/ExerciseSummary';
 import AttendancePopup from '../components/AttendancePopup';
-import {getMemberExerciseList} from '../api/services/memberExercise';
+import {getMemberExerciseList} from '../api/services/memberExerciseService';
 import {useAuth} from '../hooks/useAuth';
 
 type RootStackParamList = {
@@ -371,48 +371,49 @@ const AttendanceRecord = () => {
   );
 
   return (
-    <ScrollView
-      style={styles.container}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{paddingBottom: scale(40)}}
-    >
+    <>
       <CommonHeader title="출석 기록" />
-      {renderCalendar()}
-      
-      {/* 월별 누적 운동량 컴포넌트 추가 */}
-      <ExerciseSummary 
-        data={accumulatedData} 
-        title={`${selectedDate.getMonth() + 1}월 누적 운동량`}
-      />
-      
-      <TouchableOpacity 
-        style={styles.attendanceButton}
-        onPress={() => navigation.navigate('MainTab', { screen: 'Attendance' })}
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{paddingBottom: scale(40)}}
       >
-        <Text style={styles.attendanceButtonText}>출석하러 가기</Text>
-      </TouchableOpacity>
+        {renderCalendar()}
+        
+        {/* 월별 누적 운동량 컴포넌트 추가 */}
+        <ExerciseSummary 
+          data={accumulatedData} 
+          title={`${selectedDate.getMonth() + 1}월 누적 운동량`}
+        />
+        
+        <TouchableOpacity 
+          style={styles.attendanceButton}
+          onPress={() => navigation.navigate('MainTab', { screen: 'Attendance' })}
+        >
+          <Text style={styles.attendanceButtonText}>출석하러 가기</Text>
+        </TouchableOpacity>
 
-      {/* 운동 정보 팝업 */}
-      <AttendancePopup
-        visible={showAttendancePopup}
-        date={clickedDate}
-        onClose={() => setShowAttendancePopup(false)}
-      />
-    </ScrollView>
+        {/* 운동 정보 팝업 */}
+        <AttendancePopup
+          visible={showAttendancePopup}
+          date={clickedDate}
+          onClose={() => setShowAttendancePopup(false)}
+        />
+      </ScrollView>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#242527',
-    padding: 16,
+    backgroundColor: '#202020',
+    padding: scale(16),
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#242527',
   },
   header: {
     flexDirection: 'row',
@@ -432,7 +433,7 @@ const styles = StyleSheet.create({
   },
   weekDays: {
     flexDirection: 'row',
-    marginBottom: 10,
+    marginBottom: scale(10),
   },
   weekDayText: {
     flex: 1,

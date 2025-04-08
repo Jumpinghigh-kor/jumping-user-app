@@ -3,6 +3,7 @@ import {axiosInstance} from '../config/axiosConfig';
 // 공지사항 타입 정의
 export interface Notice {
   notices_app_id: number;
+  notices_type: string;
   title: string;
   content: string;
   reg_dt: string;

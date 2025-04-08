@@ -11,6 +11,7 @@ import {
   Alert,
   Modal,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -23,12 +24,19 @@ import type {AuthStackParamList} from '../navigation/AuthStackNavigator';
 import CommonPopup from '../components/CommonPopup';
 import AttendancePopup from '../components/AttendancePopup';
 import LinearGradient from 'react-native-linear-gradient';
-import {getMemberExerciseInfo, getMemberExerciseList} from '../api/services/memberExercise';
+import {getMemberExerciseInfo, getMemberExerciseList} from '../api/services/memberExerciseService';
 import IMAGES from '../utils/images';
 import { useProfileImage } from '../hooks/useProfileImage';
 import ProfileImagePicker from '../components/ProfileImagePicker';
+import BannerImagePicker from '../components/BannerImagePicker';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList>;
+
+// 배너 아이템 인터페이스 정의
+interface BannerItem {
+  imageUrl: string;
+  linkUrl: string;
+}
 
 const Home = () => {
   const insets = useSafeAreaInsets();
@@ -50,9 +58,164 @@ const Home = () => {
     averageHeartRate: 0,
   });
   const ref = useRef<ScrollView>(null);
-  const [bannerImages, setBannerImages] = useState<string[]>([]);
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-  const [loadingBanner, setLoadingBanner] = useState(false);
+
+  // 운동 정보 새로고침 함수
+  const refreshExerciseData = React.useCallback(async () => {
+    if (memberInfo?.mem_id) {
+      try {
+        setIsLoading(true);
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth() + 1;
+        
+        // 현재 월의 yearMonth 포맷 생성 (YYYYMM)
+        const yearMonth = `${year}${month < 10 ? '0' + month : month}`;
+        
+        // 선택된 기간 값을 영어로 변환
+        let periodValue = 'day';
+        switch (selectedPeriod) {
+          case '일':
+            periodValue = 'day';
+            break;
+          case '주':
+            periodValue = 'week';
+            break;
+          case '월':
+            periodValue = 'month';
+            break;
+          case '연':
+            periodValue = 'year';
+            break;
+          default:
+            periodValue = 'day';
+        }
+        
+        // 운동 정보 API 호출 (기간 값 전달)
+        const response = await getMemberExerciseList(Number(memberInfo.mem_id), yearMonth, periodValue);
+        
+        if (response.success) {
+          setExerciseData(Array.isArray(response.data) ? response.data || [] : [response.data || {}]);
+        }
+
+        // 누적 운동량 데이터 가져오기
+        const allDataResponse = await getMemberExerciseList(Number(memberInfo.mem_id), 'all_date');
+        
+        if (allDataResponse.success) {
+          
+          const allExerciseData = Array.isArray(allDataResponse.data) ? allDataResponse.data || [] : [allDataResponse.data || {}];
+          
+          // 누적 데이터 계산
+          let totalCalories = 0;
+          let totalDistance = 0;
+          let totalHeartRate = 0;
+          let heartRateCount = 0;
+          
+          allExerciseData.forEach(data => {
+            // 칼로리 계산
+            let baseCalories = 0;
+            switch (data.intensity_level) {
+              case 'LOW':
+                baseCalories = 300;
+                break;
+              case 'MODERATE':
+                baseCalories = 400;
+                break;
+              case 'HIGH':
+                baseCalories = 500;
+                break;
+              default:
+                baseCalories = 0;
+            }
+            
+            // 운동 시간에 따른 칼로리 조정
+            if (data.exercise_time) {
+              const hours = parseInt(data.exercise_time.substring(0, 2), 10);
+              const minutes = parseInt(data.exercise_time.substring(2, 4), 10);
+              const totalMinutes = hours * 60 + minutes;
+              
+              const timeRatio = totalMinutes / 60;
+              totalCalories += Math.round(baseCalories * timeRatio);
+            } else {
+              totalCalories += baseCalories;
+            }
+            
+            // 뛴거리 계산
+            let baseDistance = 0;
+            switch (data.intensity_level) {
+              case 'LOW':
+                baseDistance = 1.5;
+                break;
+              case 'MODERATE':
+                baseDistance = 4.5;
+                break;
+              case 'HIGH':
+                baseDistance = 9.5;
+                break;
+              default:
+                baseDistance = 0;
+            }
+            
+            // 운동 시간에 따른 거리 조정
+            if (data.exercise_time) {
+              const hours = parseInt(data.exercise_time.substring(0, 2), 10);
+              const minutes = parseInt(data.exercise_time.substring(2, 4), 10);
+              const totalMinutes = hours * 60 + minutes;
+              
+              const timeRatio = totalMinutes / 60;
+              totalDistance += baseDistance * timeRatio;
+            } else {
+              totalDistance += baseDistance;
+            }
+            
+            // 심박수 계산
+            let heartRate = 0;
+            if (data.heart_rate && parseInt(data.heart_rate, 10) > 0) {
+              heartRate = parseInt(data.heart_rate, 10);
+            } else {
+              switch (data.intensity_level) {
+                case 'LOW':
+                  heartRate = 110;
+                  break;
+                case 'MODERATE':
+                  heartRate = 135;
+                  break;
+                case 'HIGH':
+                  heartRate = 165;
+                  break;
+                default:
+                  heartRate = 0;
+              }
+            }
+            
+            if (heartRate > 0) {
+              totalHeartRate += heartRate;
+              heartRateCount++;
+            }
+          });
+          
+          // 평균 심박수 계산
+          const averageHeartRate = heartRateCount > 0 ? Math.round(totalHeartRate / heartRateCount) : 0;
+          
+          // 누적 데이터 설정
+          setAccumulatedData({
+            totalCalories,
+            totalDistance,
+            averageHeartRate,
+          });
+        }
+      } catch (error) {
+        console.error('운동 정보 조회 실패:', error);
+        // 오류 발생 시 사용자에게 알림
+        if (Platform.OS === 'android') {
+          ToastAndroid.show('운동 정보를 불러오는데 실패했습니다.', ToastAndroid.SHORT);
+        } else {
+          Alert.alert('알림', '운동 정보를 불러오는데 실패했습니다.');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  }, [memberInfo, selectedPeriod]);
 
   // 프로필 이미지 로드
   useFocusEffect(
@@ -267,165 +430,8 @@ const Home = () => {
   // 운동 정보 가져오기
   useFocusEffect(
     React.useCallback(() => {
-      const fetchExerciseData = async () => {
-        if (memberInfo?.mem_id) {
-          try {
-            setIsLoading(true);
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = today.getMonth() + 1;
-            
-            // 현재 월의 yearMonth 포맷 생성 (YYYYMM)
-            const yearMonth = `${year}${month < 10 ? '0' + month : month}`;
-            
-            // 선택된 기간 값을 영어로 변환
-            let periodValue = 'day';
-            switch (selectedPeriod) {
-              case '일':
-                periodValue = 'day';
-                break;
-              case '주':
-                periodValue = 'week';
-                break;
-              case '월':
-                periodValue = 'month';
-                break;
-              case '연':
-                periodValue = 'year';
-                break;
-              default:
-                periodValue = 'day';
-            }
-            
-            // 운동 정보 API 호출 (기간 값 전달)
-            const response = await getMemberExerciseList(Number(memberInfo.mem_id), yearMonth, periodValue);
-            
-            if (response.success) {
-              setExerciseData(Array.isArray(response.data) ? response.data || [] : [response.data || {}]);
-            }
-
-            // 누적 운동량 데이터 가져오기
-            const allDataResponse = await getMemberExerciseList(Number(memberInfo.mem_id), 'all_date');
-            
-            if (allDataResponse.success) {
-              
-              const allExerciseData = Array.isArray(allDataResponse.data) ? allDataResponse.data || [] : [allDataResponse.data || {}];
-              
-              // 누적 데이터 계산
-              let totalCalories = 0;
-              let totalDistance = 0;
-              let totalHeartRate = 0;
-              let heartRateCount = 0;
-              
-              allExerciseData.forEach(data => {
-                // 칼로리 계산
-                let baseCalories = 0;
-                switch (data.intensity_level) {
-                  case 'LOW':
-                    baseCalories = 300;
-                    break;
-                  case 'MODERATE':
-                    baseCalories = 400;
-                    break;
-                  case 'HIGH':
-                    baseCalories = 500;
-                    break;
-                  default:
-                    baseCalories = 0;
-                }
-                
-                // 운동 시간에 따른 칼로리 조정
-                if (data.exercise_time) {
-                  const hours = parseInt(data.exercise_time.substring(0, 2), 10);
-                  const minutes = parseInt(data.exercise_time.substring(2, 4), 10);
-                  const totalMinutes = hours * 60 + minutes;
-                  
-                  const timeRatio = totalMinutes / 60;
-                  totalCalories += Math.round(baseCalories * timeRatio);
-                } else {
-                  totalCalories += baseCalories;
-                }
-                
-                // 뛴거리 계산
-                let baseDistance = 0;
-                switch (data.intensity_level) {
-                  case 'LOW':
-                    baseDistance = 1.5;
-                    break;
-                  case 'MODERATE':
-                    baseDistance = 4.5;
-                    break;
-                  case 'HIGH':
-                    baseDistance = 9.5;
-                    break;
-                  default:
-                    baseDistance = 0;
-                }
-                
-                // 운동 시간에 따른 거리 조정
-                if (data.exercise_time) {
-                  const hours = parseInt(data.exercise_time.substring(0, 2), 10);
-                  const minutes = parseInt(data.exercise_time.substring(2, 4), 10);
-                  const totalMinutes = hours * 60 + minutes;
-                  
-                  const timeRatio = totalMinutes / 60;
-                  totalDistance += baseDistance * timeRatio;
-                } else {
-                  totalDistance += baseDistance;
-                }
-                
-                // 심박수 계산
-                let heartRate = 0;
-                if (data.heart_rate && parseInt(data.heart_rate, 10) > 0) {
-                  heartRate = parseInt(data.heart_rate, 10);
-                } else {
-                  switch (data.intensity_level) {
-                    case 'LOW':
-                      heartRate = 110;
-                      break;
-                    case 'MODERATE':
-                      heartRate = 135;
-                      break;
-                    case 'HIGH':
-                      heartRate = 165;
-                      break;
-                    default:
-                      heartRate = 0;
-                  }
-                }
-                
-                if (heartRate > 0) {
-                  totalHeartRate += heartRate;
-                  heartRateCount++;
-                }
-              });
-              
-              // 평균 심박수 계산
-              const averageHeartRate = heartRateCount > 0 ? Math.round(totalHeartRate / heartRateCount) : 0;
-              
-              // 누적 데이터 설정
-              setAccumulatedData({
-                totalCalories,
-                totalDistance,
-                averageHeartRate,
-              });
-            }
-          } catch (error) {
-            console.error('운동 정보 조회 실패:', error);
-            // 오류 발생 시 사용자에게 알림
-            if (Platform.OS === 'android') {
-              ToastAndroid.show('운동 정보를 불러오는데 실패했습니다.', ToastAndroid.SHORT);
-            } else {
-              Alert.alert('알림', '운동 정보를 불러오는데 실패했습니다.');
-            }
-          } finally {
-            setIsLoading(false);
-          }
-        }
-      };
-
-      fetchExerciseData();
-    }, [memberInfo, selectedPeriod]),
+      refreshExerciseData();
+    }, [refreshExerciseData]),
   );
 
   // 출석 기록 가져오기
@@ -1130,7 +1136,7 @@ const Home = () => {
         <View
           style={[
             styles.header,
-            {paddingTop: Platform.OS === 'ios' ? insets.top : 16},
+            {paddingTop: Platform.OS === 'ios' ? insets.top : scale(16)},
           ]}>
           <View style={styles.emptySpace} />
           <View style={styles.profileSection}>
@@ -1152,7 +1158,7 @@ const Home = () => {
         </View>
 
         <View style={styles.contentSection}>
-          <View style={styles.banner}></View>
+          <BannerImagePicker bannerLocate="HOME" />
         </View>
 
         <View style={styles.contentSection}>
@@ -1645,6 +1651,7 @@ const Home = () => {
         visible={showAttendancePopup}
         date={selectedDate}
         onClose={() => setShowAttendancePopup(false)}
+        onExerciseInfoUpdated={refreshExerciseData}
       />
     </>
   );

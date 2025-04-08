@@ -113,7 +113,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: scale(20),
     borderTopRightRadius: scale(20),
     width: '100%',
-    maxHeight: '80%',
+    maxHeight: '70%',
+    minHeight: '70%',
     padding: scale(20),
   },
   dragArea: {

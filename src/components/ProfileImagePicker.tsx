@@ -301,7 +301,7 @@ const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
   const handleSuccessClose = () => {
     setShowSuccessPopup(false);
   };
-
+  
   return (
     <>
       <TouchableOpacity 
