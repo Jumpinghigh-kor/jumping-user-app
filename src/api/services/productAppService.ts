@@ -3,17 +3,14 @@ import {axiosInstance} from '../config/axiosConfig';
 // 상품 타입 정의
 export interface Product {
   product_app_id: number;
-  name: string;
+  title: string;
   price: number;
   original_price: number;
   discount: number;
-  rating: number;
-  comments: number;
-  category: string;
+  big_category: string;
+  small_category: string;
   image: string;
   reg_dt: string;
-  title: string;
-  description: string;
   // 추가 필드가 있다면 여기에 정의
 }
 
@@ -35,9 +32,9 @@ export const getProductAppList = async (params?: any): Promise<GetProductsRespon
 };
 
 // 상품 상세 조회 API
-export const getProductAppDetail = async (params: {product_app_id: number}): Promise<GetProductsResponse> => {
+export const getProductAppImgDetail = async (params: {product_app_id: number}): Promise<GetProductsResponse> => {
   try {
-    const response = await axiosInstance.post('/product-app/getProductAppDetail', params);
+    const response = await axiosInstance.post('/product-app/getProductAppImgDetail', params);
     return response.data;
   } catch (error: any) {
     throw error;

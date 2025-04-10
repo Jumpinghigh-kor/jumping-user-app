@@ -46,11 +46,18 @@ const IMAGES = {
     shopHeartFillGray: require('../assets/images/icon/icon_shop_heart_gray_fill.png'),
     shopSearchFillGray: require('../assets/images/icon/icon_shop_search_gray_fill.png'),
     shopMyPageFillGray: require('../assets/images/icon/icon_shop_my_gray_fill.png'),
+    starYellow: require('../assets/images/icon/icon_star_yellow.png'),
+    starGray: require('../assets/images/icon/icon_star_gray.png'),
+    speechGray: require('../assets/images/icon/icon_speech_gray.png'),
+    starHalfYellow: require('../assets/images/icon/icon_star_half_yellow.png'),
   },
   logo: {
     jumpingBlack: require('../assets/images/logo/logo_jumping_black.png'),
     jumpingWhite: require('../assets/images/logo/logo_jumping_white.png'),
   },
+  splash: {
+    splash_001: require('../assets/images/splash/splash_001.png'),
+  }
 };
 
 export default IMAGES; 

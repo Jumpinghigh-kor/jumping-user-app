@@ -9,11 +9,14 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import authService from '../api/services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {scale} from '../utils/responsive';
+import IMAGES from '../utils/images';
 
 type RootStackParamList = {
   Login: undefined;
@@ -101,8 +104,7 @@ const Login = () => {
       style={styles.container}>
       <View style={styles.innerContainer}>
         {/* Welcome Text */}
-        <Text style={styles.welcomeText}>환영합니다</Text>
-        <Text style={styles.subText}>계정 정보를 입력해주세요</Text>
+        <Image source={IMAGES.logo.jumpingWhite} style={styles.logoImage} />
 
         {/* Input Fields */}
         <View style={styles.inputContainer}>
@@ -114,6 +116,7 @@ const Login = () => {
             keyboardType="email-address"
             autoCapitalize="none"
             editable={!loading}
+            placeholderTextColor="#FFFFFF"
           />
           <TextInput
             style={styles.input}
@@ -122,6 +125,7 @@ const Login = () => {
             onChangeText={setPassword}
             secureTextEntry
             editable={!loading}
+            placeholderTextColor="#FFFFFF"
           />
         </View>
 
@@ -154,43 +158,40 @@ const Login = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#202020',
   },
   innerContainer: {
-    flex: 1,
-    padding: 20,
+    marginTop: scale(80),
+    padding: scale(16),
     justifyContent: 'center',
   },
-  welcomeText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  subText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 30,
+  logoImage: {
+    width: scale(150),
+    height: scale(150),
+    alignSelf:'center',
+    resizeMode: 'contain',
+    marginBottom: scale(30),
   },
   inputContainer: {
     marginBottom: 20,
   },
   input: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-    fontSize: 16,
+    backgroundColor: '#373737',
+    borderWidth: 1,
+    borderColor: '#D9D9D9',
+    borderRadius: scale(15),
+    padding: scale(15),
+    marginBottom: scale(15),
+    fontSize: scale(14),
+    color: '#FFFFFF',
   },
   loginButton: {
     backgroundColor: '#007AFF',
-    borderRadius: 10,
-    padding: 15,
+    borderRadius: scale(15),
+    padding: scale(15),
     alignItems: 'center',
-    marginBottom: 20,
-    height: 50,
+    marginBottom: scale(20),
+    height: scale(50),
     justifyContent: 'center',
   },
   loginButtonDisabled: {
@@ -198,7 +199,7 @@ const styles = StyleSheet.create({
   },
   loginButtonText: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: scale(18),
     fontWeight: '600',
   },
   forgotContainer: {
@@ -206,13 +207,13 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     color: '#007AFF',
-    fontSize: 14,
+    fontSize: scale(14),
     textAlign: 'center',
   },
   errorText: {
     color: '#FF4444',
-    fontSize: 14,
-    marginBottom: 10,
+    fontSize: scale(14),
+    marginBottom: scale(10),
     textAlign: 'center',
   },
 });

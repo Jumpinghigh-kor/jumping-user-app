@@ -5,8 +5,10 @@ import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {scale} from '../utils/responsive';
 import {getProductAppList, getProductAppThumbnailImg, Product as ProductType} from '../api/services/productAppService';
+import {getMemberReviewAppList} from '../api/services/memberReviewAppService';
 import BannerImagePicker from '../components/BannerImagePicker';
 import {supabase} from '../utils/supabaseClient';
+import IMAGES from '../utils/images';
 
 // Define navigation type
 type RootStackParamList = {
@@ -17,12 +19,26 @@ type RootStackParamList = {
 
 type ShoppingNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ShoppingMain'>;
 
-const ProductItem = ({item, onPress, thumbnailData}: {item: ProductType; onPress: (item: ProductType) => void; thumbnailData: any}) => {
+const ProductItem = ({item, onPress, thumbnailData, reviewData}: {item: ProductType; onPress: (item: ProductType) => void; thumbnailData: any; reviewData: any}) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [imageError, setImageError] = useState(false);
   
   // 썸네일 데이터에서 현재 상품과 일치하는 이미지 정보 찾기
   const thumbnailItem = thumbnailData?.find(thumb => thumb.product_app_id === item.product_app_id);
+  
+  // 리뷰 데이터에서 현재 상품의 리뷰 찾기
+  const productReviews = reviewData?.filter(review => review.product_app_id === item.product_app_id) || [];
+  const reviewCnt = productReviews.length;
+  
+  // 리뷰 평균 평점 계산
+  const avgStarPointRaw = productReviews.length > 0 
+    ? (productReviews.reduce((sum, review) => sum + review.star_point, 0) / productReviews.length)
+    : 0;
+  
+  // 소수점 처리: 소수점이 .0으로 끝나면 정수로, 아니면 소수점 첫째자리까지만 표시
+  const avgStarPoint = avgStarPointRaw % 1 === 0 
+    ? avgStarPointRaw.toFixed(0) 
+    : avgStarPointRaw.toFixed(1);
   
   // Supabase URL 생성
   const getSupabaseImageUrl = () => {
@@ -36,7 +52,7 @@ const ProductItem = ({item, onPress, thumbnailData}: {item: ProductType; onPress
         return data.publicUrl;
       }
     }
-    
+
     // image_url이 있는 경우
     if (thumbnailItem.image_url) {
       // 경로만 있는 경우 Supabase URL로 변환
@@ -53,7 +69,6 @@ const ProductItem = ({item, onPress, thumbnailData}: {item: ProductType; onPress
   };
   
   const imageUrl = getSupabaseImageUrl();
-  
   return (
     <TouchableOpacity style={styles.productItem} onPress={() => onPress(item)}>
       <View style={styles.imageContainer}>
@@ -65,7 +80,7 @@ const ProductItem = ({item, onPress, thumbnailData}: {item: ProductType; onPress
           ]} 
           onError={() => setImageError(true)} 
         />
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.favoriteButton} 
           onPress={(e) => {
             e.stopPropagation();
@@ -74,23 +89,29 @@ const ProductItem = ({item, onPress, thumbnailData}: {item: ProductType; onPress
         >
           <Icon 
             name={isFavorite ? "heart" : "heart-outline"} 
-            size={22} 
-            color={isFavorite ? "#F04D4D" : "#000"} 
+            size={25} 
+            color={isFavorite ? "#F04D4D" : "#F04D4D"} 
           />
         </TouchableOpacity>
       </View>
       <View style={styles.productInfo}>
         <Text style={styles.productName} numberOfLines={1} ellipsizeMode="tail">{item.title}</Text>
-        <Text style={styles.originalPrice}>{item.original_price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원</Text>
+        {item.discount > 0 && (
+          <Text style={styles.originalPrice}>{item.original_price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원</Text>
+        )}
         <View style={styles.priceContainer}>
-          <Text style={styles.discount}>{item.discount}%</Text>
+          {item.discount > 0 && (
+            <Text style={styles.discount}>{item.discount}%</Text>
+          )}
           <Text style={styles.price}>{Math.round(item.original_price * (1 - item.discount/100)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원</Text>
         </View>
-        <View style={styles.ratingContainer}>
-          <Icon name="star" size={14} color="#FFD700" />
-          <Text style={styles.rating}>{item.rating}</Text>
-          <Text style={styles.comments}>리뷰 {item.comments}</Text>
-        </View>
+        {productReviews.length > 0 && (
+          <View style={styles.ratingContainer}>
+            <Image source={IMAGES.icons.starYellow} style={styles.starIcon} />
+            <Text style={styles.avgStarPoint}>{avgStarPoint}</Text>
+            <Text style={styles.reviewCnt}>후기 {reviewCnt}</Text>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -103,13 +124,13 @@ const ShoppingList: React.FC = () => {
   const [filteredProducts, setFilteredProducts] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState(true);
   const [thumbnailData, setThumbnailData] = useState<any>(null);
+  const [reviewData, setReviewData] = useState<any>(null);
 
   useEffect(() => {
     const fetchThumbnailData = async () => {
       try {
         const response = await getProductAppThumbnailImg();
         setThumbnailData(response.data);
-        console.log('썸네일 데이터:', response.data);
       } catch (error) {
         console.error('썸네일 데이터 로드 오류:', error);
       }
@@ -118,10 +139,27 @@ const ShoppingList: React.FC = () => {
     fetchThumbnailData();
   }, []);
 
+  // 리뷰 데이터를 화면에 진입할 때마다 갱신
+  useFocusEffect(
+    useCallback(() => {
+      const fetchReviewData = async () => {
+        try {
+          const response = await getMemberReviewAppList();
+          setReviewData(response.data);
+          console.log('리뷰 데이터:', response.data);
+        } catch (error) {
+          console.error('리뷰 데이터 로드 오류:', error);
+        }
+      };
+      
+      fetchReviewData();
+    }, [])
+  );
+
   useFocusEffect(
     useCallback(() => {
       loadProducts();
-    }, [selectedCategory])
+    }, [selectedCategory, reviewData])
   );
 
   const loadProducts = async () => {
@@ -132,8 +170,23 @@ const ShoppingList: React.FC = () => {
       });
       if (response.success) {
         console.log('상품 로드 성공:', response.data);
-        setProducts(response.data || []);
-        setFilteredProducts(response.data || []);
+
+        // 리뷰 데이터를 기반으로 상품의 리뷰 수 업데이트
+        let updatedProducts = response.data || [];
+        
+        if (reviewData) {
+          updatedProducts = updatedProducts.map(product => {
+            // 이 상품에 대한 리뷰 개수 계산
+            
+            // 리뷰 개수가 있으면 comments 필드 업데이트
+            return {
+              ...product,
+            };
+          });
+        }
+        
+        setProducts(updatedProducts);
+        setFilteredProducts(updatedProducts);
       } else {
         Alert.alert('알림', '상품을 불러오는데 실패했습니다.');
       }
@@ -193,7 +246,7 @@ const ShoppingList: React.FC = () => {
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.categoryButton, selectedCategory === 'CLOTHES' && styles.selectedCategory]} 
-              onPress={() => setSelectedCategory('CLOTHES')}
+              onPress={() => setSelectedCategory('CLOTHING')}
             >
               <Text style={[styles.categoryText, selectedCategory === 'CLOTHES' && styles.selectedCategoryText]}>의류</Text>
             </TouchableOpacity>
@@ -213,7 +266,7 @@ const ShoppingList: React.FC = () => {
         ) : filteredProducts.length > 0 ? (
           <FlatList
             data={filteredProducts}
-            renderItem={({item}) => <ProductItem item={item} onPress={handleProductPress} thumbnailData={thumbnailData || []} />}
+            renderItem={({item}) => <ProductItem item={item} onPress={handleProductPress} thumbnailData={thumbnailData || []} reviewData={reviewData || []} />}
             keyExtractor={item => item.product_app_id.toString()}
             style={styles.content}
             contentContainerStyle={styles.listContainer}
@@ -387,14 +440,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  rating: {
-    fontSize: 14,
-    marginLeft: 4,
-    marginRight: 8,
+  starIcon: {
+    width: scale(12),
+    height: scale(12),
+    resizeMode: 'contain',
   },
-  comments: {
-    fontSize: 14,
-    color: '#666',
+  avgStarPoint: {
+    fontSize: scale(12),
+    marginLeft: scale(4),
+    marginRight: scale(8),
+  },
+  reviewCnt: {
+    fontSize: scale(12),
+    color: '#848484',
   },
   text: {
     fontSize: 24,

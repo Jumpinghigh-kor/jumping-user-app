@@ -198,7 +198,7 @@ const BannerImagePicker: React.FC<BannerImagePickerProps> = ({
                   styles.bannerImage,
                   bannerLocate === "SHOP" && styles.shopBannerImage
                 ]}
-                resizeMode={bannerLocate === "SHOP" ? "cover" : "cover"}
+                resizeMode="contain"
                 onError={(e) => {
                   console.error('배너 이미지 로드 오류:', e.nativeEvent.error);
                   console.log('문제가 있는 이미지 URL:', banners[currentIndex].banner_img_url);
