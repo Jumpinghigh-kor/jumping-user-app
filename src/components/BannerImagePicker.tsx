@@ -37,6 +37,24 @@ const BannerImagePicker: React.FC<BannerImagePickerProps> = ({
   const [loading, setLoading] = useState(false);
   const [banners, setBanners] = useState<BannerItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [defaultBannerUrl, setDefaultBannerUrl] = useState<string | null>(null);
+  
+  // 기본 배너 URL 가져오기
+  useEffect(() => {
+    if (bannerLocate === "HOME") {
+      try {
+        const { data } = supabase.storage
+          .from('banner/banner')
+          .getPublicUrl('banner_basic.png');
+          
+        if (data && data.publicUrl) {
+          setDefaultBannerUrl(data.publicUrl);
+        }
+      } catch (err) {
+        console.error('기본 배너 URL 생성 중 오류:', err);
+      }
+    }
+  }, [bannerLocate]);
 
   // 자동 슬라이드 기능
   useEffect(() => {
@@ -65,26 +83,21 @@ const BannerImagePicker: React.FC<BannerImagePickerProps> = ({
         
         try {
           setLoading(true);
-          console.log('배너 로드 시작:', bannerLocate);
           
           const response = await getBannerAppDetail({
             banner_locate: bannerLocate
           });
           
           if (response.success && response.data) {
-            console.log('배너 데이터 받음:', response.data);
             
             // URL 처리하여 배너 목록 설정
             const processedBanners = response.data.map(banner => {
-              console.log('처리할 배너 데이터:', JSON.stringify(banner));
-              
               // file_path와 file_name으로 이미지 경로 생성
               let imageUrl = '';
               
               if (banner.file_path && banner.file_name) {
                 // file_path와 file_name 조합
                 const imagePath = `${banner.file_path}/${banner.file_name}`.replace(/^\//, '');
-                console.log('Supabase 이미지 경로:', imagePath);
                 
                 try {
                   const { data } = supabase.storage
@@ -93,9 +106,6 @@ const BannerImagePicker: React.FC<BannerImagePickerProps> = ({
                     
                   if (data && data.publicUrl) {
                     imageUrl = data.publicUrl;
-                    console.log('Supabase URL 생성 성공:', imageUrl);
-                  } else {
-                    console.log('Supabase URL 생성 실패:', data);
                   }
                 } catch (err) {
                   console.error('Supabase URL 생성 중 오류:', err);
@@ -103,7 +113,6 @@ const BannerImagePicker: React.FC<BannerImagePickerProps> = ({
               } else if (banner.banner_img_url) {
                 // 기존 banner_img_url이 있는 경우
                 imageUrl = banner.banner_img_url;
-                console.log('원본 이미지 URL 사용:', imageUrl);
                 
                 // 경로만 있는 경우 Supabase URL로 변환
                 if (imageUrl && !imageUrl.includes('http')) {
@@ -114,16 +123,12 @@ const BannerImagePicker: React.FC<BannerImagePickerProps> = ({
                       
                     if (data && data.publicUrl) {
                       imageUrl = data.publicUrl;
-                      console.log('Supabase URL 생성 성공:', imageUrl);
-                    } else {
-                      console.log('Supabase URL 생성 실패:', data);
                     }
                   } catch (err) {
                     console.error('Supabase URL 생성 중 오류:', err);
                   }
                 }
               } else {
-                console.log('배너 이미지 정보 없음:', banner);
               }
               
               const processedBanner = {
@@ -131,19 +136,15 @@ const BannerImagePicker: React.FC<BannerImagePickerProps> = ({
                 banner_img_url: imageUrl
               };
               
-              console.log('처리된 배너:', JSON.stringify(processedBanner));
               return processedBanner;
             });
             
             const filteredBanners = processedBanners.filter(b => b.banner_img_url);
-            console.log('필터링된 배너 개수:', filteredBanners.length);
             setBanners(filteredBanners);
           } else {
-            console.log('배너 데이터 없음');
             setBanners([]);
           }
         } catch (error) {
-          console.error('배너 로드 실패:', error);
           setBanners([]);
         } finally {
           setLoading(false);
@@ -213,7 +214,21 @@ const BannerImagePicker: React.FC<BannerImagePickerProps> = ({
           {banners.length > 1 && renderDots()}
         </View>
       ) : (
-        <Text style={styles.placeholderText}>배너 이미지가 없습니다.</Text>
+        // 배너가 없을 때: HOME 위치에서는 기본 이미지를 보여주고, 그 외에는 플레이스홀더를 보여줌
+        bannerLocate === "HOME" && defaultBannerUrl ? (
+          <TouchableOpacity>
+            <Image 
+              source={{ uri: defaultBannerUrl }}
+              style={styles.bannerImage}
+              resizeMode="contain"
+              onError={(e) => {
+                console.error('기본 배너 이미지 로드 오류:', e.nativeEvent.error);
+              }}
+            />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.placeholderContainer} />
+        )
       )}
     </View>
   );
@@ -227,8 +242,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: scale(150),
     maxHeight: scale(200),
-    borderRadius: scale(8),
-    borderWidth: 1,
+    borderRadius: scale(15),
   },
   shopBannerImage: {
     borderRadius: 0,
@@ -252,11 +266,6 @@ const styles = StyleSheet.create({
   },
   activeDot: {
     backgroundColor: '#FFFFFF',
-  },
-  placeholderText: {
-    color: '#999999',
-    fontSize: scale(14),
-    textAlign: 'center',
   },
   errorContainer: {
     width: '100%',
@@ -285,6 +294,12 @@ const styles = StyleSheet.create({
     borderRadius: scale(8),
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  placeholderContainer: {
+    width: '100%',
+    height: scale(150),
+    backgroundColor: '#333333',
+    borderRadius: scale(15),
   }
 });
 

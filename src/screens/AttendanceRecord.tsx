@@ -24,6 +24,7 @@ import ExerciseSummary from '../components/ExerciseSummary';
 import AttendancePopup from '../components/AttendancePopup';
 import {getMemberExerciseList} from '../api/services/memberExerciseService';
 import {useAuth} from '../hooks/useAuth';
+import ExerciseInfoPopup from '../components/ExerciseInfoPopup';
 
 type RootStackParamList = {
   Home: undefined;
@@ -394,7 +395,7 @@ const AttendanceRecord = () => {
         </TouchableOpacity>
 
         {/* 운동 정보 팝업 */}
-        <AttendancePopup
+        <ExerciseInfoPopup
           visible={showAttendancePopup}
           date={clickedDate}
           onClose={() => setShowAttendancePopup(false)}
@@ -483,7 +484,7 @@ const styles = StyleSheet.create({
   attendanceButtonText: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: '500',
+    fontWeight: '600',
   },
   calendarContainer: {
     backgroundColor: '#2A2A2A',

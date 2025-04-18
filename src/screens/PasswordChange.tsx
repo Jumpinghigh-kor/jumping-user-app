@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Image,
   ScrollView,
   TextInput,
@@ -33,6 +32,7 @@ const PasswordChange = () => {
   const [errors, setErrors] = useState<PasswordErrors>({});
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
+  const [popupType, setPopupType] = useState<'default' | 'warning' | 'confirm'>('warning');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -96,6 +96,7 @@ const PasswordChange = () => {
       if (response.success) {
         // 비밀번호 변경 성공 시 메시지 표시
         setPopupMessage('비밀번호가 변경되었습니다.');
+        setPopupType('default');
         setPopupVisible(true);
         
         // 입력값 초기화
@@ -105,17 +106,20 @@ const PasswordChange = () => {
         setErrors({});
       } else {
         // 현재 비밀번호가 맞지 않는 경우에 대한 처리
-        if (response.message && response.message.includes('비밀번호가 맞지 않습니다')) {
-          setErrors({
-            ...errors,
-            currentPassword: '현재 비밀번호가 맞지 않습니다.'
-          });
+        if (response.message) {
+          setPopupMessage('현재 비밀번호가 맞지 않습니다.');
+          setPopupType('warning');
+          setPopupVisible(true);
         } else {
-          Alert.alert('오류', response.message || '비밀번호 변경에 실패했습니다.');
+          setPopupMessage(response.message || '비밀번호 변경에 실패했습니다.');
+          setPopupType('warning');
+          setPopupVisible(true);
         }
       }
     } catch (error) {
-      Alert.alert('오류', '비밀번호 변경 중 오류가 발생했습니다.');
+      setPopupMessage('비밀번호 변경 중 오류가 발생했습니다.');
+      setPopupType('warning');
+      setPopupVisible(true);
     } finally {
       setLoading(false);
     }
@@ -123,6 +127,11 @@ const PasswordChange = () => {
 
   const handlePopupConfirm = () => {
     setPopupVisible(false);
+    
+    // 성공했을 때만 뒤로 가기
+    if (popupType === 'default') {
+      navigation.goBack();
+    }
   };
 
   const toggleShowCurrentPassword = () => {
@@ -158,7 +167,10 @@ const PasswordChange = () => {
                 style={styles.eyeIcon} 
                 onPress={toggleShowCurrentPassword}
               >
-                <Text style={styles.eyeText}>{showCurrentPassword ? '숨기기' : '보기'}</Text>
+                <Image 
+                  source={showCurrentPassword ? IMAGES.icons.invisibleGray : IMAGES.icons.visibleGray} 
+                  style={styles.eyeIconImage}
+                />
               </TouchableOpacity>
             </View>
             {errors.currentPassword && (
@@ -179,7 +191,10 @@ const PasswordChange = () => {
                 style={styles.eyeIcon} 
                 onPress={toggleShowNewPassword}
               >
-                <Text style={styles.eyeText}>{showNewPassword ? '숨기기' : '보기'}</Text>
+                <Image 
+                  source={showNewPassword ? IMAGES.icons.invisibleGray : IMAGES.icons.visibleGray} 
+                  style={styles.eyeIconImage}
+                />
               </TouchableOpacity>
             </View>
             {errors.newPassword ? (
@@ -204,7 +219,10 @@ const PasswordChange = () => {
                 style={styles.eyeIcon} 
                 onPress={toggleShowConfirmPassword}
               >
-                <Text style={styles.eyeText}>{showConfirmPassword ? '숨기기' : '보기'}</Text>
+                <Image 
+                  source={showConfirmPassword ? IMAGES.icons.invisibleGray : IMAGES.icons.visibleGray} 
+                  style={styles.eyeIconImage}
+                />
               </TouchableOpacity>
             </View>
             {errors.confirmPassword && (
@@ -224,6 +242,7 @@ const PasswordChange = () => {
         <CommonPopup
           visible={popupVisible}
           message={popupMessage}
+          type={popupType}
           onConfirm={handlePopupConfirm}
           confirmText="확인"
         />
@@ -242,7 +261,8 @@ const styles = StyleSheet.create({
   desc: {
     color: '#FFFFFF',
     fontSize: scale(12),
-    marginVertical: scale(20),
+    marginTop: scale(20),
+    marginBottom: scale(30),
   },
   formGroup: {
     marginBottom: scale(20),
@@ -269,9 +289,10 @@ const styles = StyleSheet.create({
     padding: scale(5),
     marginLeft: scale(10),
   },
-  eyeText: {
-    color: '#43B546',
-    fontSize: scale(10),
+  eyeIconImage: {
+    width: scale(20),
+    height: scale(20),
+    resizeMode: 'contain',
   },
   inputError: {
     borderWidth: 1,

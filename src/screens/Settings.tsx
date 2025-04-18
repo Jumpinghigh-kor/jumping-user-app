@@ -13,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {scale} from '../utils/responsive';
 import IMAGES from '../utils/images';
 import CommonPopup from '../components/CommonPopup';
-
+import CommonHeader from '../components/CommonHeader';
 const Settings = () => {
   const navigation = useNavigation();
   const [popupVisible, setPopupVisible] = useState(false);
@@ -73,23 +73,13 @@ const Settings = () => {
   };
 
   const handleWithdrawal = () => {
-    showPopup('회원 탈퇴', '정말 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.', 'withdrawal');
+    showPopup('회원 탈퇴', '정말 탈퇴하시겠습니까?\n 이 작업은 되돌릴 수 없습니다.', 'withdrawal');
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleGoBack}
-        >
-          <Image source={IMAGES.icons.arrowLeftWhite} style={styles.backIcon} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>환경설정</Text>
-        <View style={styles.headerRight} />
-      </View>
-
-      <ScrollView style={styles.contentContainer}>
+      <CommonHeader title="환경설정" />
+      <View style={styles.contentContainer}>
         <View style={styles.menuContainer}>
           <TouchableOpacity 
             style={styles.menuItem}
@@ -124,12 +114,13 @@ const Settings = () => {
             />
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </View>
 
       <CommonPopup
         visible={popupVisible}
         title={popupTitle}
         message={popupMessage}
+        type={currentAction === 'withdrawal' ? 'warning' : 'default'}
         onConfirm={handlePopupConfirm}
         onCancel={currentAction === 'none' ? undefined : handlePopupCancel}
         confirmText="확인"
@@ -143,34 +134,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#202020',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: scale(12),
-    paddingHorizontal: scale(16),
-    borderBottomWidth: 0,
-    borderBottomColor: '#333333',
-    backgroundColor: '#202020',
-    marginTop: scale(5),
-  },
-  backButton: {
-    width: scale(30),
-    height: scale(30),
-    justifyContent: 'center',
-  },
-  backIcon: {
-    width: scale(20),
-    height: scale(20),
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: scale(14),
-    fontWeight: 'bold',
-  },
-  headerRight: {
-    width: scale(40),
   },
   contentContainer: {
     flex: 1,

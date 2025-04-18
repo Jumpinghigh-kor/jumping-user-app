@@ -119,7 +119,8 @@ const NoticesAppList = () => {
           />
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>등록된 공지사항이 없습니다.</Text>
+            <Image source={IMAGES.icons.speechGray} style={styles.speechIcon} />
+            <Text style={styles.emptyText}>등록된 공지가 없어요</Text>
           </View>
         )}
 
@@ -182,19 +183,21 @@ const styles = StyleSheet.create({
     color: '#999999',
     fontSize: scale(10),
   },
-  arrowIcon: {
-    width: scale(16),
-    height: scale(16),
-    tintColor: '#999999',
+  speechIcon: {
+    width: scale(30),
+    height: scale(30),
+    resizeMode: 'contain',
+    marginBottom: scale(10),
   },
   emptyContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: scale(80),
   },
   emptyText: {
     color: '#999999',
     fontSize: scale(14),
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,

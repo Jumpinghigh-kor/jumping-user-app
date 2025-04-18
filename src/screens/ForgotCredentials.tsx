@@ -10,6 +10,8 @@ import {
   Dimensions,
 } from 'react-native';
 import {createMaterialTopTabNavigator} from '@react-navigation/material-top-tabs';
+import CommonHeader from '../components/CommonHeader';
+import { scale } from '../utils/responsive';
 
 const Tab = createMaterialTopTabNavigator();
 const screenWidth = Dimensions.get('window').width;
@@ -39,34 +41,46 @@ const FindIDScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.description}>
-        회원가입 시 입력한 이름과 전화번호를 입력해주세요.
-      </Text>
-      <TextInput
-        style={styles.input}
-        placeholder="이름"
-        value={name}
-        onChangeText={setName}
-        editable={!loading}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="전화번호"
-        value={phone}
-        onChangeText={setPhone}
-        keyboardType="phone-pad"
-        editable={!loading}
-      />
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleFindID}
-        disabled={loading}>
-        {loading ? (
-          <ActivityIndicator color="#ffffff" />
-        ) : (
-          <Text style={styles.buttonText}>아이디 찾기</Text>
-        )}
-      </TouchableOpacity>
+      <View style={styles.contentContainer}>
+        <View style={styles.inputField}>
+          <TextInput
+            style={styles.underlineInput}
+            placeholder="이름"
+            placeholderTextColor="#848484"
+            value={name}
+            onChangeText={setName}
+            editable={!loading}
+          />
+        </View>
+        
+        <View style={styles.inputField}>
+          <TextInput
+            style={styles.underlineInput}
+            placeholder="휴대폰 번호 (-제외)"
+            placeholderTextColor="#848484"
+            value={phone}
+            onChangeText={(text) => {
+              const onlyNumber = text.replace(/[^0-9]/g, '');
+              setPhone(onlyNumber);
+            }}
+            keyboardType="numeric"
+            editable={!loading}
+          />
+        </View>
+      </View>
+      
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleFindID}
+          disabled={loading}>
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>아이디 찾기</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -98,108 +112,130 @@ const FindPasswordScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.description}>
-        가입한 이메일을 입력하시면 비밀번호 재설정 링크를 보내드립니다.
-      </Text>
-      <TextInput
-        style={styles.input}
-        placeholder="이메일"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        editable={!loading}
-      />
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleFindPassword}
-        disabled={loading}>
-        {loading ? (
-          <ActivityIndicator color="#ffffff" />
-        ) : (
-          <Text style={styles.buttonText}>비밀번호 재설정</Text>
-        )}
-      </TouchableOpacity>
+      <View style={styles.contentContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="이메일"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          editable={!loading}
+        />
+      </View>
+      
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleFindPassword}
+          disabled={loading}>
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>비밀번호 재설정</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
 
 // 메인 화면
-const ForgotCredentials = () => {
+const ForgotCredentials = ({ route }) => {
+  // Login 화면에서 넘어온 초기 탭 정보 확인
+  const initialTab = route?.params?.initialTab || 'FindID';
+
   return (
-    <Tab.Navigator
-      screenOptions={{
-        tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: '#666666',
-        tabBarIndicatorStyle: {
-          backgroundColor: '#007AFF',
-          height: 3,
-          width: screenWidth / 2,
-        },
-        tabBarStyle: {
-          elevation: 0,
-          shadowOpacity: 0,
-          borderBottomWidth: 1,
-          borderBottomColor: '#f0f0f0',
-        },
-        tabBarLabelStyle: {
-          fontSize: 16,
-          fontWeight: '600',
-          textTransform: 'none',
-        },
-        tabBarItemStyle: {
-          width: screenWidth / 2,
-        },
-      }}>
-      <Tab.Screen
-        name="FindID"
-        component={FindIDScreen}
-        options={{tabBarLabel: '아이디 찾기'}}
-      />
-      <Tab.Screen
-        name="FindPassword"
-        component={FindPasswordScreen}
-        options={{tabBarLabel: '비밀번호 찾기'}}
-      />
-    </Tab.Navigator>
+    <>
+      <CommonHeader />
+      <Tab.Navigator
+        initialRouteName={initialTab}
+        screenOptions={{
+          tabBarActiveTintColor: '#FFFFFF',
+          tabBarInactiveTintColor: '#FFFFFF',
+          tabBarIndicatorStyle: {
+            backgroundColor: '#40B649',
+            height: 3,
+            width: screenWidth / 2,
+          },
+          tabBarStyle: {
+            elevation: 0,
+            shadowOpacity: 0,
+            backgroundColor: '#202020',
+          },
+          tabBarLabelStyle: {
+            fontSize: 16,
+            fontWeight: '600',
+            textTransform: 'none',
+          },
+          tabBarItemStyle: {
+            width: screenWidth / 2,
+          },
+        }}>
+        <Tab.Screen
+          name="FindID"
+          component={FindIDScreen}
+          options={{tabBarLabel: '아이디 찾기'}}
+        />
+        <Tab.Screen
+          name="FindPassword"
+          component={FindPasswordScreen}
+          options={{tabBarLabel: '비밀번호 찾기'}}
+        />
+      </Tab.Navigator>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    padding: 20,
+    backgroundColor: '#202020',
+    paddingHorizontal: scale(16),
+    paddingTop: scale(50),
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
   },
-  description: {
-    fontSize: 16,
-    color: '#666666',
-    marginBottom: 20,
-    lineHeight: 24,
+  contentContainer: {
+    flex: 1,
+  },
+  buttonContainer: {
+    width: '100%',
+    marginBottom: scale(20),
   },
   input: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-    fontSize: 16,
+    backgroundColor: '#373737',
+    borderRadius: scale(10),
+    padding: scale(15),
+    marginBottom: scale(15),
+    fontSize: scale(16),
   },
   button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
-    padding: 15,
+    backgroundColor: '#40B649',
+    borderRadius: scale(10),
+    paddingVertical: scale(12),
     alignItems: 'center',
-    marginTop: 10,
-    height: 50,
     justifyContent: 'center',
   },
   buttonDisabled: {
-    backgroundColor: '#007AFF80',
+    backgroundColor: '#40B64980',
   },
   buttonText: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: scale(14),
     fontWeight: '600',
+  },
+  inputField: {
+    marginBottom: scale(20),
+  },
+  underlineInput: {
+    color: '#FFFFFF',
+    fontSize: scale(14),
+    paddingVertical: scale(8),
+    borderBottomWidth: 1,
+    borderBottomColor: '#D9D9D9',
+    height: scale(40),
   },
 });
 

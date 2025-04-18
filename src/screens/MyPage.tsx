@@ -94,23 +94,18 @@ const MyPage = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom: scale(90)}}>
         <View style={styles.profileIconContainer}>
           <ProfileImagePicker
             memId={memberInfo?.mem_id}
             currentImageUrl={profileImageUrl}
             onImageUpdate={loadProfileImage}
           />
+          <View style={{marginVertical: scale(10)}}>
           <Text style={styles.nickname}>{memberInfo?.mem_nickname}</Text>
+          <Text style={styles.centerName}>{memberInfo?.center_name}</Text>
+          </View>
           <Text style={styles.emailId}>{memberInfo?.mem_email_id}</Text>
-        </View>
-        
-        <View style={styles.statsContainer}>
-          <Text style={styles.statsText}>키</Text>
-          <Text style={styles.statsDivider}>|</Text>
-          <Text style={styles.statsText}>포인트</Text>
-          <Text style={styles.statsDivider}>|</Text>
-          <Text style={styles.statsText}>몸무게</Text>
         </View>
 
         <Text style={styles.sectionTitle}>고객센터</Text>
@@ -203,7 +198,6 @@ const MyPage = () => {
             </View>
           </TouchableOpacity>
         </View>
-        <View style={styles.bottomPadding}></View>
       </ScrollView>
 
       <CommonModal
@@ -226,17 +220,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#202020',
     padding: scale(16),
+    paddingTop: scale(40),
   },
   profileIconContainer: {
     alignItems: 'center',
     marginTop: scale(20),
-    marginBottom: scale(20),
+    marginBottom: scale(30),
   },
   nickname: {
-    fontSize: scale(12),
+    fontSize: scale(14),
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginVertical: scale(10),
+    textAlign: 'center',
+  },
+  centerName: {
+    fontSize: scale(12),
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
   emailId: {
     color: '#aaaaaa',
@@ -251,31 +251,12 @@ const styles = StyleSheet.create({
     width: scale(24),
     height: scale(24),
   },
-  statsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#43B546',
-    borderRadius: scale(8),
-    padding: scale(12),
-    marginTop: scale(20),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statsText: {
-    color: '#ffffff',
-    fontSize: scale(12),
-    fontWeight: 'bold',
-    paddingHorizontal: scale(10),
-  },
-  statsDivider: {
-    color: '#ffffff',
-    fontSize: scale(12),
-  },
   sectionTitle: {
     color: '#ffffff',
     fontSize: scale(14),
     fontWeight: 'bold',
     marginTop: scale(25),
-    marginBottom: scale(10),
+    marginBottom: scale(15),
   },
   menuContainer: {
     borderRadius: scale(8),
@@ -305,9 +286,6 @@ const styles = StyleSheet.create({
     width: scale(16),
     height: scale(16),
     tintColor: '#999999',
-  },
-  bottomPadding: {
-    height: scale(80),
   },
   menuTextContainer: {
     flexDirection: 'row',

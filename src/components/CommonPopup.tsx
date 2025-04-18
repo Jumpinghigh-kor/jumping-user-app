@@ -15,6 +15,8 @@ interface CommonPopupProps {
   confirmText?: string;
   cancelText?: string;
   children?: ReactNode;
+  backgroundColor?: string;
+  textColor?: string;
 }
 
 const CommonPopup = ({
@@ -27,6 +29,8 @@ const CommonPopup = ({
   confirmText = '확인',
   cancelText = '취소',
   children,
+  backgroundColor,
+  textColor,
 }: CommonPopupProps) => {
   return (
     <Modal
@@ -35,8 +39,7 @@ const CommonPopup = ({
       visible={visible}
       onRequestClose={onCancel}>
       <View style={styles.overlay}>
-        <View style={styles.container}>
-          {title && <Text style={styles.title}>{title}</Text>}
+        <View style={[styles.container, backgroundColor ? { backgroundColor } : null]}>
           <View style={styles.messageContainer}>
           {type === 'warning' && (
             <View style={styles.iconContainer}>
@@ -47,10 +50,15 @@ const CommonPopup = ({
               />
             </View>
           )}
-          <Text style={styles.message}>{message}</Text>
+          <Text style={[styles.message, textColor ? { color: textColor } : null]}>{message}</Text>
           </View>
           {children}
           <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.confirmButton]}
+              onPress={onConfirm}>
+              <Text style={styles.confirmButtonText}>{confirmText}</Text>
+            </TouchableOpacity>
             {(onCancel || type === 'confirm') && (
               <TouchableOpacity
                 style={[styles.button, styles.cancelButton]}
@@ -58,11 +66,6 @@ const CommonPopup = ({
                 <Text style={styles.cancelButtonText}>{cancelText}</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity
-              style={[styles.button, styles.confirmButton]}
-              onPress={onConfirm}>
-              <Text style={styles.confirmButtonText}>{confirmText}</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -73,67 +76,64 @@ const CommonPopup = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   container: {
     width: '80%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: scale(10),
-    padding: scale(20),
+    backgroundColor: '#373737',
+    borderRadius: scale(20),
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(40),
     alignItems: 'center',
   },
   messageContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: scale(15),
+    marginBottom: scale(25),
   },
   iconContainer: {
+    marginRight: scale(8),
   },
   warningIcon: {
-    width: scale(18),
-    height: scale(18),
-    marginRight: scale(5),
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#000000',
+    width: scale(20),
+    height: scale(20),
+    // marginRight: scale(3),
+    resizeMode: 'contain',
   },
   message: {
     fontSize: scale(14),
     textAlign: 'center',
-    color: '#333333',
+    color: '#FFFFFF',
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     width: '100%',
   },
   button: {
-    flex: 1,
     paddingVertical: scale(7),
-    borderRadius: scale(5),
-    alignItems: 'center',
+    paddingHorizontal: scale(30),
+    borderRadius: scale(30),
     marginHorizontal: scale(5),
   },
   cancelButton: {
-    backgroundColor: '#DDDDDD',
+    backgroundColor: '#848484',
   },
   confirmButton: {
-    backgroundColor: '#6BC46A',
+    backgroundColor: '#43B546',
   },
   cancelButtonText: {
-    color: '#333333',
+    color: '#FFFFFF',
     fontWeight: 'bold',
+    fontSize: scale(14),
   },
   confirmButtonText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
-    fontSize: scale(12),
+    fontSize: scale(14),
   },
 });
 

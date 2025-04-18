@@ -9,6 +9,8 @@ export interface MemberInfo {
   email: string;
   mem_nickname: string;
   mem_email_id: string;
+  center_id: number;
+  center_name: string;
   // 필요한 다른 회원 정보 필드 추가
 }
 

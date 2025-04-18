@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, Image, StyleSheet, Text } from 'react-native';
+import { View, TouchableOpacity, Image, StyleSheet, Text, Platform } from 'react-native';
 import { scale } from '../utils/responsive';
 import IMAGES from '../utils/images';
 import { useNavigation } from '@react-navigation/native';
@@ -56,8 +56,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: scale(20),
+    paddingBottom: scale(20),
     paddingHorizontal: scale(16),
+    paddingTop: Platform.OS === 'ios' ? scale(50) : scale(20),
   },
   backButton: {
     width: '33.3%',

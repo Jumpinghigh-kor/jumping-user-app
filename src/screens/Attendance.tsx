@@ -93,7 +93,7 @@ const Attendance = () => {
   };
 
   const handleNumberPress = (num: string) => {
-    if (inputNumber.length < 6) {
+    if (inputNumber.length < 8) {
       setInputNumber(prev => prev + num);
     }
   };
@@ -126,6 +126,9 @@ const Attendance = () => {
       if (response.success) {
         hideAlert();
         showToast('출석체크가 완료되었습니다.');
+        
+        // 입력 번호 초기화
+        setInputNumber('');
         
         // 회원권 목록 다시 조회
         const memberOrdersResponse = await getMemberOrdersList({
@@ -191,6 +194,7 @@ const Attendance = () => {
           visible: true,
           message: '회원권을 먼저 구매하셔야 합니다.',
           confirmText: '회원권 보러가기',
+          type: 'warning',
           onConfirm: () => {
             hideAlert();
             navigation.navigate('MainTab', { screen: 'Membership' });
@@ -329,6 +333,8 @@ const Attendance = () => {
         type={alertConfig.type}
         onConfirm={alertConfig.onConfirm}
         onCancel={alertConfig.onCancel}
+        backgroundColor="#FFFFFF"
+        textColor="#000000"
       />
 
       <MemberOrdersPopup
@@ -391,6 +397,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#000000',
     width: '100%',
+    height: scale(50),
   },
   keypadRow: {
     flexDirection: 'row',

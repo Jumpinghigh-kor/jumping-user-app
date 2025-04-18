@@ -295,6 +295,7 @@ const MainTabNavigator = () => {
         options={{
           title: '예약',
           tabBarLabel: '예약',
+          headerShown: false,
           tabBarIcon: ({color, focused}) => (
             <Image
               source={focused ? IMAGES.icons.clockGreen : IMAGES.icons.clockGray}

@@ -13,11 +13,13 @@ import {
 import {scale} from '../utils/responsive';
 import {useAuth} from '../hooks/useAuth';
 import {insertMemberExercise, getMemberExerciseInfo, updateMemberExercise} from '../api/services/memberExerciseService';
+import CommonPopup from './CommonPopup';
 
 interface ExerciseInfoPopupProps {
   visible: boolean;
   date?: string;
   onClose: () => void;
+  onExerciseInfoUpdated?: () => void;
 }
 
 // 셀렉트 박스 옵션 컴포넌트
@@ -44,6 +46,7 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
   visible,
   date,
   onClose,
+  onExerciseInfoUpdated
 }) => {
   const {memberInfo} = useAuth();
   const [intensityLevel, setIntensityLevel] = useState<string>('저강도');
@@ -56,6 +59,11 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [exerciseId, setExerciseId] = useState<number | null>(null);
   const [timeError, setTimeError] = useState<string | null>(null);
+  const [commonPopup, setCommonPopup] = useState({
+    visible: false,
+    message: '',
+    type: 'default' as 'default' | 'warning' | 'confirm',
+  });
 
   // 강도 레벨 매핑
   const getIntensityLevelValue = (level: string): string => {
@@ -185,18 +193,25 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
   ) => {
     switch (type) {
       case 'success':
-        Alert.alert('성공', message, [
-          {
-            text: '확인',
-            onPress: onClose,
-          },
-        ]);
+        setCommonPopup({
+          visible: true,
+          message: message,
+          type: 'default',
+        });
         break;
       case 'error':
-        Alert.alert(title || '오류', message);
+        setCommonPopup({
+          visible: true,
+          message: message,
+          type: 'warning',
+        });
         break;
       case 'alert':
-        Alert.alert('알림', '운동 시간을 입력해주세요.');
+        setCommonPopup({
+          visible: true,
+          message: '운동 시간을 입력해주세요.',
+          type: 'warning',
+        });
         break;
     }
   };
@@ -508,6 +523,22 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
           </View>
         </View>
       </Modal>
+      
+      <CommonPopup 
+        visible={commonPopup.visible}
+        message={commonPopup.message}
+        type={commonPopup.type}
+        onConfirm={() => {
+          setCommonPopup({ ...commonPopup, visible: false });
+          if (commonPopup.type === 'default') {
+            // 성공 시 콜백 호출
+            if (onExerciseInfoUpdated) {
+              onExerciseInfoUpdated();
+            }
+            onClose();
+          }
+        }}
+      />
     </>
   );
 };

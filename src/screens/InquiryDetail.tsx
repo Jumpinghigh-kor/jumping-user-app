@@ -18,7 +18,7 @@ import { scale } from '../utils/responsive';
 import IMAGES from '../utils/images';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CommonPopup from '../components/CommonPopup';
-import { formatDateYYYYMMDD } from '../utils/commonFunctions';
+import { formatDateYYYYMMDD, formatDateYYYYMMDDHHII } from '../utils/commonFunctions';
 import type { AuthStackParamList } from '../navigation/AuthStackNavigator';
 
 const MAX_TITLE_LENGTH = 20;
@@ -38,6 +38,7 @@ const InquiryAppDetail = () => {
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (inquiry) {
@@ -133,8 +134,7 @@ const InquiryAppDetail = () => {
       });
       
       if (response.success) {
-        setPopupMessage('문의가 삭제되었습니다.');
-        setPopupVisible(true);
+        navigation.goBack();
       } else {
         setPopupMessage(response.message || '문의 삭제에 실패했습니다.');
         setPopupVisible(true);
@@ -147,8 +147,7 @@ const InquiryAppDetail = () => {
       setIsSubmitting(false);
     }
   };
-  console.log('i', isSubmitting != null)
-  console.log('loading', loading)
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -165,6 +164,20 @@ const InquiryAppDetail = () => {
           }
         }}
       />
+
+      <CommonPopup
+        visible={showDeleteConfirm}
+        message="삭제하시겠습니까?"
+        type="warning"
+        onConfirm={() => {
+          setShowDeleteConfirm(false);
+          handleDelete();
+        }}
+        onCancel={() => setShowDeleteConfirm(false)}
+        confirmText="확인"
+        cancelText="취소"
+      />
+
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -184,7 +197,7 @@ const InquiryAppDetail = () => {
         <View style={styles.inputContainer}>
           <View style={styles.titleRow}>
             <Text style={styles.label}>문의 제목<Text style={{color: '#FF0000'}}> *</Text></Text>
-            <Text style={styles.dateText}>{formatDateYYYYMMDD(inquiry.reg_dt)}</Text>
+            <Text style={styles.dateText}>{formatDateYYYYMMDDHHII(inquiry.reg_dt)}</Text>
           </View>
           <View style={styles.titleInputContainer}>
             <TextInput
@@ -227,11 +240,9 @@ const InquiryAppDetail = () => {
             <Text style={styles.answerLabel}>답변</Text>
             <View style={styles.answerContent}>
               <Text style={styles.answerText}>{inquiry.answer}</Text>
-              {inquiry.answer_dt && (
-                <Text style={styles.answerDate}>
-                  {formatDateYYYYMMDD(inquiry.answer_dt)}
-                </Text>
-              )}
+              <Text style={styles.answerDate}>
+                {formatDateYYYYMMDDHHII(inquiry.answer_dt)}
+              </Text>
             </View>
           </View>
         )}
@@ -248,7 +259,7 @@ const InquiryAppDetail = () => {
 
         <TouchableOpacity 
           style={[styles.deleteButton]}
-          onPress={handleDelete}
+          onPress={() => setShowDeleteConfirm(true)}
           disabled={loading || isSubmitting}
         >
           <Text style={styles.deleteButtonText}>삭제</Text>

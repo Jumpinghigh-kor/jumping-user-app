@@ -371,7 +371,7 @@ const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
         <CommonPopup
           visible={showConfirmPopup}
           title="프로필 사진 등록"
-          message={hasExistingImage ? "기존 프로필 사진을 변경하시겠습니까?" : "선택한 사진을 프로필 사진으로 등록하시겠습니까?"}
+          message={hasExistingImage ? "기존 프로필 사진을 변경하시겠습니까?" : "선택한 사진을 프로필 사진으로\n등록하시겠습니까?"}
           confirmText="예"
           cancelText="아니오"
           onConfirm={handleUploadImage}

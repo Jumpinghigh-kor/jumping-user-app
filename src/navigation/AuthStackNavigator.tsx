@@ -62,7 +62,7 @@ const AuthStackNavigator = () => {
       <Stack.Screen
         name="ForgotCredentials"
         component={ForgotCredentials}
-        options={{title: '비밀번호 찾기'}}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="SignUp"

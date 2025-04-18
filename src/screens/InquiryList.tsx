@@ -22,8 +22,7 @@ import {formatDateYYYYMMDD} from '../utils/commonFunctions';
 import type {AuthStackParamList} from '../navigation/AuthStackNavigator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CommonPopup from '../components/CommonPopup';
-import ProfileImagePicker from '../components/ProfileImagePicker';
-import { useProfileImage } from '../hooks/useProfileImage';
+import CommonHeader from '../components/CommonHeader';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -204,7 +203,9 @@ const InquiryList = () => {
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>등록된 문의사항이 없습니다.</Text>
+          <Image source={IMAGES.icons.speechGray} style={styles.speechIcon} />
+          <Text style={styles.emptyText}>등록된 문의가 없어요</Text>
+          <Text style={styles.emptyDesc}>문의하기 페이지에서{'\n'}궁금한 점에 대해 문의를 남겨주세요</Text>
         </View>
       )}
         </>
@@ -212,11 +213,7 @@ const InquiryList = () => {
     } else {
       return (
         <>
-          <ScrollView
-            style={styles.formContainer}
-            contentContainerStyle={styles.formContentContainer}
-            keyboardShouldPersistTaps="handled"
-          >
+          <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
               <Text style={styles.label}>문의 제목<Text style={{color: '#FF0000'}}> *</Text></Text>
               <View style={styles.titleInputContainer}>
@@ -254,7 +251,7 @@ const InquiryList = () => {
                 <Text style={{color: '#4C78E0'}}>{content.length}</Text> / {MAX_CONTENT_LENGTH}
               </Text>
             </View>
-          </ScrollView>
+          </View>
 
           <View style={styles.bottomButtonContainer}>
             <TouchableOpacity 
@@ -276,16 +273,7 @@ const InquiryList = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Image source={IMAGES.icons.arrowLeftWhite} style={styles.backIcon} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>문의</Text>
-        <View style={styles.headerRight} />
-      </View>
+      <CommonHeader title="문의" />
 
       {/* 탭 메뉴 */}
       <View style={styles.tabContainer}>
@@ -412,17 +400,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(10),
     paddingVertical: scale(3),
   },
-    statusText: {
+  statusText: {
     fontSize: scale(12), 
   },
   emptyContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: scale(80),
   },
   emptyText: {
-    color: '#999999',
+    color: '#848484',
     fontSize: scale(14),
+    fontWeight: '600',
+  },
+  emptyDesc: {
+    color: '#848484',
+    fontSize: scale(12),
+    textAlign: 'center',
+    marginTop: scale(10),
   },
   createButton: {
     position: 'absolute',
@@ -571,6 +566,12 @@ const styles = StyleSheet.create({
     padding: scale(16),
     paddingBottom: Platform.OS === 'ios' ? scale(24) : scale(16),
     backgroundColor: '#202020',
+  },
+  speechIcon: {
+    width: scale(40),
+    height: scale(40),
+    resizeMode: 'contain',
+    marginBottom: scale(15),
   },
 });
 

@@ -29,6 +29,7 @@ import IMAGES from '../utils/images';
 import { useProfileImage } from '../hooks/useProfileImage';
 import ProfileImagePicker from '../components/ProfileImagePicker';
 import BannerImagePicker from '../components/BannerImagePicker';
+import ExerciseInfoPopup from '../components/ExerciseInfoPopup';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -625,6 +626,7 @@ const Home = () => {
       // 심박수 평균 계산
       if (activeCategory === '심박수') {
         weeklyDataValues.forEach((data, index) => {
+          console.log('data', data);
           if (typeof data === 'object' && data.count > 0) {
             weeklyDataValues[index] = Math.round(data.sum / data.count);
           } else if (typeof data === 'object') {
@@ -742,6 +744,7 @@ const Home = () => {
       // 심박수 평균 계산
       if (activeCategory === '심박수') {
         weeklyDataValues.forEach((data, index) => {
+          console.log('data::::', data);
           if (typeof data === 'object' && data.count > 0) {
             weeklyDataValues[index] = Math.round(data.sum / data.count);
           } else if (typeof data === 'object') {
@@ -1133,6 +1136,12 @@ const Home = () => {
         alwaysBounceVertical={true}
         keyboardShouldPersistTaps="handled">
         {/* 헤더 부분 */}
+
+          <Image 
+            source={IMAGES.icons.gradientGreen}
+            style={styles.gradientGreen}
+          />
+
         <View
           style={[
             styles.header,
@@ -1179,72 +1188,76 @@ const Home = () => {
           </View>
           <View style={styles.calendarContent}>
             {sevenDaysData.map(item => (
-              <LinearGradient
-                key={`date-${item.date}`}
-                colors={['#43b546', '#b6ff99']}
-                start={{x: 0, y: 0}}
-                end={{x: 0, y: 1}}
-                style={styles.linearGradientDateWrapper}>
-                <TouchableOpacity
-                  style={[styles.dateItem, item.isToday && styles.todayItem]}
-                onPress={() => {
-                  if (item.isToday) {
-                    if (item.isCheckedIn) {
-                      // 오늘 날짜이고 출석한 경우 AttendancePopup 표시
-                      setSelectedDate(item.date.toString());
-                      setShowAttendancePopup(true);
-                    } else {
-                      // 오늘 날짜이고 출석하지 않은 경우 출석 팝업 표시
-                      setShowPopup(true);
-                    }
-                  } else if (item.isCheckedIn) {
-                    // 오늘이 아닌 날짜이고 출석한 경우 AttendancePopup 표시
-                    setSelectedDate(item.date.toString());
-                    setShowAttendancePopup(true);
-                  } else {
-                    // 출석하지 않은 날짜 클릭 시 토스트 메시지
-                    if (Platform.OS === 'android') {
-                      ToastAndroid.show(
-                        '출석한 요일을 클릭하면 운동 정보를 입력할 수 있습니다.',
-                        ToastAndroid.SHORT,
-                      );
-                    } else {
-                      // iOS의 경우 Alert 사용
-                      Alert.alert(
-                        '알림',
-                        '출석한 요일을 클릭하면 운동 정보를 입력할 수 있습니다.',
-                      );
-                    }
-                  }
-                }}>
-                <View
-                  style={[
-                    styles.attendanceMark,
-                    {
-                      backgroundColor:
-                        item.isCheckedIn && !item.isToday
-                          ? '#6BC46A'
-                          : item.isCheckedIn && item.isToday
-                          ? '#A7EB45'
-                          : '#5C5C5C',
-                    },
-                  ]}
-                />
-                <Text
-                  style={[styles.dateDay, item.isToday && styles.todayText]}>
-                  {item.day}
-                </Text>
-                <Text
-                  style={[styles.dateNumber, item.isToday && styles.todayText]}>
-                  {item.date}
-                </Text>
-              </TouchableOpacity>
-              </LinearGradient>
+              <View key={`date-${item.date}`} style={styles.gradientOuterWrapper}>
+                <View style={styles.gradientInnerWrapper}>
+                  <LinearGradient
+                    colors={['#43b546', '#b6ff99']}
+                    start={{x: 0, y: 0}}
+                    end={{x: 0, y: 1}}
+                    style={styles.linearGradientDateWrapper}>
+                    <TouchableOpacity
+                      style={[styles.dateItem, item.isToday && styles.todayItem]}
+                      onPress={() => {
+                        if (item.isToday) {
+                          if (item.isCheckedIn) {
+                            // 오늘 날짜이고 출석한 경우 AttendancePopup 표시
+                            setSelectedDate(item.date.toString());
+                            setShowAttendancePopup(true);
+                          } else {
+                            // 오늘 날짜이고 출석하지 않은 경우 출석 팝업 표시
+                            setShowPopup(true);
+                          }
+                        } else if (item.isCheckedIn) {
+                          // 오늘이 아닌 날짜이고 출석한 경우 AttendancePopup 표시
+                          setSelectedDate(item.date.toString());
+                          setShowAttendancePopup(true);
+                        } else {
+                          // 출석하지 않은 날짜 클릭 시 토스트 메시지
+                          if (Platform.OS === 'android') {
+                            ToastAndroid.show(
+                              '출석한 요일을 클릭하면 운동 정보를 입력할 수 있습니다.',
+                              ToastAndroid.SHORT,
+                            );
+                          } else {
+                            // iOS의 경우 Alert 사용
+                            Alert.alert(
+                              '알림',
+                              '출석한 요일을 클릭하면 운동 정보를 입력할 수 있습니다.',
+                            );
+                          }
+                        }
+                      }
+                    }>
+                    <View
+                      style={[
+                        styles.attendanceMark,
+                        {
+                          backgroundColor:
+                            item.isCheckedIn && !item.isToday
+                              ? '#6BC46A'
+                              : item.isCheckedIn && item.isToday
+                              ? '#A7EB45'
+                              : '#5C5C5C',
+                        },
+                      ]}
+                    />
+                    <Text
+                      style={[styles.dateDay, item.isToday && styles.todayText]}>
+                      {item.day}
+                    </Text>
+                    <Text
+                      style={[styles.dateNumber, item.isToday && styles.todayText]}>
+                      {item.date}
+                    </Text>
+                  </TouchableOpacity>
+                  </LinearGradient>
+                </View>
+              </View>
             ))}
           </View>
         </View>
 
-        <View style={styles.contentSection}>
+        <View style={[styles.contentSection]}>
           <Text style={styles.sectionTitle}>운동 기록</Text>
           <View style={styles.card}>
             {/* 카테고리 버튼 */}
@@ -1363,111 +1376,111 @@ const Home = () => {
                   ref={ref}
                 >
               <View style={styles.graphContent}>
-                    {/* 월 또는 일 데이터 막대 */}
-                    {(selectedPeriod === '월' ? weeklyData : currentMonthDates).map((item, index) => {
-                  const values = getCategoryData();
-                  const maxValue = getMaxValue();
-                      const value = values[index] || 0;
+                {/* 월 또는 일 데이터 막대 */}
+                {(selectedPeriod === '월' ? weeklyData : currentMonthDates).map((item, index) => {
+                const values = getCategoryData();
+                const maxValue = getMaxValue();
+                const value = values[index] || 0;
                       
-                      // 값을 그래프 높이에 맞게 스케일링
-                      let heightPercent = 0;
+                // 값을 그래프 높이에 맞게 스케일링
+                let heightPercent = 0;
                       
-                      // Using switch statement for safer type checking
-                      switch(selectedPeriod) {
-                        case '일':
-                          if (activeCategory === '칼로리') {
-                            // 일 선택 시 칼로리 Y축 스케일 맞춤
-                            heightPercent = (value / 1250) * 150;
-                          } else {
-                            // 일 선택 시 Y축 스케일 맞춤
-                            heightPercent = (value / 25) * 200;
-                          }
-                          break;
-                        case '주':
-                          if (activeCategory === '뛴거리') {
-                            // 주 선택 시 뛴거리 Y축 0-75 스케일에 맞춤
-                            console.log(`뛴거리 주간 데이터: ${value}km, 인덱스: ${index}`);
-                            heightPercent = value * 15;
-                          } else {
-                            // 주 선택 시 Y축 0-5000 스케일에 맞춤
-                            heightPercent = (value / 5000) * 300;
-                          }
-                          break;
-                        case '월':
-                          if (activeCategory === '칼로리') {
-                            // 월 선택 시 칼로리 Y축 0-50000 스케일에 맞춤
-                            heightPercent = (value / 50000) * 300;
-                          } else {
-                            // 월 선택 시 Y축 0-500 스케일에 맞춤
-                            heightPercent = (value / 500) * 150;
-                          }
-                          break;
-                        case '연':
-                          if (activeCategory === '칼로리') {
-                            // 연 선택 시 칼로리 Y축 0-500000 스케일에 맞춤
-                            heightPercent = (value / 500000) * 300;
-                          } else if (activeCategory === '뛴거리') {
-                            // 연 선택 시 뛴거리 Y축 0-100 스케일에 맞춤
-                            heightPercent = (value / 100) * 300;
-                          } else {
-                            // 연 선택 시 Y축 0-750000 스케일에 맞춤
-                            heightPercent = (value / 750000) * 300;
-                          }
-                          break;
-                        default:
-                          // 기본 스케일링 로직
-                          if (activeCategory === '뛴거리') {
-                            // 뛴거리: Y축 0-25 스케일에 맞춤 (1km = 6px)
-                            heightPercent = (value / 25) * 150;
-                          } else if (activeCategory === '칼로리') {
-                            // 칼로리: Y축 0-1250 스케일에 맞춤 (1250kcal = 150px)
-                            heightPercent = (value / 1250) * 150;
-                          } else if (activeCategory === '심박수') {
-                            // 심박수: Y축 0-200 스케일에 맞춤 (200bpm = 150px)
-                            heightPercent = (value / 200) * 150;
-                          }
-                      }
-                      
-                      // 높이 조정 (최대 150으로 제한)
-                      const adjustedHeight = Math.min(heightPercent, 150);
-                      
-                      // 고유 키 생성을 위한 처리
-                      const itemKey = 'id' in item ? item.id : item.date.toString();
+                // Using switch statement for safer type checking
+                switch(selectedPeriod) {
+                  case '일':
+                    if (activeCategory === '칼로리') {
+                      // 일 선택 시 칼로리 Y축 스케일 맞춤
+                      heightPercent = (value / 1250) * 150;
+                    } else {
+                      // 일 선택 시 Y축 스케일 맞춤
+                      heightPercent = (value / 25) * 200;
+                    }
+                    break;
+                  case '주':
+                    if (activeCategory === '뛴거리') {
+                      // 주 선택 시 뛴거리 Y축 0-75 스케일에 맞춤
+                      console.log(`뛴거리 주간 데이터: ${value}km, 인덱스: ${index}`);
+                      heightPercent = value * 15;
+                    } else {
+                      // 주 선택 시 Y축 0-5000 스케일에 맞춤
+                      heightPercent = (value / 5000) * 300;
+                    }
+                    break;
+                  case '월':
+                    if (activeCategory === '칼로리') {
+                      // 월 선택 시 칼로리 Y축 0-50000 스케일에 맞춤
+                      heightPercent = (value / 50000) * 300;
+                    } else {
+                      // 월 선택 시 Y축 0-500 스케일에 맞춤
+                      heightPercent = (value / 500) * 150;
+                    }
+                    break;
+                  case '연':
+                    if (activeCategory === '칼로리') {
+                      // 연 선택 시 칼로리 Y축 0-500000 스케일에 맞춤
+                      heightPercent = (value / 500000) * 300;
+                    } else if (activeCategory === '뛴거리') {
+                      // 연 선택 시 뛴거리 Y축 0-100 스케일에 맞춤
+                      heightPercent = (value / 100) * 300;
+                    } else {
+                      // 연 선택 시 Y축 0-750000 스케일에 맞춤
+                      heightPercent = (value / 750000) * 300;
+                    }
+                    break;
+                  default:
+                    // 기본 스케일링 로직
+                    if (activeCategory === '뛴거리') {
+                      // 뛴거리: Y축 0-25 스케일에 맞춤 (1km = 6px)
+                      heightPercent = (value / 25) * 150;
+                    } else if (activeCategory === '칼로리') {
+                      // 칼로리: Y축 0-1250 스케일에 맞춤 (1250kcal = 150px)
+                      heightPercent = (value / 1250) * 150;
+                    } else if (activeCategory === '심박수') {
+                      // 심박수: Y축 0-200 스케일에 맞춤 (200bpm = 150px)
+                      heightPercent = (value / 200) * 150;
+                    }
+                }
+                
+                // 높이 조정 (최대 150으로 제한)
+                const adjustedHeight = Math.min(heightPercent, 150);
+                
+                // 고유 키 생성을 위한 처리
+                const itemKey = 'id' in item ? item.id : item.date.toString();
                   
-                  return (
-                        <View key={itemKey} style={styles.graphItem}>
-                      <View style={{height: '100%', justifyContent: 'flex-end', alignItems: 'center'}}>
-                        <View 
-                          style={[
-                                styles.graphBarContainer,
-                                { height: scale(adjustedHeight) }
-                              ]} 
-                            >
-                              <LinearGradient 
-                                colors={['rgba(107, 196, 106, 0.3)', '#6BC46A']}
-                                style={styles.graphBarGradient}
-                                start={{x: 0, y: 0}}
-                                end={{x: 0, y: 1}}
-                              />
-                            </View>
-                      </View>
-                      <Text style={styles.graphDateLabel}>{item.date}</Text>
-                          <Text style={styles.graphXLabel}>
-                            {(() => {
-                              switch(selectedPeriod) {
-                                case '주': return '';
-                                case '월': return '';
-                                case '연': return '';
-                                case '일': return item.day;
-                                default: return item.day;
-                              }
-                            })()}
-                          </Text>
+                return (
+                  <View key={itemKey} style={styles.graphItem}>
+                    <View style={{height: '100%', justifyContent: 'flex-end', alignItems: 'center'}}>
+                      <View 
+                        style={[
+                              styles.graphBarContainer,
+                              { height: scale(adjustedHeight) }
+                            ]} 
+                          >
+                            <LinearGradient 
+                              colors={['rgba(107, 196, 106, 0.3)', '#6BC46A']}
+                              style={styles.graphBarGradient}
+                              start={{x: 0, y: 0}}
+                              end={{x: 0, y: 1}}
+                            />
+                          </View>
                     </View>
-                  );
-                })}
-              </View>
-                </ScrollView>
+                    <Text style={styles.graphDateLabel}>{item.date}</Text>
+                        <Text style={styles.graphXLabel}>
+                          {(() => {
+                            switch(selectedPeriod) {
+                              case '주': return '';
+                              case '월': return '';
+                              case '연': return '';
+                              case '일': return item.day;
+                              default: return item.day;
+                            }
+                          })()}
+                        </Text>
+                  </View>
+                );
+              })}
+                </View>
+              </ScrollView>
               ) : (
                 <View style={[styles.graphContent, { justifyContent: 'space-between', width: '100%', flex: 1 }]}>
                   {/* 주별 또는 연도별 막대 */}
@@ -1569,7 +1582,7 @@ const Home = () => {
         </View>
 
         {/* 누적 운동량 섹션 */}
-        <View style={styles.contentSection}>
+        <View style={[styles.contentSection]}>  
           <Text style={styles.sectionTitle}>누적 운동량</Text>
           <View style={styles.exerciseSummaryContainer}>
             {/* 왼쪽 박스 */}
@@ -1647,7 +1660,7 @@ const Home = () => {
         onCancel={() => setShowPopup(false)}
       />
 
-      <AttendancePopup
+      <ExerciseInfoPopup
         visible={showAttendancePopup}
         date={selectedDate}
         onClose={() => setShowAttendancePopup(false)}
@@ -1661,6 +1674,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#202020',
+    position: 'relative',
   },
   scrollViewContent: {
     flexGrow: 1,
@@ -1774,9 +1788,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  linearGradientDateWrapper: {
+  gradientOuterWrapper: {
     borderRadius: scale(50),
-    padding: scale(1),
+    backgroundColor: '#43b546',
+  },
+  gradientInnerWrapper: {
+    borderRadius: scale(50),
+    margin: scale(1),
+    overflow: 'hidden',
+  },
+  linearGradientDateWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   dateItem: {
     backgroundColor: '#333333',
@@ -2036,6 +2059,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  gradientGreen: {
+    width: scale(400),
+    height: scale(400),
+    resizeMode: 'cover',
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
 });
 
