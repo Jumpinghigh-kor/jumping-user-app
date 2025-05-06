@@ -14,7 +14,7 @@ import {
   Image,
 } from 'react-native';
 import {validateMemberNumber, insertCheckinLog} from '../api/services/checkinService';
-import {getMemberOrdersList, GetMemberOrderResponse} from '../api/services/orderService';
+import {getMemberOrdersList, GetMemberOrderResponse} from '../api/services/memberOrdersService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';

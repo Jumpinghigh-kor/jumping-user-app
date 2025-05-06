@@ -15,6 +15,12 @@ import ShoppingDetail from '../screens/ShoppingDetail';
 import ShoppingMypage from '../screens/ShoppingMypage';
 import ShoppingZZim from '../screens/ShoppingZZim';
 import ShoppingSearch from '../screens/ShoppingSearch';
+import ShoppingLoading from '../screens/ShoppingLoading';
+import ShoppingCart from '../screens/ShoppingCart';
+import ShoppingAddress from '../screens/ShoppingAddress';
+import ShoppingAddressAdd from '../screens/ShoppingAddressAdd';
+import ShoppingReview from '../screens/ShoppingReview';
+import ShoppingReviewModify from '../screens/ShoppingReviewModify';
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -37,6 +43,12 @@ export type AuthStackParamList = {
   ShoppingMypage: undefined;
   ShoppingZZim: undefined;
   ShoppingSearch: undefined;
+  ShoppingLoading: undefined;
+  ShoppingCart: undefined;
+  ShoppingAddress: undefined;
+  ShoppingAddressAdd: undefined;
+  ShoppingReview: undefined;
+  ShoppingReviewModify: undefined;
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -127,6 +139,36 @@ const AuthStackNavigator = () => {
       <Stack.Screen
         name="ShoppingSearch"
         component={ShoppingSearch}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingLoading"
+        component={ShoppingLoading}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingCart"
+        component={ShoppingCart}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingAddress"
+        component={ShoppingAddress}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingAddressAdd"
+        component={ShoppingAddressAdd}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingReview"
+        component={ShoppingReview}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingReviewModify"
+        component={ShoppingReviewModify}
         options={{headerShown: false}}
       />
     </Stack.Navigator>

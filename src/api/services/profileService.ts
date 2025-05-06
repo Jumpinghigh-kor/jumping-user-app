@@ -104,7 +104,7 @@ export const uploadProfileImage = async (
     };
 
     const response = await axiosInstance.post(
-      '/common/insertCommonFile',
+      '/common-code/insertCommonFile',
       requestData,
     );
     return response.data;

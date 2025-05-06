@@ -9,7 +9,11 @@ import {
   Alert,
   Dimensions,
   ActivityIndicator,
-  FlatList
+  FlatList,
+  Platform,
+  Modal,
+  PanResponder,
+  Animated
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -18,10 +22,12 @@ import IMAGES from '../utils/images';
 import { scale } from '../utils/responsive';
 import { getProductAppImgDetail } from '../api/services/productAppService';
 import { getMemberReviewAppList } from '../api/services/memberReviewAppService';
+import { updateMemberZzimApp, getMemberZzimAppDetail, insertMemberZzimApp } from '../api/services/memberZzimAppService';
 import { supabase } from '../utils/supabaseClient';
 import { useProfileImage } from '../hooks/useProfileImage';
 import ProfileImagePicker from '../components/ProfileImagePicker';
-
+import ShoppingReview from '../components/ShoppingReview';
+import { useAppSelector } from '../store/hooks';
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // 리뷰 아이템 컴포넌트 분리
@@ -61,8 +67,33 @@ const ReviewItem = ({ review }) => {
           </View>
         </View>
       </View>
+      <Text style={styles.reviewTitle}>{review.title}</Text>
       <Text style={styles.reviewText}>{review.content}</Text>
     </View>
+  );
+};
+
+// 상세 이미지 컴포넌트 분리
+const DetailImage = ({ imageData, getSupabaseImageUrl }) => {
+  const [imageHeight, setImageHeight] = useState(300); // 기본 높이
+  const imageUrl = getSupabaseImageUrl(imageData);
+  
+  return (
+    <Image 
+      source={{ uri: imageUrl }}
+      style={{ 
+        width: '100%',
+        height: imageHeight,
+        marginBottom: scale(10),
+      }}
+      resizeMode="cover"
+      onLoad={(event) => {
+        const { width, height } = event.nativeEvent.source;
+        const screenWidth = Dimensions.get('window').width;
+        const scaleFactor = screenWidth / width;
+        setImageHeight(height * scaleFactor);
+      }}
+    />
   );
 };
 
@@ -76,7 +107,10 @@ const ShoppingDetail = ({route, navigation}) => {
   const [activeSlide, setActiveSlide] = useState(0);
   const [activeTab, setActiveTab] = useState('info'); // 'info', 'review', 'inquiry'
   const [isWished, setIsWished] = useState(false);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const memberInfo = useAppSelector(state => state.member.memberInfo);
   const scrollViewRef = useRef(null);
+  const [zzimData, setZzimData] = useState(null); // 찜 데이터 저장용 상태 추가
 
   // Supabase URL 생성
   const getSupabaseImageUrl = (imageData) => {
@@ -156,33 +190,39 @@ const ShoppingDetail = ({route, navigation}) => {
     };
     
     fetchProductImages();
+    loadReviews(); // 초기 로드 시 리뷰 데이터도 함께 가져오기
   }, [product.product_app_id]);
+  
+  // 초기 찜 상태 확인
+  useEffect(() => {
+    const checkInitialWishStatus = async () => {
+      try {
+        if (memberInfo?.mem_id) {
+          const zzimResponse = await getMemberZzimAppDetail({
+            mem_id: memberInfo.mem_id,
+            product_app_id: product.product_app_id
+          });
+          
+          if (zzimResponse.success && zzimResponse.data) {
+            setIsWished(zzimResponse.data.zzim_yn === 'Y');
+            setZzimData(zzimResponse.data); // 찜 데이터 저장
+          }
+        }
+      } catch (error) {
+        console.error('초기 찜 상태 확인 오류:', error);
+      }
+    };
+    
+    checkInitialWishStatus();
+  }, [isWished]);
 
   const handleCartPress = () => {
-    navigation.navigate('CartScreen');
-  };
-
-  const handleAddToCart = () => {
-    // 실제 구현에서는 Context API나 Redux 등으로 장바구니 상태를 관리해야 합니다
-    Alert.alert(
-      '장바구니 추가',
-      `"${product.name}" 상품이 장바구니에 추가되었습니다.`,
-      [
-        {
-          text: '쇼핑 계속하기',
-          style: 'cancel',
-        },
-        {
-          text: '장바구니 보기',
-          onPress: () => navigation.navigate('CartScreen'),
-        },
-      ]
-    );
+    navigation.navigate('ShoppingCart');
   };
 
   const cartIcon = (
     <TouchableOpacity style={styles.cartButton} onPress={handleCartPress}>
-      <Icon name="cart-outline" style={styles.cartIcon} size={24} color="#000" />
+      <Image source={IMAGES.icons.cartStrokeBlack} style={styles.cartIcon} />
     </TouchableOpacity>
   );
 
@@ -212,7 +252,7 @@ const ShoppingDetail = ({route, navigation}) => {
         <Image 
           source={{ uri: imageUrl }} 
           style={styles.productImage}
-          resizeMode="contain"
+          resizeMode="cover"
         />
       </View>
     );
@@ -260,7 +300,7 @@ const ShoppingDetail = ({route, navigation}) => {
       console.error('리뷰 데이터 로드 오류:', error);
     }
   };
-  
+
   // 탭 렌더링 함수
   const renderTabContent = () => {
     switch (activeTab) {
@@ -268,16 +308,23 @@ const ShoppingDetail = ({route, navigation}) => {
         return (
           <View>
             {detailImages.length > 0 ? (
-              detailImages.map((item, index) => (
-                <Image 
-                  key={`detail_${index}`}
-                  source={{ uri: getSupabaseImageUrl(item) }}
-                  style={styles.detailImage}
-                  resizeMode="contain"
-                />
-              ))
+              <ScrollView 
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingVertical: scale(20) }}
+              >
+                {detailImages.map((item, index) => (
+                  <DetailImage 
+                    key={`detail_${index}`}
+                    imageData={item}
+                    getSupabaseImageUrl={getSupabaseImageUrl}
+                  />
+                ))}
+              </ScrollView>
             ) : (
-              <Text>상품 상세 이미지가 없습니다.</Text>
+              <View style={styles.noTabContainer}>
+                <Image source={IMAGES.icons.sadFaceGray} style={styles.noTabIcon} />
+                <Text style={styles.noTabText}>상품 상세 이미지가 없어요</Text>
+              </View>
             )}
           </View>
         );
@@ -292,23 +339,94 @@ const ShoppingDetail = ({route, navigation}) => {
                 ))}
               </View>
             ) : (
-              <View style={styles.noReviewContainer}>
-                <Image source={IMAGES.icons.speechGray} style={styles.noReviewIcon} />
-                <Text style={styles.noReviewText}>작성된 리뷰가 없어요</Text>
+              <View style={styles.noTabContainer}>
+                <Image source={IMAGES.icons.speechGray} style={styles.noTabIcon} />
+                <Text style={styles.noTabText}>작성된 리뷰가 없어요</Text>
               </View>
             )}
           </View>
         );
       case 'inquiry':
         return (
-          <View>
-            <Text>
-              상품에 대한 문의사항이 있으시면 이곳에 남겨주세요.
-            </Text>
+          <View style={styles.inquiryContainer}>
+            <Text style={styles.inquiryTitle}>해당 상품이 궁금하신가요?</Text>
+            <Text style={styles.inquiryDesc}>상품 관련 문의가 궁금하시다면 아래 번호로{'\n'}전화 또는 문자 주시기 바랍니다.</Text>
+            <View style={styles.inquiryButtonContainer}>
+              <TouchableOpacity style={styles.inquiryButton}>
+                <Text style={styles.inquiryButtonText}>010-1234-5678</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         );
       default:
         return null;
+    }
+  };
+  
+  // 구매하기 모달 열기
+  const handlePurchaseClick = () => {
+    setShowPurchaseModal(true);
+  };
+
+  // 구매하기 모달 닫기
+  const handleCloseModal = () => {
+    setShowPurchaseModal(false);
+  };
+  
+  // Modify the wishlist button handler
+  const handleWishButtonClick = async () => {
+    try {
+      const newWishState = !isWished;
+      
+      // 즉시 UI 업데이트
+      setIsWished(newWishState);
+
+      // 이미 찜 데이터가 있을 경우 (zzimData가 있을 경우 업데이트)
+      if (zzimData && zzimData.zzim_app_id) {
+        const response = await updateMemberZzimApp({
+          mem_id: memberInfo?.mem_id,
+          zzim_yn: newWishState ? 'Y' : 'N',
+          zzim_app_id: zzimData.zzim_app_id
+        });
+        
+        // 업데이트 성공 시 찜 데이터 갱신
+        if (response.success) {
+          setZzimData({
+            ...zzimData,
+            zzim_yn: newWishState ? 'Y' : 'N'
+          });
+        } else {
+          // 실패시 UI 되돌리기
+          setIsWished(!newWishState);
+        }
+      } 
+      // 찜 데이터가 없는 경우 (최초 찜하기)
+      else {
+        const insertResponse = await insertMemberZzimApp({
+          mem_id: memberInfo?.mem_id,
+          product_app_id: product.product_app_id
+        });
+        
+        if (insertResponse.success) {
+          // 등록 성공 시 찜 데이터 저장
+          const newZzimData = {
+            zzim_app_id: insertResponse.data.zzim_app_id,
+            zzim_yn: 'Y',
+            mem_id: memberInfo?.mem_id,
+            product_app_id: product.product_app_id
+          };
+
+          setZzimData(newZzimData);
+        } else {
+          // 실패시 UI 되돌리기
+          setIsWished(!newWishState);
+          console.error('찜 등록 실패:', insertResponse.message);
+        }
+      }
+    } catch (error) {
+      // 에러 발생 시 UI 되돌리기
+      setIsWished(!isWished);
+      console.error('찜 상태 변경 오류:', error);
     }
   };
 
@@ -329,9 +447,9 @@ const ShoppingDetail = ({route, navigation}) => {
           <View style={styles.imageOuterContainer}>
             {loading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#6BC46A" />
+                <ActivityIndicator size="large" color="#43B546" />
               </View>
-            ) : productImages && productImages.length > 0 ? (
+            ) : productImages[0]?.file_name ? (
               <View>
                 <FlatList
                   ref={scrollViewRef}
@@ -346,61 +464,85 @@ const ShoppingDetail = ({route, navigation}) => {
                   scrollEventThrottle={16}
                 />
                 {productImages.length > 0 && renderDots()}
-              </View>
+            </View>
             ) : (
-              <Image 
-                source={{uri: product.image}} 
-                style={styles.productImage} 
-                resizeMode="contain"
-              />
+              <View style={[styles.noImageContainer, {backgroundColor: '#EEEEEE'}]}>
+                <Image source={IMAGES.icons.sadFaceGray} style={styles.noImageIcon} />
+                <Text style={styles.noImageText}>상품 이미지가 없어요</Text>
+            </View>
             )}
           </View>
           
           <View style={styles.productInfo}>
             <Text style={styles.productName}>{product.title}</Text>
             
-            <View style={styles.ratingContainer}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Image 
-                  key={`star_${star}`} 
-                  source={star <= parseFloat(avgStarPoint) ? IMAGES.icons.starYellow : IMAGES.icons.starGray} 
-                  style={styles.starIcon} 
-                />
-              ))}
-              <Text style={styles.rating}>{avgStarPoint}</Text>
-            </View>
+            {reviewData && reviewData.length > 0 ? (
+              <ShoppingReview 
+                productAppId={product.product_app_id} 
+                reviewData={reviewData}
+              />
+            ) : (
+              <View style={styles.ratingContainer}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Image 
+                    key={`star_${star}`} 
+                    source={star <= parseFloat(avgStarPoint) ? IMAGES.icons.starYellow : IMAGES.icons.starGray} 
+                    style={styles.starIcon} 
+                  />
+                ))}
+                <Text style={styles.rating}>{avgStarPoint}</Text>
+              </View>
+            )}
             
             <View style={styles.priceContainer}>
               <View style={styles.priceRow}>
-                <View style={styles.discountContainer}>
-                  <Text style={styles.discount}>{product.discount}%</Text>
-                  <Text style={styles.originalPrice}>{product.original_price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원</Text>
-                </View>
+                {product.discount > 0 && (
+                  <View style={styles.discountContainer}>
+                    <Text style={styles.discount}>{product.discount}%</Text>
+                    <Text style={styles.originalPrice}>{product.original_price}원</Text>
+                  </View>
+                )}
               </View>
-                <Text style={styles.price}>{product.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원</Text>
+              <Text style={[styles.price, {marginTop: product.discount > 0 ? scale(5) : scale(0)}]}>{product.price}원</Text>
             </View>
             
+            <View style={{marginTop: scale(10), marginBottom: scale(25), borderBottomWidth: 1, borderBottomColor: '#EEEEEE', marginHorizontal: -scale(20)}} />
+            
+            <View style={styles.deliveryContainer}>
+              <Text style={styles.deliveryTitle}>배송</Text>
+              <View>
+                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                  <Text style={styles.deliveryText}>무료배송</Text>
+                  <Image source={IMAGES.icons.infoGray} style={styles.deliveryInfoIcon} />
+                </View>
+                <Text style={styles.deliveryDate}><Text style={{fontWeight: '600'}}>04.08(화)</Text> 이내 판매자 발송예정</Text>
+              </View>
+            </View>
+
             <View style={styles.divider} />
             
             {/* 탭 메뉴 */}
             <View style={styles.tabContainer}>
               <TouchableOpacity 
-                style={[styles.tab, activeTab === 'info' && styles.activeTab]} 
+                style={[styles.tabButton]} 
                 onPress={() => handleTabPress('info')}
               >
-                <Text style={[styles.tabText, activeTab === 'info' && styles.activeTabText]}>상품정보</Text>
+                <Text style={[styles.tabButtonText, activeTab === 'info' && styles.activeTabButtonText]}>상품정보</Text>
+                {activeTab === 'info' && <View style={styles.activeTabIndicator} />}
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.tab, activeTab === 'review' && styles.activeTab]} 
+                style={[styles.tabButton]} 
                 onPress={() => handleTabPress('review')}
               >
-                <Text style={[styles.tabText, activeTab === 'review' && styles.activeTabText]}>리뷰</Text>
+                <Text style={[styles.tabButtonText, activeTab === 'review' && styles.activeTabButtonText]}>리뷰</Text>
+                {activeTab === 'review' && <View style={styles.activeTabIndicator} />}
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.tab, activeTab === 'inquiry' && styles.activeTab]} 
+                style={[styles.tabButton]} 
                 onPress={() => handleTabPress('inquiry')}
               >
-                <Text style={[styles.tabText, activeTab === 'inquiry' && styles.activeTabText]}>문의</Text>
+                <Text style={[styles.tabButtonText, activeTab === 'inquiry' && styles.activeTabButtonText]}>문의</Text>
+                {activeTab === 'inquiry' && <View style={styles.activeTabIndicator} />}
               </TouchableOpacity>
             </View>
             
@@ -412,19 +554,195 @@ const ShoppingDetail = ({route, navigation}) => {
         <View style={styles.bottomBar}>
           <TouchableOpacity 
             style={styles.wishButton} 
-            onPress={() => setIsWished(!isWished)}
+            onPress={handleWishButtonClick}
           >
             <Icon name={isWished ? "heart" : "heart-outline"} size={24} color={isWished ? "#F04D4D" : "#202020"} />
             <Text style={styles.wishText}>찜</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.buyButton}>
+          <TouchableOpacity style={styles.buyButton} onPress={handlePurchaseClick}>
             <Text style={styles.buyText}>구매하기</Text>
           </TouchableOpacity>
         </View>
+
+        {/* 구매하기 모달 */}
+        <CustomPurchaseModal 
+          visible={showPurchaseModal}
+          onClose={handleCloseModal}
+          product={product}
+        />
       </View>
     </>
   );
 };
+
+// 커스텀 구매 모달 컴포넌트
+const CustomPurchaseModal = ({ visible, onClose, product }) => {
+  const translateY = new Animated.Value(0);
+  
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderMove: (evt, gestureState) => {
+      if (gestureState.dy > 0) {
+        translateY.setValue(gestureState.dy);
+      }
+    },
+    onPanResponderRelease: (evt, gestureState) => {
+      if (gestureState.dy > 100) {
+        Animated.timing(translateY, {
+          toValue: screenHeight,
+          duration: 200,
+          useNativeDriver: true
+        }).start(onClose);
+      } else {
+        Animated.spring(translateY, {
+          toValue: 0,
+          friction: 8,
+          useNativeDriver: true
+        }).start();
+      }
+    }
+  });
+
+  return (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={purchaseModalStyles.overlay}>
+        <Animated.View 
+          style={[
+            purchaseModalStyles.content,
+            { transform: [{ translateY }] }
+          ]}
+        >
+          <View 
+            style={purchaseModalStyles.dragArea}
+            {...panResponder.panHandlers}
+          >
+            <View style={purchaseModalStyles.barContainer}>
+              <Image source={IMAGES.icons.smallBarLightGray} style={purchaseModalStyles.bar} />
+            </View>
+          </View>
+          
+          <TouchableOpacity style={purchaseModalStyles.selectBox}>
+            <Text style={purchaseModalStyles.selectBoxText}>상품을 선택해주세요</Text>
+            <Image source={IMAGES.icons.arrowDownGray} style={purchaseModalStyles.arrowDownIcon} />
+          </TouchableOpacity>
+
+          <View style={purchaseModalStyles.buttonContainer}>
+            <TouchableOpacity style={purchaseModalStyles.cartButton} onPress={onClose}>
+              <Text style={purchaseModalStyles.cartButtonText}>장바구니</Text>
+            </TouchableOpacity>          
+            <TouchableOpacity style={purchaseModalStyles.confirmButton} onPress={onClose}>
+              <Text style={purchaseModalStyles.confirmButtonText}>구매하기</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
+
+// 구매 모달 스타일
+const purchaseModalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  content: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: scale(20),
+    borderTopRightRadius: scale(20),
+    padding: scale(20),
+    paddingTop: scale(10),
+    minHeight: scale(300),
+  },
+  dragArea: {
+    alignItems: 'center',
+    marginBottom: scale(15),
+  },
+  barContainer: {
+    alignItems: 'center',
+  },
+  bar: {
+    width: scale(40),
+    height: scale(4),
+    resizeMode: 'contain',
+  },
+  title: {
+    fontSize: scale(18),
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: scale(20),
+    color: '#202020',
+  },
+  productInfoContainer: {
+    marginBottom: scale(20),
+  },
+  productName: {
+    fontSize: scale(16),
+    marginBottom: scale(10),
+    color: '#202020',
+  },
+  productPrice: {
+    fontSize: scale(18),
+    fontWeight: 'bold',
+    color: '#202020',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: scale(10),
+  },
+  confirmButton: {
+    backgroundColor: '#43B546',
+    borderRadius: scale(30),
+    paddingVertical: scale(15),
+    alignItems: 'center',
+    width: '48%',
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: scale(16),
+    fontWeight: 'bold',
+  },
+  cartButton: {
+    backgroundColor: '#D9D9D9',
+    borderRadius: scale(30),
+    paddingVertical: scale(15),
+    alignItems: 'center',
+    width: '48%',
+  },
+  cartButtonText: {
+    color: '#71717',
+    fontSize: scale(16),
+    fontWeight: 'bold',
+  },
+  selectBox: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D9D9D9',
+    borderRadius: scale(10),
+    padding: scale(15),
+    marginBottom: scale(20),
+  },
+  selectBoxText: {
+    fontSize: scale(14),
+    color: '#202020',
+  },
+  arrowDownIcon: {
+    width: scale(16),
+    height: scale(16),
+    resizeMode: 'contain',
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -440,15 +758,15 @@ const styles = StyleSheet.create({
   },
   slide: {
     width: screenWidth,
-    height: scale(400),  
+    height: scale(450),  
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#EEEEEE',
   },
   productImage: {
     width: screenWidth,
-    height: scale(100),
-    resizeMode: 'contain',
+    height: scale(450),
+    resizeMode: 'cover',
   },
   paginationContainer: {
     position: 'absolute',
@@ -492,7 +810,7 @@ const styles = StyleSheet.create({
     marginRight: scale(10),
   },
   priceContainer: {
-    marginBottom: scale(16),
+    marginBottom: scale(14),
   },
   priceRow: {
     flexDirection: 'row',
@@ -506,6 +824,7 @@ const styles = StyleSheet.create({
   discountContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: scale(10),
   },
   originalPrice: {
     fontSize: scale(14),
@@ -537,16 +856,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    height: scale(70),
+    // height: scale(70),
     paddingHorizontal: scale(16),
-    paddingVertical: scale(10),
-    borderTopLeftRadius: scale(16),
-    borderTopRightRadius: scale(16),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 8,
+    paddingVertical: scale(20),
+    borderTopLeftRadius: scale(20),
+    borderTopRightRadius: scale(20),
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+      },
+      android: {
+        elevation: 15,
+        shadowColor: '#000',
+      },
+    }),
   },
   wishButton: {
     flexDirection: 'row',
@@ -562,23 +888,24 @@ const styles = StyleSheet.create({
   buyButton: {
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#43B546',
+    borderRadius: scale(30),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(8),
   },
   buyText: {
-    backgroundColor: '#43B546',
     fontSize: scale(14),
     fontWeight: '600',
     color: '#FFFFFF',
-    borderRadius: scale(30),
-    paddingHorizontal: scale(15),
-    paddingVertical: scale(8),
   },
   cartButton: {
     width: scale(40),
     alignItems: 'flex-end'
   },
   cartIcon: {
-    // width: scale(40),
-    // height: scale(40),
+    width: scale(20),
+    height: scale(20),
+    resizeMode: 'contain',
   },
   dotsContainer: {
     position: 'absolute',
@@ -600,27 +927,33 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
-    paddingHorizontal: scale(16),
-    paddingVertical: scale(15),
-  },
-  tab: {
-    alignItems: 'center'
-  },
-  activeTab: {
     borderBottomWidth: 2,
-    borderBottomColor: '#43B546',
+    borderBottomColor: '#EEEEEE',
+    marginHorizontal: -scale(16),
   },
-  tabText: {
+  tabButton: {
+    width: '33.33%',
+    height: scale(40),
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  tabButtonText: {
     fontSize: scale(14),
+    fontWeight: '500',
     color: '#202020',
   },
-  activeTabText: {
+  activeTabButtonText: {
     color: '#43B546',
-    fontWeight: 'bold',
+  },
+  activeTabIndicator: {
+    position: 'absolute',
+    bottom: -3,
+    left: '25%',
+    right: '25%',
+    height: scale(3),
+    backgroundColor: '#43B546',
+    borderRadius: scale(1.5),
   },
   detailImage: {
     width: '100%',
@@ -660,6 +993,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  reviewTitle: {
+    fontSize: scale(16),
+    fontWeight: '600',
+    marginBottom: scale(10),
+  },
   reviewText: {
     fontSize: scale(14),
   },
@@ -686,6 +1024,96 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     fontWeight: '600',
     marginTop: scale(10),
+  },
+  deliveryContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  deliveryTitle: {
+    fontSize: scale(14),
+    marginRight: scale(10),
+    color: '#848484',
+  },
+  deliveryText: {
+    fontSize: scale(14),
+    color: '#202020',
+  },
+  deliveryInfoIcon: {
+    width: scale(14),
+    height: scale(14),
+    resizeMode: 'contain',
+    marginLeft: scale(5),
+  },
+  deliveryDate: {
+    marginTop: scale(5),
+    fontSize: scale(14),
+    color: '#848484',
+  },
+  noImageContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: screenWidth,
+    height: scale(400),
+  },
+  noImageIcon: {
+    width: scale(40),
+    height: scale(40),
+    resizeMode: 'contain',
+  },
+  noImageText: {  
+    fontSize: scale(14),
+    color: '#848484',
+    marginTop: scale(10),
+  },
+  noTabContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: screenWidth,
+    height: scale(200),
+  },
+  noTabIcon: {
+    width: scale(40),
+    height: scale(40),
+    resizeMode: 'contain',
+  },
+  noTabText: {
+    fontSize: scale(14),
+    color: '#848484',
+    marginTop: scale(10),
+  },
+  inquiryContainer: {
+    padding: scale(16),
+    width: screenWidth,
+    height: scale(200),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inquiryTitle: {
+    fontSize: scale(16),
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#202020',
+  },
+  inquiryDesc: {
+    fontSize: scale(14),
+    color: '#848484',
+    marginTop: scale(10),
+    textAlign: 'center',
+  },
+  inquiryButtonContainer: {
+    marginTop: scale(20),
+  },
+  inquiryButton: {
+    backgroundColor: '#202020',
+    borderRadius: scale(12),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(8),
+  },
+  inquiryButtonText: {
+    fontSize: scale(14),
+    color: '#FFFFFF',
   },
 });
 

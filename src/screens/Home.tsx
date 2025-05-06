@@ -12,6 +12,8 @@ import {
   Modal,
   Image,
   ActivityIndicator,
+  Animated,
+  Easing,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -22,13 +24,12 @@ import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {AuthStackParamList} from '../navigation/AuthStackNavigator';
 import CommonPopup from '../components/CommonPopup';
-import AttendancePopup from '../components/AttendancePopup';
 import LinearGradient from 'react-native-linear-gradient';
 import {getMemberExerciseInfo, getMemberExerciseList} from '../api/services/memberExerciseService';
 import IMAGES from '../utils/images';
 import { useProfileImage } from '../hooks/useProfileImage';
 import ProfileImagePicker from '../components/ProfileImagePicker';
-import BannerImagePicker from '../components/BannerImagePicker';
+import HomeBannerImgPicker from '../components/HomeBannerImgPicker';
 import ExerciseInfoPopup from '../components/ExerciseInfoPopup';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList>;
@@ -59,6 +60,11 @@ const Home = () => {
     averageHeartRate: 0,
   });
   const ref = useRef<ScrollView>(null);
+
+  // 파동 애니메이션 값
+  const pulseAnim1 = useRef(new Animated.Value(0)).current;
+  const pulseAnim2 = useRef(new Animated.Value(0)).current;
+  const pulseAnim3 = useRef(new Animated.Value(0)).current;
 
   // 운동 정보 새로고침 함수
   const refreshExerciseData = React.useCallback(async () => {
@@ -1123,6 +1129,85 @@ const Home = () => {
     return total;
   };
 
+  // 파동 애니메이션 시작
+  useEffect(() => {
+    const startPulseAnimation = () => {
+      // 모든 애니메이션 값 리셋
+      pulseAnim1.setValue(0);
+      pulseAnim2.setValue(0);
+      pulseAnim3.setValue(0);
+      
+      // 첫 번째 파동 애니메이션
+      Animated.timing(pulseAnim1, {
+        toValue: 1,
+        duration: 3500,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }).start();
+      
+      // 두 번째 파동 애니메이션(약간 지연)
+      setTimeout(() => {
+        Animated.timing(pulseAnim2, {
+          toValue: 1,
+          duration: 3500,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }).start();
+      }, 1200);
+      
+      // 세 번째 파동 애니메이션(더 지연)
+      setTimeout(() => {
+        Animated.timing(pulseAnim3, {
+          toValue: 1,
+          duration: 3500,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }).start();
+      }, 2400);
+      
+      // 애니메이션 주기적 반복
+      const animationInterval = setInterval(() => {
+        pulseAnim1.setValue(0);
+        Animated.timing(pulseAnim1, {
+          toValue: 1,
+          duration: 3500,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }).start();
+        
+        setTimeout(() => {
+          pulseAnim2.setValue(0);
+          Animated.timing(pulseAnim2, {
+            toValue: 1,
+            duration: 3500,
+            easing: Easing.linear,
+            useNativeDriver: true,
+          }).start();
+        }, 1200);
+        
+        setTimeout(() => {
+          pulseAnim3.setValue(0);
+          Animated.timing(pulseAnim3, {
+            toValue: 1,
+            duration: 3500,
+            easing: Easing.linear,
+            useNativeDriver: true,
+          }).start();
+        }, 2400);
+      }, 3600);
+      
+      // 컴포넌트 언마운트 시 인터벌 정리
+      return () => clearInterval(animationInterval);
+    };
+    
+    const animation = startPulseAnimation();
+    
+    return () => {
+      // 클린업 함수
+      if (animation) animation();
+    };
+  }, []);
+
   return (
     <>
       <ScrollView
@@ -1137,10 +1222,12 @@ const Home = () => {
         keyboardShouldPersistTaps="handled">
         {/* 헤더 부분 */}
 
+        <View style={styles.gradientGreenContainer}>
           <Image 
-            source={IMAGES.icons.gradientGreen}
+            source={IMAGES.gradient.circleGreen}
             style={styles.gradientGreen}
-          />
+            />
+        </View>
 
         <View
           style={[
@@ -1167,7 +1254,7 @@ const Home = () => {
         </View>
 
         <View style={styles.contentSection}>
-          <BannerImagePicker bannerLocate="HOME" />
+          <HomeBannerImgPicker />
         </View>
 
         <View style={styles.contentSection}>
@@ -1191,7 +1278,7 @@ const Home = () => {
               <View key={`date-${item.date}`} style={styles.gradientOuterWrapper}>
                 <View style={styles.gradientInnerWrapper}>
                   <LinearGradient
-                    colors={['#43b546', '#b6ff99']}
+                    colors={['#43b546', '#43b546']}
                     start={{x: 0, y: 0}}
                     end={{x: 0, y: 1}}
                     style={styles.linearGradientDateWrapper}>
@@ -1457,7 +1544,10 @@ const Home = () => {
                             ]} 
                           >
                             <LinearGradient 
-                              colors={['rgba(107, 196, 106, 0.3)', '#6BC46A']}
+                              colors={[
+                                '#43B546', 
+                                '#43B546'
+                              ]}
                               style={styles.graphBarGradient}
                               start={{x: 0, y: 0}}
                               end={{x: 0, y: 1}}
@@ -1553,7 +1643,10 @@ const Home = () => {
                             ]} 
                           >
                             <LinearGradient 
-                              colors={['rgba(107, 196, 106, 0.3)', '#6BC46A']}
+                              colors={[
+                                '#43B546', 
+                                '#43B546'
+                              ]}
                               style={styles.graphBarGradient}
                               start={{x: 0, y: 0}}
                               end={{x: 0, y: 1}}
@@ -1587,7 +1680,7 @@ const Home = () => {
           <View style={styles.exerciseSummaryContainer}>
             {/* 왼쪽 박스 */}
             <View style={styles.exerciseSummaryBox}>
-              <View>
+              <View style={{width: '100%'}}>
                 <View style={{flexDirection: 'row', alignItems: 'center'}}>
                   <View>
                     <View style={[styles.iconCircle, {backgroundColor: '#FFFFFF'}]}>
@@ -1599,7 +1692,62 @@ const Home = () => {
                   </View>
                   <Text style={styles.exerciseSummaryTitle}>평균 심박수</Text>
                 </View>
-                <Text style={styles.exerciseSummaryValue}>{accumulatedData.averageHeartRate} bpm</Text>
+                <View style={{height: scale(120), justifyContent: 'center', alignItems: 'center'}}>
+                  {/* 파동 애니메이션 */}
+                  <Animated.View style={[
+                    styles.pulseCircle,
+                    {
+                      opacity: pulseAnim1.interpolate({
+                        inputRange: [0, 0.5, 1],
+                        outputRange: [0.7, 0.3, 0],
+                      }),
+                      transform: [{
+                        scale: pulseAnim1.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.8, 3],
+                        }),
+                      }],
+                    }
+                  ]} />
+                  
+                  <Animated.View style={[
+                    styles.pulseCircle,
+                    {
+                      opacity: pulseAnim2.interpolate({
+                        inputRange: [0, 0.5, 1],
+                        outputRange: [0.7, 0.3, 0],
+                      }),
+                      transform: [{
+                        scale: pulseAnim2.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.8, 3],
+                        }),
+                      }],
+                    }
+                  ]} />
+                  
+                  <Animated.View style={[
+                    styles.pulseCircle,
+                    {
+                      opacity: pulseAnim3.interpolate({
+                        inputRange: [0, 0.5, 1],
+                        outputRange: [0.7, 0.3, 0],
+                      }),
+                      transform: [{
+                        scale: pulseAnim3.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.8, 3],
+                        }),
+                      }],
+                    }
+                  ]} />
+                  
+                  <Image source={IMAGES.icons.heartWhite} style={styles.hearWhite} />
+                </View>
+                <View style={{flexDirection: 'row', alignItems: 'flex-end'}}>
+                  <Text style={styles.exerciseSummaryValue}>{accumulatedData.averageHeartRate}</Text>
+                  <Text style={{fontSize: scale(16), color: '#FFFFFF'}}> Bpm</Text>
+                </View>
               </View>
             </View>
             
@@ -1607,7 +1755,7 @@ const Home = () => {
             <View style={styles.exerciseSummaryRightContainer}>
               {/* 오른쪽 위 박스 */}
               <View style={styles.exerciseSummaryBoxSmall}>
-                <View>
+                <View style={{flexDirection: 'column', justifyContent: 'space-between'}}>
                   <View style={{flexDirection: 'row', alignItems: 'center'}}>
                     <View style={styles.iconCircle}>
                     <Image 
@@ -1617,14 +1765,17 @@ const Home = () => {
                     </View>
                     <Text style={styles.exerciseSummaryTitle}>총 소모 칼로리</Text>
                   </View>
-                  <Text style={styles.exerciseSummaryValue}>{accumulatedData.totalCalories.toLocaleString()} kcal</Text>
+                  <View style={{flexDirection: 'row', alignItems: 'flex-end'}}>
+                    <Text style={styles.exerciseSummaryValue}>{accumulatedData.totalCalories.toLocaleString()}</Text>
+                    <Text style={{fontSize: scale(16), color: '#848484'}}> kcal</Text>
+                  </View>
                 </View>
 
               </View>
               
               {/* 오른쪽 아래 박스 */}
               <View style={styles.exerciseSummaryBoxSmall}>
-                <View>
+                <View style={{flexDirection: 'column', justifyContent: 'space-between'}}>
                   <View style={{flexDirection: 'row', alignItems: 'center'}}>
                     <View>
                       <View style={styles.iconCircle}>
@@ -1636,7 +1787,10 @@ const Home = () => {
                     </View>
                     <Text style={styles.exerciseSummaryTitle}>총 뛴거리</Text>
                   </View>
-                  <Text style={styles.exerciseSummaryValue}>{accumulatedData.totalDistance.toFixed(1)} km</Text>
+                  <View style={{flexDirection: 'row', alignItems: 'flex-end'}}>
+                    <Text style={styles.exerciseSummaryValue}>{accumulatedData.totalDistance.toFixed(1)}</Text>
+                    <Text style={{fontSize: scale(16), color: '#848484'}}> km</Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -1740,7 +1894,7 @@ const styles = StyleSheet.create({
     marginRight: scale(2),
   },
   card: {
-    backgroundColor: '#333333',
+    backgroundColor: '#373737',
     borderRadius: scale(15),
     padding: scale(16),
     justifyContent: 'center',
@@ -1751,7 +1905,7 @@ const styles = StyleSheet.create({
     fontSize: scale(16),
   },
   banner: {
-    backgroundColor: '#333333',
+    backgroundColor: '#373737',
     borderRadius: scale(8),
     padding: scale(16),
     minHeight: scale(150),
@@ -1810,7 +1964,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   todayItem: {
-    backgroundColor: '#6BC46A',
+    backgroundColor: '#40B649',
   },
   dateDay: {
     color: '#999999',
@@ -1844,7 +1998,7 @@ const styles = StyleSheet.create({
     marginRight: scale(10),
   },
   categoryButtonActive: {
-    backgroundColor: '#6BC46A',
+    backgroundColor: '#43B546',
   },
   categoryButtonText: {
     color: '#FFFFFF',
@@ -1895,7 +2049,7 @@ const styles = StyleSheet.create({
   },
   graphBarContainer: {
     width: scale(20),
-    backgroundColor: 'rgba(107, 196, 106, 0.1)',
+    backgroundColor: '#43B546',
     borderRadius: scale(10),
     overflow: 'hidden',
     marginBottom: scale(5),
@@ -1904,6 +2058,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: scale(10),
+    opacity: Platform.OS === 'ios' ? 1 : undefined,
   },
   graphXLabel: {
     color: '#999999',
@@ -2012,10 +2167,15 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     fontWeight: 'bold',
   },
+  hearWhite: {
+    width: scale(35),
+    height: scale(35),
+    tintColor: '#FFFFFF',
+    resizeMode: 'contain',
+  },
   exerciseSummaryValue: {
     color: '#FFFFFF',
-    fontSize: scale(22),
-    fontWeight: 'bold',
+    fontSize: scale(20),
     marginTop: scale(10),
   },
   exerciseSummaryIcon: {
@@ -2036,6 +2196,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     flexDirection: 'row',
     minHeight: scale(95),
+    paddingVertical: scale(18),
   },
   iconCircle: {
     width: scale(18),
@@ -2060,13 +2221,24 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
-  gradientGreen: {
-    width: scale(400),
-    height: scale(400),
-    resizeMode: 'cover',
+  gradientGreenContainer: {
+    width: scale(500),
+    height: scale(500),
     position: 'absolute',
-    top: 0,
+    top: 50,
     left: 0,
+  },
+  gradientGreen: {
+    width: scale(300),
+    height: scale(300),
+    resizeMode: 'contain',
+  },
+  pulseCircle: {
+    width: scale(70),
+    height: scale(70),
+    borderRadius: scale(35),
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    position: 'absolute',
   },
 });
 

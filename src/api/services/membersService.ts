@@ -11,6 +11,8 @@ export interface MemberInfo {
   mem_email_id: string;
   center_id: number;
   center_name: string;
+  sch_time: string
+  mem_sch_id: number;
   // 필요한 다른 회원 정보 필드 추가
 }
 

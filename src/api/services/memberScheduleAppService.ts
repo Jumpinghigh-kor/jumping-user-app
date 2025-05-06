@@ -6,6 +6,10 @@ export interface CenterScheduleInfo {
   sch_time: string;
   sch_max_cap: number;
   sch_info: string;
+  mem_sch_cnt: number;
+  mem_total_sch_cnt: number;
+  mem_change_sch_cnt: number;
+  mem_basic_sch_cnt: number;
 }
 
 export interface MemberScheduleInfo {
@@ -35,10 +39,12 @@ export interface InsertMemberScheduleResponse {
 }
 
 // 센터 ID로 회원 스케줄 조회
-export const getCenterScheduleList = async (centerId: number): Promise<GetCenterScheduleResponse> => {
+export const getCenterScheduleList = async (centerId: number, memId: number, schDt?: string): Promise<GetCenterScheduleResponse> => {
   try {
     const response = await axiosInstance.post('/member-schedule-app/getCenterScheduleList', {
-      center_id: centerId
+      center_id: centerId,
+      mem_id: memId,
+      sch_dt: schDt
     });
     return response.data;
   } catch (error) {
@@ -51,13 +57,15 @@ export const getCenterScheduleList = async (centerId: number): Promise<GetCenter
 export const insertMemberSchedule = async (
   memId: number, 
   schId: number, 
-  schDt: string
+  schDt: string,
+  basicSchId?: number
 ): Promise<InsertMemberScheduleResponse> => {
   try {
     const response = await axiosInstance.post('/member-schedule-app/insertMemberScheduleApp', {
       mem_id: memId,
       sch_id: schId,
-      sch_dt: schDt
+      sch_dt: schDt,
+      basic_sch_id: basicSchId
     });
     return response.data;
   } catch (error) {
@@ -75,6 +83,44 @@ export const getMemberScheduleList = async (memId: number): Promise<GetMemberSch
     return response.data;
   } catch (error) {
     console.error('회원 스케줄 목록 조회 에러:', error);
+    throw error;
+  }
+};
+
+// 회원 스케줄 삭제
+export const deleteMemberScheduleApp = async (
+  memId: number, 
+  schAppIds: number | number[]
+): Promise<InsertMemberScheduleResponse> => {
+  try {
+    const response = await axiosInstance.post('/member-schedule-app/deleteMemberScheduleApp', {
+      mem_id: memId,
+      sch_app_id: schAppIds
+    });
+    return response.data;
+  } catch (error) {
+    console.error('예약 취소 에러:', error);
+    throw error;
+  }
+};
+
+// 회원 스케줄 수정
+export const updateMemberScheduleApp = async (
+  memId: number,
+  schId: number,
+  schDt: string,
+  schAppId: number
+): Promise<InsertMemberScheduleResponse> => {
+  try {
+    const response = await axiosInstance.post('/member-schedule-app/updateMemberScheduleApp', {
+      mem_id: memId,
+      sch_id: schId,
+      sch_dt: schDt,
+      sch_app_id: schAppId
+    });
+    return response.data;
+  } catch (error) {
+    console.error('스케줄 수정 에러:', error);
     throw error;
   }
 }; 

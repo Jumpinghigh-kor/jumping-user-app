@@ -11,7 +11,7 @@ import IMAGES from '../utils/images';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {getInquiryList} from '../api/services/inquiryService';
 import {getNoticesAppList} from '../api/services/noticesAppService';
-import ShoppingList from '../screens/ShoppingList';
+import ShoppingHome from '../screens/ShoppingHome';
 const Tab = createBottomTabNavigator();
 const ShoppingStack = createNativeStackNavigator();
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -320,7 +320,7 @@ const MainTabNavigator = () => {
       />
       <Tab.Screen
         name="Shopping"
-        component={ShoppingList}
+        component={ShoppingHome}
         options={{
           title: '쇼핑',
           tabBarLabel: '쇼핑',
@@ -409,11 +409,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 8,
     borderColor: '#202020',
-    shadowColor: 'transparent',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
   },
   homeButtonTouchable: {
     position: 'absolute',

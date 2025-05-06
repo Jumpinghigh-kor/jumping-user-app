@@ -3,7 +3,7 @@ import {View, StyleSheet, Text, TouchableOpacity, Image, ScrollView, FlatList, M
 import { scale } from '../utils/responsive';
 import CommonHeader from '../components/CommonHeader';
 import images from '../utils/images';
-import { getCenterScheduleList, CenterScheduleInfo, insertMemberSchedule, getMemberScheduleList } from '../api/services/memberScheduleAppService';
+import { getCenterScheduleList, CenterScheduleInfo, insertMemberSchedule, getMemberScheduleList, deleteMemberScheduleApp, updateMemberScheduleApp } from '../api/services/memberScheduleAppService';
 import {useAppSelector} from '../store/hooks';
 import CommonModal from '../components/CommonModal';
 import CommonPopup from '../components/CommonPopup';
@@ -29,6 +29,17 @@ const Reservation: React.FC = () => {
   const [historyLoading, setHistoryLoading] = useState<boolean>(false);
   const memberInfo = useAppSelector(state => state.member.memberInfo);
   const scrollViewRef = useRef<ScrollView>(null);
+  const [selectedSchedules, setSelectedSchedules] = useState<number[]>([]);
+  const [cancelPopupVisible, setCancelPopupVisible] = useState<boolean>(false);
+  const [cancelLoading, setCancelLoading] = useState<boolean>(false);
+  const [cancelErrorMessage, setCancelErrorMessage] = useState<string>('');
+  const [cancelErrorPopupVisible, setCancelErrorPopupVisible] = useState<boolean>(false);
+  const [cancelSuccessPopupVisible, setCancelSuccessPopupVisible] = useState<boolean>(false);
+  const [selectedSchAppId, setSelectedSchAppId] = useState<number | null>(null);
+  const [isUpdateMode, setIsUpdateMode] = useState<boolean>(false);
+  const [noSelectionWarningVisible, setNoSelectionWarningVisible] = useState<boolean>(false);
+  // 강제 리렌더링용 카운터 상태
+  const [forceUpdateCounter, setForceUpdateCounter] = useState<number>(0);
   
   // 모달 드래그 관련 상태와 핸들러
   const pan = useRef(new Animated.ValueXY()).current;
@@ -89,62 +100,72 @@ const Reservation: React.FC = () => {
   };
 
   // API에서 시간표 데이터 가져오기
-  useFocusEffect(
-    useCallback(() => {
-      const fetchScheduleData = async () => {
-        try {
-          const response = await getCenterScheduleList(memberInfo?.center_id);
-          if (response.success && response.data) {
-            setTimeOptions(response.data);
-          } else {
-          }
-        } catch (err) {
-          console.error('시간표 로딩 오류:', err);
-        } finally {
-        }
-      };
-
-      fetchScheduleData();
-    }, [])
-  );
+  const fetchScheduleData = async (date: string) => {
+    try {
+      // YYYY-MM-DD 형식을 YYYYMMDD 형식으로 변환
+      const formattedDate = date.replace(/-/g, '');
+      
+      const response = await getCenterScheduleList(
+        Number(memberInfo?.center_id), 
+        Number(memberInfo?.mem_id),
+        formattedDate
+      );
+      if (response.success && response.data) {
+        setTimeOptions(response.data);
+        // 시간표 데이터 갱신 후 리렌더링 촉진
+        setForceUpdateCounter(prev => prev + 1);
+      } else {
+      }
+    } catch (err) {
+      console.error('시간표 로딩 오류:', err);
+    } finally {
+    }
+  };
 
   // 회원의 예약된 스케줄 목록 가져오기
-  useFocusEffect(
-    useCallback(() => {
-      const fetchMemberSchedules = async () => {
-        if (!memberInfo?.mem_id) return;
-        
-        try {
-          setHistoryLoading(true);
-          const response = await getMemberScheduleList(Number(memberInfo.mem_id));
+  const fetchMemberSchedules = async () => {
+    if (!memberInfo?.mem_id) return null;
+    
+    try {
+      setHistoryLoading(true);
+      const response = await getMemberScheduleList(Number(memberInfo.mem_id));
 
-          if (response.success && response.data) {
-            // sch_dt 형식이 YYYYMMDD 이므로 YYYY-MM-DD 형식으로 변환
-            const formattedDates = response.data.map(schedule => {
-              const dt = schedule.sch_dt;
-              if (dt.length === 8) {
-                return `${dt.substring(0, 4)}-${dt.substring(4, 6)}-${dt.substring(6, 8)}`;
-              }
-              return dt;
-            });
-
-
-            setScheduledDates(formattedDates);
-            
-            // API에서 이미 정렬된 데이터를 사용
-            setMemberSchedules(response.data);
-
-          }
-        } catch (err) {
-          console.error('회원 스케줄 조회 오류:', err);
-        } finally {
-          setHistoryLoading(false);
+      if (response.success && response.data) {
+        // 데이터가 없는 경우 scheduledDates도 빈 배열로 초기화
+        if (response.data.length === 0) {
+          setScheduledDates([]);
+          setMemberSchedules([]);
+          return [];
         }
-      };
+        
+        // sch_dt 형식이 YYYYMMDD 이므로 YYYY-MM-DD 형식으로 변환
+        const formattedDates = response.data.map(schedule => {
+          const dt = schedule.sch_dt;
+          if (dt.length === 8) {
+            return `${dt.substring(0, 4)}-${dt.substring(4, 6)}-${dt.substring(6, 8)}`;
+          }
+          return dt;
+        });
 
-      fetchMemberSchedules();
-    }, [])
-  );
+        setScheduledDates(formattedDates);
+        
+        // API에서 이미 정렬된 데이터를 사용
+        setMemberSchedules(response.data);
+        
+        return response.data;
+      }
+      
+      // 데이터가 없거나 success가 false인 경우 빈 배열로 초기화
+      setScheduledDates([]);
+      setMemberSchedules([]);
+      return [];
+    } catch (err) {
+      console.error('회원 스케줄 조회 오류:', err);
+      return [];
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   // 현재 날짜 정보 가져오기
   const today = new Date();
@@ -205,20 +226,39 @@ const Reservation: React.FC = () => {
     
     const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     
-    // 이미 예약된 날짜인지 확인
-    if (scheduledDates.includes(formattedDate)) {
-      // 토스트 메시지 표시
-      if (Platform.OS === 'android') {
-        ToastAndroid.show('이미 예약이 된 날짜입니다', ToastAndroid.SHORT);
-      } else {
-        // iOS의 경우 Alert로 대체
-        Alert.alert('알림', '이미 예약이 된 날짜입니다');
-      }
-      return; // 이미 예약된 날짜는 선택하지 않음
-    }
+    // 이미 예약된 날짜인지 확인하되 토스트 없이 선택 허용
+    const isScheduled = scheduledDates.includes(formattedDate);
     
+    // 날짜 선택 및 유효성 검사 오류 초기화
     setSelectedDate(formattedDate);
     setValidationError(null);
+    
+    // 수정 모드 설정
+    setIsUpdateMode(isScheduled);
+    
+    // 날짜가 선택되었을 때 시간표 데이터 가져오기
+    fetchScheduleData(formattedDate);
+    
+    // 이미 예약된 날짜인 경우 해당 날짜에 매핑된 시간표 설정
+    if (isScheduled) {
+      // 선택된 날짜의 sch_dt 형식으로 변환 (YYYY-MM-DD -> YYYYMMDD)
+      const schDtFormat = formattedDate.replace(/-/g, '');
+      
+      // 해당 날짜에 예약된 스케줄 찾기
+      const scheduledTimeForDate = memberSchedules.find(
+        schedule => schedule.sch_dt === schDtFormat
+      );
+      
+      // 예약된 시간이 있으면 selectedTime 설정
+      if (scheduledTimeForDate) {
+        setSelectedTime(scheduledTimeForDate.sch_time);
+        // sch_app_id 저장
+        setSelectedSchAppId(scheduledTimeForDate.sch_app_id);
+      }
+    } else {
+      // 예약되지 않은 날짜를 선택한 경우 sch_app_id만 초기화하고 selectedTime은 유지
+      setSelectedSchAppId(null);
+    }
   };
 
   const goToPreviousMonth = () => {
@@ -253,6 +293,31 @@ const Reservation: React.FC = () => {
       return;
     }
     
+    // 예약 수정 모드이고 당일인 경우 토스트 메시지 표시
+    if (scheduledDates.includes(selectedDate)) {
+      // 선택한 날짜가 오늘인지 확인
+      const selectedDateParts = selectedDate.split('-');
+      const selectedYear = parseInt(selectedDateParts[0]);
+      const selectedMonth = parseInt(selectedDateParts[1]) - 1; // 월은 0부터 시작
+      const selectedDay = parseInt(selectedDateParts[2]);
+      
+      const isTodaySelected = 
+        selectedYear === currentYear && 
+        selectedMonth === currentMonth && 
+        selectedDay === currentDate;
+      
+      if (isTodaySelected) {
+        // 토스트 메시지 표시
+        if (Platform.OS === 'android') {
+          ToastAndroid.show('예약당일엔 변경이나 취소를 할 수 없습니다.', ToastAndroid.SHORT);
+        } else {
+          // iOS의 경우 Alert로 대체
+          Alert.alert('알림', '예약당일엔 변경이나 취소를 할 수 없습니다.');
+        }
+        return;
+      }
+    }
+    
     // 모든 유효성 검사를 통과하면 모달 표시
     setValidationError(null);
     setModalVisible(true);
@@ -268,6 +333,10 @@ const Reservation: React.FC = () => {
 
   const closeSuccessPopup = () => {
     setSuccessPopupVisible(false);
+    // 성공적으로 예약 후 목록 새로고침
+    if (memberInfo?.mem_id) {
+      fetchMemberSchedules();
+    }
   };
 
   const closeReserveErrorPopup = () => {
@@ -288,22 +357,45 @@ const Reservation: React.FC = () => {
       // YYYY-MM-DD 형식의 날짜를 YYYYMMDD 형식으로 변환
       const formattedDate = selectedDate.replace(/-/g, '');
 
-      // API 호출
-      const response = await insertMemberSchedule(
-        memberInfo?.mem_id ? Number(memberInfo.mem_id) : 0,
-        selectedSchedule.sch_id,
-        formattedDate
-      );
+      // 이미 예약된 날짜인지 확인
+      const isUpdateMode = scheduledDates.includes(selectedDate);
+      
+      let response;
+      
+      if (isUpdateMode && selectedSchAppId) {
+        // 업데이트 API 호출
+        response = await updateMemberScheduleApp(
+          memberInfo?.mem_id ? Number(memberInfo.mem_id) : 0,
+          selectedSchedule.sch_id,
+          formattedDate,
+          selectedSchAppId
+        );
+      } else {
+        // 일반 예약 API 호출
+        response = await insertMemberSchedule(
+          memberInfo?.mem_id ? Number(memberInfo.mem_id) : 0,
+          selectedSchedule.sch_id,
+          formattedDate,
+          memberInfo?.mem_sch_id ? Number(memberInfo.mem_sch_id) : undefined
+        );
+      }
 
       // 모달 닫기
       setModalVisible(false);
 
       // 성공 처리
       if (response.success) {
+        // 예약 성공 후 예약 목록 새로고침
+        fetchMemberSchedules();
+        
+        // 예약 성공 팝업 표시 및 선택 초기화
         setSuccessPopupVisible(true);
-        // 예약 성공 후 선택 초기화
         setSelectedTime('');
         setSelectedDate('');
+        setSelectedSchAppId(null);
+        
+        // 강제 리렌더링
+        setForceUpdateCounter(prev => prev + 1);
       } else {
         // 서버에서 오류 메시지가 있는 경우
         setReserveErrorMessage(response.message || '예약 처리 중 오류가 발생했습니다.');
@@ -407,13 +499,165 @@ const Reservation: React.FC = () => {
     return `${year}.${month}.${day}`;
   };
 
+  // 예약 취소 팝업 닫기
+  const closeCancelPopup = () => {
+    setCancelPopupVisible(false);
+  };
+
+  // 예약 취소 에러 팝업 닫기
+  const closeCancelErrorPopup = () => {
+    setCancelErrorPopupVisible(false);
+  };
+
+  // 예약 취소 성공 팝업 닫기
+  const closeCancelSuccessPopup = () => {
+    setCancelSuccessPopupVisible(false);
+    
+    // 성공적으로 취소 후 목록 새로고침
+    if (memberInfo?.mem_id) {
+      // 먼저 데이터 초기화 (memberSchedules가 비어있을 경우 대비)
+      if (memberSchedules.length === 0) {
+        setScheduledDates([]);
+      }
+      
+      fetchMemberSchedules();
+      // 강제 리렌더링
+      setForceUpdateCounter(prev => prev + 1);
+    }
+  };
+  
+  // 선택 없음 경고 팝업 닫기
+  const closeNoSelectionWarning = () => {
+    setNoSelectionWarningVisible(false);
+  };
+
+  // 예약 취소 처리
+  const handleCancelReservation = async () => {
+    try {
+      setCancelLoading(true);
+      
+      if (selectedSchedules.length === 0) {
+        // 경고 팝업 표시
+        setNoSelectionWarningVisible(true);
+        setCancelLoading(false);
+        return;
+      }
+      
+      // 전체 삭제 여부 확인
+      const isAllSelected = memberSchedules.length === selectedSchedules.length;
+      
+      // API 호출
+      const response = await deleteMemberScheduleApp(
+        memberInfo?.mem_id ? Number(memberInfo.mem_id) : 0,
+        selectedSchedules
+      );
+      
+      // 팝업 닫기
+      setCancelPopupVisible(false);
+      
+      // 성공 처리
+      if (response.success) {
+        // 선택 초기화
+        setSelectedSchedules([]);
+        
+        // 전체 항목을 삭제한 경우 - 직접 빈 배열로 설정
+        if (isAllSelected) {
+          console.log('모든 예약 삭제됨, 빈 배열로 설정');
+          setMemberSchedules([]);
+          // scheduledDates도 함께 비워줌
+          setScheduledDates([]);
+          // 강제 리렌더링
+          setForceUpdateCounter(prev => prev + 1);
+        }
+        
+        // API에서 목록 새로고침
+        fetchMemberSchedules();
+        
+        // 성공 팝업 표시
+        setCancelSuccessPopupVisible(true);
+      } else {
+        // 서버에서 오류 메시지가 있는 경우
+        setCancelErrorMessage(response.message || '예약 취소 중 오류가 발생했습니다.');
+        setCancelErrorPopupVisible(true);
+      }
+    } catch (err: any) {
+      console.error('예약 취소 오류:', err);
+      setCancelErrorMessage(err.message || '예약 취소 중 오류가 발생했습니다.');
+      setCancelErrorPopupVisible(true);
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  // 현재 시간보다 이전 시간인지 확인하는 함수
+  const isTimePast = (timeString: string): boolean => {
+    // 오늘 날짜가 선택되어 있는지 확인
+    if (!selectedDate) return false;
+    
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
+    // 선택한 날짜가 오늘이 아니면 false 반환
+    if (selectedDate !== today) return false;
+    
+    // 시간 파싱 (예: "7:00 PM" -> 시간:19, 분:0)
+    let hour = 0;
+    let minute = 0;
+    
+    if (timeString.includes('AM') || timeString.includes('PM')) {
+      const timeParts = timeString.replace('AM', '').replace('PM', '').trim().split(':');
+      hour = parseInt(timeParts[0]);
+      minute = parseInt(timeParts[1]);
+      
+      if (timeString.includes('PM') && hour < 12) {
+        hour += 12;
+      }
+    }
+    
+    // 현재 시간
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    // 시간 비교
+    if (hour < currentHour) {
+      return true; // 이미 지난 시간
+    } else if (hour === currentHour && minute <= currentMinute) {
+      return true; // 같은 시간이지만 분이 지났거나 같음
+    }
+    
+    return false; // 아직 오지 않은 시간
+  };
+
+  // forceUpdateCounter가 변경될 때마다 데이터 상태 확인 및 초기화
+  useEffect(() => {
+    if (forceUpdateCounter > 0 && memberInfo?.mem_id) {
+      // 데이터 로드
+      fetchMemberSchedules().then(result => {
+        // 결과가 빈 배열이면 scheduledDates도 비워줌
+        if (!result || result.length === 0) {
+          setScheduledDates([]);
+        }
+      });
+    }
+  }, [forceUpdateCounter]);
+
+  // 회원의 예약된 스케줄 목록 가져오기
+  useFocusEffect(
+    useCallback(() => {
+      fetchMemberSchedules();
+    }, [])
+  );
+
   return (
     <>
       <View style={styles.container}>
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tabButton]}
-            onPress={() => setActiveTab('reservation')}
+            onPress={() => {
+              setActiveTab('reservation');
+              setForceUpdateCounter(prev => prev + 1);
+            }}
           >
             <Text style={[styles.tabButtonText, activeTab === 'reservation' && styles.activeTabButtonText]}>
               예약하기
@@ -422,7 +666,10 @@ const Reservation: React.FC = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tabButton]}
-            onPress={() => setActiveTab('history')}
+            onPress={() => {
+              setActiveTab('history');
+              setForceUpdateCounter(prev => prev + 1);
+            }}
           >
             <Text style={[styles.tabButtonText, activeTab === 'history' && styles.activeTabButtonText]}>
               예약내역
@@ -432,96 +679,13 @@ const Reservation: React.FC = () => {
         </View>
         
         {activeTab === 'reservation' ? (
-          <View style={styles.reservationContainer}>
+          <View style={styles.reservationContainer} key={forceUpdateCounter}>
             <ScrollView
               ref={scrollViewRef}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{paddingBottom: scale(110)}}>
-              <View style={styles.sectionContainer}>
-                <Text style={styles.sectionTitle}>시간표 선택</Text>
-                <View style={styles.selectBoxContainer}>
-                  <TouchableOpacity 
-                    style={styles.selectBox}
-                    onPress={() => setShowTimeSelect(!showTimeSelect)}
-                  >
-                    <Text style={[
-                      styles.selectBoxText,
-                      selectedTime ? styles.selectedTimeText : null
-                    ]}>
-                      {selectedTime ? formatTimeToKorean(selectedTime) : '시간을 선택해주세요'}
-                    </Text>
-                    <Image 
-                      source={showTimeSelect ? images.icons.arrowUpGray : images.icons.arrowDownGray} 
-                      style={styles.selectArrow} 
-                    />
-                  </TouchableOpacity>
-                </View>
-                
-                {showTimeSelect && (
-                  <View style={styles.optionsContainer}>
-                    {
-                      <ScrollView 
-                        style={{maxHeight: scale(130)}}
-                        nestedScrollEnabled={true}
-                        showsVerticalScrollIndicator={false}
-                        scrollEventThrottle={16}
-                        onScrollBeginDrag={() => {
-                          if (scrollViewRef.current) {
-                            scrollViewRef.current.setNativeProps({ scrollEnabled: false });
-                          }
-                        }}
-                        onScrollEndDrag={() => {
-                          if (scrollViewRef.current) {
-                            scrollViewRef.current.setNativeProps({ scrollEnabled: true });
-                          }
-                        }}
-                        onMomentumScrollEnd={() => {
-                          if (scrollViewRef.current) {
-                            scrollViewRef.current.setNativeProps({ scrollEnabled: true });
-                          }
-                        }}
-                      >
-                        {timeOptions.map((timeOption) => (
-                          <TouchableOpacity
-                            key={timeOption.sch_id}
-                            style={[
-                              styles.optionItem,
-                              timeOption.sch_max_cap === 0 && styles.disabledOptionItem,
-                              selectedTime === timeOption.sch_time && styles.selectedOptionItemBackground
-                            ]}
-                            disabled={timeOption.sch_max_cap === 0}
-                            onPress={() => {
-                              setSelectedTime(timeOption.sch_time);
-                              setShowTimeSelect(false);
-                              setValidationError(null);
-                            }}
-                          >
-                            <View style={styles.optionTextContainer}>
-                              <Text style={[
-                                styles.optionText,
-                                selectedTime === timeOption.sch_time && styles.selectedOptionItemText,
-                                timeOption.sch_max_cap === 0 && styles.disabledOptionText
-                              ]}>
-                                {formatTimeToKorean(timeOption.sch_time)}
-                              </Text>
-                              {timeOption.sch_info && timeOption.sch_info.includes('키즈') && (
-                                <Text style={[
-                                  styles.optionInfoText,
-                                  selectedTime === timeOption.sch_time && styles.selectedOptionItemText,
-                                  timeOption.sch_max_cap === 0 && styles.disabledOptionText
-                                ]}>
-                                  키즈반
-                                </Text>
-                              )}
-                            </View>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    }
-                  </View>
-                )}
-              </View>
-
+              <Text style={styles.memberSchInfo}>'{memberInfo?.mem_nickname}'님의 기본 시간표는 <Text style={{color: '#42B649'}}>{formatTimeToKorean(memberInfo?.sch_time || '')}</Text>입니다.{'\n'}예약이 되어 있지 않으면 <Text style={{color: '#42B649'}}>기본 시간표로 자동 예약</Text>됩니다.</Text>
+              
               <View style={styles.sectionContainer}>
                 <Text style={styles.sectionTitle}>날짜 선택</Text>
                 <View style={styles.calendarContainer}>
@@ -547,7 +711,8 @@ const Reservation: React.FC = () => {
                         key={index} 
                         style={[
                           styles.calendarDayNameText, 
-                          index === 0 && styles.sundayText
+                          index === 0 && styles.sundayText,
+                          index === 6 && {color: '#50ABFF'}
                         ]}
                       >
                         {day}
@@ -634,9 +799,13 @@ const Reservation: React.FC = () => {
                           <Text 
                             style={[
                               styles.calendarDayText,
-                              (index % 7 === 0) && styles.sundayText,
-                              isPastDate && styles.pastDayText,
-                              (!isCurrentMonth) && styles.otherMonthText,
+                              (index % 7 === 0) && isCurrentMonth && styles.sundayText,
+                              (index % 7 === 0) && !isCurrentMonth && {color: '#B33636'},
+                              (index % 7 === 6) && !isPastDate && isCurrentMonth && {color: '#50ABFF'},
+                              (index % 7 === 6) && isPastDate && {color: '#3D81BF'},
+                              (index % 7 === 6) && !isCurrentMonth && {color: '#3D81BF'},
+                              isPastDate && (index % 7 !== 6) && (index % 7 !== 0) && styles.pastDayText,
+                              (!isCurrentMonth) && (index % 7 !== 0) && (index % 7 !== 6) && styles.otherMonthText,
                               isSelectedDate && {color: '#FFFFFF', fontWeight: 'bold'}
                             ]}
                           >
@@ -649,19 +818,125 @@ const Reservation: React.FC = () => {
                   </View>
                 </View>
               </View>
+
+              <View style={styles.sectionContainer}>
+                <Text style={styles.sectionTitle}>시간표 선택</Text>
+                <View style={styles.selectBoxContainer}>
+                  <TouchableOpacity 
+                    style={styles.selectBox}
+                    onPress={() => setShowTimeSelect(!showTimeSelect)}
+                    disabled={!selectedDate}
+                  >
+                    <Text style={[
+                      styles.selectBoxText,
+                      selectedTime ? styles.selectedTimeText : null
+                    ]}>
+                      {!selectedDate ? '날짜를 먼저 선택해주세요' : (selectedTime ? formatTimeToKorean(selectedTime) : '시간을 선택해주세요')}
+                    </Text>
+                    <Image 
+                      source={showTimeSelect ? images.icons.arrowUpGray : images.icons.arrowDownGray} 
+                      style={styles.selectArrow} 
+                    />
+                  </TouchableOpacity>
+                </View>
+                
+                {showTimeSelect && (
+                  <View style={styles.optionsContainer}>
+                    {
+                      <ScrollView 
+                        style={{maxHeight: scale(130)}}
+                        nestedScrollEnabled={true}
+                        showsVerticalScrollIndicator={false}
+                        scrollEventThrottle={16}
+                        onScrollBeginDrag={() => {
+                          if (scrollViewRef.current) {
+                            scrollViewRef.current.setNativeProps({ scrollEnabled: false });
+                          }
+                        }}
+                        onScrollEndDrag={() => {
+                          if (scrollViewRef.current) {
+                            scrollViewRef.current.setNativeProps({ scrollEnabled: true });
+                          }
+                        }}
+                        onMomentumScrollEnd={() => {
+                          if (scrollViewRef.current) {
+                            scrollViewRef.current.setNativeProps({ scrollEnabled: true });
+                          }
+                        }}
+                      >
+                        {timeOptions.map((timeOption) => {
+                          console.log(timeOption);
+                          const isPastTime = isTimePast(timeOption.sch_time);
+                          return (
+                            <TouchableOpacity
+                              key={timeOption.sch_id}
+                              style={[
+                                styles.optionItem,
+                                timeOption.sch_max_cap === 0 && styles.disabledOptionItem,
+                                isPastTime && styles.disabledOptionItem,
+                                memberInfo?.mem_sch_id === timeOption.sch_id && styles.disabledOptionItem,
+                                selectedTime === timeOption.sch_time && styles.selectedOptionItemBackground
+                              ]}
+                              disabled={timeOption.sch_max_cap === 0 || isPastTime || memberInfo?.mem_sch_id === timeOption.sch_id}
+                              onPress={() => {
+                                setSelectedTime(timeOption.sch_time);
+                                setShowTimeSelect(false);
+                                setValidationError(null);
+                              }}
+                            >
+                              <View style={styles.optionTextContainer}>
+                                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                                  <Text style={[
+                                    styles.optionText,
+                                    selectedTime === timeOption.sch_time && styles.selectedOptionItemText,
+                                    (timeOption.sch_max_cap === 0 || isPastTime) && styles.disabledOptionText
+                                  ]}>
+                                    {formatTimeToKorean(timeOption.sch_time)} {timeOption.sch_time === memberInfo?.sch_time && <Text style={{color: '#43B546', fontSize: scale(12)}}> 기본 시간표</Text>}
+                                  </Text>
+                                  {timeOption.sch_info && timeOption.sch_info.includes('키즈') && (
+                                    <Text style={[
+                                      styles.optionInfoText,
+                                      selectedTime === timeOption.sch_time && styles.selectedOptionItemText,
+                                      (timeOption.sch_max_cap === 0 || isPastTime) && styles.disabledOptionText
+                                    ]}>
+                                      키즈반
+                                    </Text>
+                                  )}
+                                </View>
+                                <Text 
+                                  style={[
+                                    styles.personText,
+                                    selectedTime === timeOption.sch_time && styles.selectedOptionItemText,
+                                    (timeOption.sch_max_cap === 0 || isPastTime) && styles.disabledOptionText
+                                  ]}
+                                  >
+                                    {Number(timeOption.mem_total_sch_cnt || 0) - Number(timeOption.mem_basic_sch_cnt || 0) + Number(timeOption.mem_change_sch_cnt || 0)} / {timeOption.sch_max_cap}
+                                </Text>
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                    }
+                  </View>
+                )}
+              </View>
               
               <View style={styles.buttonContainer}>
                 <TouchableOpacity style={styles.reserveButton} onPress={handleReservation}>
-                  <Text style={styles.reserveButtonText}>예약하기</Text>
+                  <Text style={styles.reserveButtonText}>
+                    {scheduledDates.includes(selectedDate) ? '예약변경' : '예약하기'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
           </View>
         ) : (
-          <View style={styles.historyContainer}>
+          <View style={styles.historyContainer} key={forceUpdateCounter}>
             {memberSchedules.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>예약 내역이 없습니다.</Text>
+                <Image source={images.icons.speechGray} style={styles.speechIcon} />
+                <Text style={styles.emptyText}>예약 내역이 없어요</Text>
               </View>
             ) : (
               <ScrollView
@@ -678,35 +953,85 @@ const Reservation: React.FC = () => {
                   // 시간 포맷팅
                   const formattedTime = formatTimeToKorean(schedule.sch_time);
                   
+                  // 요일 구하기
+                  const weekday = getWeekday(`${schedule.sch_dt.substring(0, 4)}-${schedule.sch_dt.substring(4, 6)}-${schedule.sch_dt.substring(6, 8)}`);
+                  console.log(schedule);
                   return (
-                    <View key={index} style={styles.scheduleItem}>
-                      <View style={styles.scheduleHeader}>
-                        <View style={[
-                          styles.dDayBadge,
-                          dDay === 0 && styles.todayBadge,
-                          isPast && styles.pastBadge
-                        ]}>
-                          <Text style={styles.dDayText}>
-                            {dDay === 0 ? '예약당일' : isPast ? '예약마감' : `D-${Math.abs(dDay)}`}
-                          </Text>
+                    <View key={schedule.sch_app_id} style={styles.scheduleItem}>
+                      <TouchableOpacity 
+                        onPress={() => {
+                          // 예약당일(dDay === 0)인 경우만 취소 불가
+                          // 예약마감(isPast)은 취소 가능하도록 수정
+                          if (dDay !== 0) {
+                            // 가장 기본적인 체크박스 토글 기능
+                            const id = schedule.sch_app_id;
+                            
+                            // 현재 선택 상태 확인
+                            const isAlreadySelected = selectedSchedules.includes(id);
+                            
+                            if (isAlreadySelected) {
+                              // 이미 선택되어 있으면 선택 해제
+                              setSelectedSchedules(selectedSchedules.filter(item => item !== id));
+                            } else {
+                              // 선택되어 있지 않으면 기존 선택에 추가 (다중 선택)
+                              setSelectedSchedules([...selectedSchedules, id]);
+                            }
+                          }
+                        }}
+                        disabled={dDay === 0}
+                        style={{width: '100%'}}
+                      >
+                        <View style={styles.scheduleHeader}>
+                          <View style={[
+                            styles.dDayBadge,
+                            dDay === 0 && styles.todayBadge,
+                            isPast && styles.pastBadge
+                          ]}>
+                            <Text style={styles.dDayText}>
+                              {dDay === 0 ? '예약당일' : isPast ? '예약마감' : `D-${Math.abs(dDay)}`}
+                            </Text>
+                          </View>
+                          
+                          <View style={[
+                            styles.checkCircle,
+                            // 체크 여부에 따른 스타일
+                            selectedSchedules.includes(schedule.sch_app_id) 
+                              ? {borderColor: '#43B546', backgroundColor: '#43B546'}
+                              : {backgroundColor: '#D9D9D9'}
+                          ]}>
+                            <Image source={images.icons.checkWhite} style={{width: scale(12), height: scale(12)}} />
+                          </View>
                         </View>
                         
-                        <View style={styles.checkCircle}>
-                          {!isPast && <View style={styles.checkInner} />}
+                        <View style={styles.scheduleContent}>
+                          <Text style={styles.centerName}>
+                            {memberInfo?.center_name || '점핑 센터'}
+                          </Text>
+                          <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                            <Text style={styles.scheduleDateTime}>일시</Text>
+                            <Text style={[styles.scheduleDateTime, {color: '#FFFFFF', marginLeft: scale(14)}]}>{formattedDate} {weekday} {formattedTime}</Text>
+                          </View>
                         </View>
-                      </View>
-                      
-                      <View style={styles.scheduleContent}>
-                        <Text style={styles.centerName}>
-                          {memberInfo?.center_name || '점핑 센터'}
-                        </Text>
-                        <Text style={styles.scheduleDateTime}>
-                          일시: {formattedDate} {formattedTime}
-                        </Text>
-                      </View>
+                      </TouchableOpacity>
                     </View>
                   );
                 })}
+                {memberSchedules.length > 0 && (
+                  <View style={[styles.buttonContainer, {marginBottom: scale(100)}]}>
+                    <TouchableOpacity 
+                      style={styles.reserveButton} 
+                      onPress={() => {
+                        if (selectedSchedules.length > 0) {
+                          setCancelPopupVisible(true);
+                        } else {
+                          setNoSelectionWarningVisible(true);
+                        }
+                      }}
+                    >
+                      <Text style={[styles.reserveButtonText]}>예약취소</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </ScrollView>
             )}
           </View>
@@ -743,6 +1068,7 @@ const Reservation: React.FC = () => {
             
             <View style={styles.modalBody}>
               <Text style={styles.modalText}>예약 내용을 다시 한 번 확인해 주세요.</Text>
+              <Text style={styles.modalWarningText}>예약 당일에는 취소 및 변경이 불가능합니다.</Text>
               
               <View style={styles.reservationDetailContainer}>
                 <View style={styles.detailItem}>
@@ -762,7 +1088,7 @@ const Reservation: React.FC = () => {
                 </View>
               </View>
             
-              <View style={{marginBottom: scale(10)}}>
+              <View>
                 <Text style={styles.lateText}>늦지 않게 출석해 주세요:)</Text>
               </View>
             </View>
@@ -781,11 +1107,7 @@ const Reservation: React.FC = () => {
                   onPress={confirmReservation}
                   disabled={reservingLoading}
                 >
-                  {reservingLoading ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.modalConfirmButtonText}>확인</Text>
-                  )}
+                  <Text style={styles.modalConfirmButtonText}>확인</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -802,7 +1124,7 @@ const Reservation: React.FC = () => {
 
       <CommonPopup
         visible={successPopupVisible}
-        message="예약이 완료되었습니다."
+        message={"예약이 완료되었습니다."}
         type="default"
         onConfirm={closeSuccessPopup}
       />
@@ -813,6 +1135,35 @@ const Reservation: React.FC = () => {
         type="warning"
         onConfirm={closeReserveErrorPopup}
       />
+
+      <CommonPopup
+        visible={cancelPopupVisible}
+        message="선택한 예약을 취소하시겠습니까?"
+        type="confirm"
+        onConfirm={handleCancelReservation}
+        onCancel={closeCancelPopup}
+      />
+
+      <CommonPopup
+        visible={cancelSuccessPopupVisible}
+        message="예약이 취소되었습니다."
+        type="default"
+        onConfirm={closeCancelSuccessPopup}
+      />
+
+      <CommonPopup
+        visible={cancelErrorPopupVisible}
+        message={cancelErrorMessage}
+        type="warning"
+        onConfirm={closeCancelErrorPopup}
+      />
+      
+      <CommonPopup
+        visible={noSelectionWarningVisible}
+        message="취소할 예약을 선택해주세요"
+        type="warning"
+        onConfirm={closeNoSelectionWarning}
+      />
     </>
   );
 };
@@ -821,7 +1172,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#202020',
-    paddingTop: scale(30),
   },
   text: {
     fontSize: scale(24),
@@ -867,6 +1217,15 @@ const styles = StyleSheet.create({
   },
   sectionContainer: {
     marginBottom: scale(10),
+  },
+  memberSchInfo: {
+    color: '#FFFFFF',
+    fontSize: scale(14),
+    marginTop: scale(20),
+    borderWidth: 1,
+    borderColor: '#D9D9D9',
+    borderRadius: scale(12),
+    padding: scale(12),
   },
   sectionTitle: {
     color: '#FFFFFF',
@@ -922,10 +1281,15 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   optionText: {
-    color: '#717171',
+    color: '#ACACAC',
     fontSize: scale(14),
   },
   optionInfoText: {
+    color: '#717171',
+    fontSize: scale(12),
+    marginLeft: scale(8),
+  },
+  personText: {
     color: '#717171',
     fontSize: scale(12),
     marginLeft: scale(8),
@@ -1099,6 +1463,10 @@ const styles = StyleSheet.create({
   modalText: {
     color: '#D9D9D9',
     fontSize: scale(14),
+  },
+  modalWarningText: {
+    color: '#F04D4D',
+    fontSize: scale(12),
     marginBottom: scale(20),
   },
   reservationDetailContainer: {
@@ -1112,7 +1480,6 @@ const styles = StyleSheet.create({
   detailItem: {
     flexDirection: 'column',
     alignItems: 'center',
-    marginBottom: scale(15),
   },
   detailIcon: {
     width: scale(20),
@@ -1175,13 +1542,12 @@ const styles = StyleSheet.create({
     paddingTop: scale(20),
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    marginTop: scale(100),
     alignItems: 'center',
   },
   emptyText: {
-    color: '#FFFFFF',
-    fontSize: scale(16),
+    color: '#848484',
+    fontSize: scale(14),
   },
   scheduleItem: {
     backgroundColor: '#373737',
@@ -1190,6 +1556,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D9D9D9',
     overflow: 'hidden',
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(5),
   },
   scheduleHeader: {
     flexDirection: 'row',
@@ -1200,9 +1568,9 @@ const styles = StyleSheet.create({
   },
   dDayBadge: {
     backgroundColor: '#40B649',
-    paddingHorizontal: scale(10),
-    paddingVertical: scale(4),
-    borderRadius: scale(4),
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(2),
+    borderRadius: scale(6),
   },
   todayBadge: {
     backgroundColor: '#40B649',
@@ -1213,14 +1581,14 @@ const styles = StyleSheet.create({
   dDayText: {
     color: '#FFFFFF',
     fontSize: scale(12),
-    fontWeight: 'bold',
+    paddingVertical: Platform.OS === 'ios' ? scale(3) : scale(2),
   },
   checkCircle: {
     width: scale(22),
     height: scale(22),
     borderRadius: scale(11),
     borderWidth: 2,
-    borderColor: '#40B649',
+    borderColor: '#D9D9D9',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1228,7 +1596,7 @@ const styles = StyleSheet.create({
     width: scale(12),
     height: scale(12),
     borderRadius: scale(6),
-    backgroundColor: '#40B649',
+    backgroundColor: '#43B546',
   },
   scheduleContent: {
     paddingHorizontal: scale(15),
@@ -1243,6 +1611,12 @@ const styles = StyleSheet.create({
   scheduleDateTime: {
     color: '#D9D9D9',
     fontSize: scale(14),
+  },
+  speechIcon: {
+    width: scale(40),
+    height: scale(40),
+    marginBottom: scale(15),
+    resizeMode: 'contain',
   },
 });
 

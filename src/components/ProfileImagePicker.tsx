@@ -376,7 +376,6 @@ const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
           cancelText="아니오"
           onConfirm={handleUploadImage}
           onCancel={() => setShowConfirmPopup(false)}
-          type="warning"
         />
       )}
 

@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Image, 
   StyleSheet, 
   ActivityIndicator,
   Text,
-  Dimensions,
   TouchableOpacity,
   Linking
 } from 'react-native';
@@ -15,8 +14,7 @@ import { getBannerAppDetail } from '../api/services/bannerAppService';
 import { supabase } from '../utils/supabaseClient';
 import { useFocusEffect } from '@react-navigation/native';
 
-interface BannerImagePickerProps {
-  bannerLocate: string; // 'HOME', 'PROFILE' 등
+interface HomeBannerImgPickerProps {
   style?: object;
 }
 
@@ -28,33 +26,27 @@ interface BannerItem {
   file_name?: string;
 }
 
-const { width } = Dimensions.get('window');
-
-const BannerImagePicker: React.FC<BannerImagePickerProps> = ({ 
-  bannerLocate,
-  style
-}) => {
+const HomeBannerImgPicker: React.FC<HomeBannerImgPickerProps> = ({ style }) => {
   const [loading, setLoading] = useState(false);
   const [banners, setBanners] = useState<BannerItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [defaultBannerUrl, setDefaultBannerUrl] = useState<string | null>(null);
+  const bannersLoadedRef = useRef(false);
   
   // 기본 배너 URL 가져오기
   useEffect(() => {
-    if (bannerLocate === "HOME") {
-      try {
-        const { data } = supabase.storage
-          .from('banner/banner')
-          .getPublicUrl('banner_basic.png');
-          
-        if (data && data.publicUrl) {
-          setDefaultBannerUrl(data.publicUrl);
-        }
-      } catch (err) {
-        console.error('기본 배너 URL 생성 중 오류:', err);
+    try {
+      const { data } = supabase.storage
+        .from('banner/banner')
+        .getPublicUrl('banner_basic.png');
+        
+      if (data && data.publicUrl) {
+        setDefaultBannerUrl(data.publicUrl);
       }
+    } catch (err) {
+      console.error('기본 배너 URL 생성 중 오류:', err);
     }
-  }, [bannerLocate]);
+  }, []);
 
   // 자동 슬라이드 기능
   useEffect(() => {
@@ -70,39 +62,55 @@ const BannerImagePicker: React.FC<BannerImagePickerProps> = ({
   }, [banners.length]);
 
   // 배너 이미지 로드
-  useFocusEffect(
-    React.useCallback(() => {
-      // 이미 배너가 로드되어 있고 로딩 중이 아니면 다시 로드하지 않음
-      if (banners.length > 0 && !loading) {
-        return;
-      }
+  useEffect(() => {
+    // 이미 배너가 로드되어 있고 로딩 중이 아니면 다시 로드하지 않음
+    if (banners.length > 0 && !loading) {
+      return;
+    }
+    
+    const loadBanners = async () => {
+      // 이미 로딩 중이면 중복 요청 방지
+      if (loading) return;
       
-      const loadBanners = async () => {
-        // 이미 로딩 중이면 중복 요청 방지
-        if (loading) return;
+      try {
+        setLoading(true);
         
-        try {
-          setLoading(true);
+        const response = await getBannerAppDetail({
+          banner_locate: "HOME"
+        });
+        
+        if (response.success && response.data) {
           
-          const response = await getBannerAppDetail({
-            banner_locate: bannerLocate
-          });
-          
-          if (response.success && response.data) {
+          // URL 처리하여 배너 목록 설정
+          const processedBanners = response.data.map(banner => {
+            // file_path와 file_name으로 이미지 경로 생성
+            let imageUrl = '';
             
-            // URL 처리하여 배너 목록 설정
-            const processedBanners = response.data.map(banner => {
-              // file_path와 file_name으로 이미지 경로 생성
-              let imageUrl = '';
+            if (banner.file_path && banner.file_name) {
+              // file_path와 file_name 조합
+              const imagePath = `${banner.file_path}/${banner.file_name}`.replace(/^\//, '');
               
-              if (banner.file_path && banner.file_name) {
-                // file_path와 file_name 조합
-                const imagePath = `${banner.file_path}/${banner.file_name}`.replace(/^\//, '');
-                
+              try {
+                const { data } = supabase.storage
+                  .from('banner')
+                  .getPublicUrl(imagePath);
+                  
+                if (data && data.publicUrl) {
+                  imageUrl = data.publicUrl;
+                }
+              } catch (err) {
+                console.error('Supabase URL 생성 중 오류:', err);
+              }
+            } else if (banner.banner_img_url) {
+              // 기존 banner_img_url이 있는 경우
+              imageUrl = banner.banner_img_url;
+              
+              // 경로만 있는 경우 Supabase URL로 변환
+              if (imageUrl && !imageUrl.includes('http')) {
                 try {
                   const { data } = supabase.storage
                     .from('banner')
-                    .getPublicUrl(imagePath);
+                    .getPublicUrl(imageUrl);
                     
                   if (data && data.publicUrl) {
                     imageUrl = data.publicUrl;
@@ -110,50 +118,32 @@ const BannerImagePicker: React.FC<BannerImagePickerProps> = ({
                 } catch (err) {
                   console.error('Supabase URL 생성 중 오류:', err);
                 }
-              } else if (banner.banner_img_url) {
-                // 기존 banner_img_url이 있는 경우
-                imageUrl = banner.banner_img_url;
-                
-                // 경로만 있는 경우 Supabase URL로 변환
-                if (imageUrl && !imageUrl.includes('http')) {
-                  try {
-                    const { data } = supabase.storage
-                      .from('banner')
-                      .getPublicUrl(imageUrl);
-                      
-                    if (data && data.publicUrl) {
-                      imageUrl = data.publicUrl;
-                    }
-                  } catch (err) {
-                    console.error('Supabase URL 생성 중 오류:', err);
-                  }
-                }
-              } else {
               }
-              
-              const processedBanner = {
-                ...banner,
-                banner_img_url: imageUrl
-              };
-              
-              return processedBanner;
-            });
+            } else {
+            }
             
-            const filteredBanners = processedBanners.filter(b => b.banner_img_url);
-            setBanners(filteredBanners);
-          } else {
-            setBanners([]);
-          }
-        } catch (error) {
+            const processedBanner = {
+              ...banner,
+              banner_img_url: imageUrl
+            };
+            
+            return processedBanner;
+          });
+          
+          const filteredBanners = processedBanners.filter(b => b.banner_img_url);
+          setBanners(filteredBanners);
+        } else {
           setBanners([]);
-        } finally {
-          setLoading(false);
         }
-      };
-      
-      loadBanners();
-    }, [bannerLocate])
-  );
+      } catch (error) {
+        setBanners([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadBanners();
+  }, []);
 
   // 배너 클릭 핸들러
   const handleBannerPress = (banner: BannerItem) => {
@@ -195,10 +185,7 @@ const BannerImagePicker: React.FC<BannerImagePickerProps> = ({
             {banners[currentIndex].banner_img_url ? (
               <Image 
                 source={{ uri: banners[currentIndex].banner_img_url }}
-                style={[
-                  styles.bannerImage,
-                  bannerLocate === "SHOP" && styles.shopBannerImage
-                ]}
+                style={styles.bannerImage}
                 resizeMode="contain"
                 onError={(e) => {
                   console.error('배너 이미지 로드 오류:', e.nativeEvent.error);
@@ -214,8 +201,8 @@ const BannerImagePicker: React.FC<BannerImagePickerProps> = ({
           {banners.length > 1 && renderDots()}
         </View>
       ) : (
-        // 배너가 없을 때: HOME 위치에서는 기본 이미지를 보여주고, 그 외에는 플레이스홀더를 보여줌
-        bannerLocate === "HOME" && defaultBannerUrl ? (
+        // 배너가 없을 때 기본 이미지를 보여줌
+        defaultBannerUrl ? (
           <TouchableOpacity>
             <Image 
               source={{ uri: defaultBannerUrl }}
@@ -243,12 +230,6 @@ const styles = StyleSheet.create({
     height: scale(150),
     maxHeight: scale(200),
     borderRadius: scale(15),
-  },
-  shopBannerImage: {
-    borderRadius: 0,
-    width: '100%',
-    height: '100%',
-    borderWidth: 0,
   },
   dotsContainer: {
     position: 'absolute',
@@ -303,4 +284,4 @@ const styles = StyleSheet.create({
   }
 });
 
-export default BannerImagePicker;
+export default HomeBannerImgPicker; 

@@ -9,165 +9,222 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {useNavigation} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {scale} from '../utils/responsive';
 import IMAGES from '../utils/images';
+import CommonHeader from '../components/CommonHeader';
+import { useAppSelector } from '../store/hooks';
+
+// 네비게이션 타입 정의
+type RootStackParamList = {
+  Shopping: undefined;
+  ShoppingHome: undefined;
+};
+
+type ShoppingNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const ShoppingMypage: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<ShoppingNavigationProp>();
+  const memberInfo = useAppSelector(state => state.member.memberInfo);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.topHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="chevron-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>쇼핑 마이페이지</Text>
-        <View style={{width: 24}} />
-      </View>
-
-      <ScrollView style={styles.content}>
-        <View style={styles.profileSection}>
-          <View style={styles.profileImageContainer}>
-            <Image 
-              source={IMAGES.icons.profileGray}
-              style={styles.profileImage}
-            />
+    <>
+      <CommonHeader 
+        title="마이페이지"
+        titleColor="#FFFFFF"
+        backIcon={IMAGES.icons.arrowLeftWhite}
+        backgroundColor="#42B649"
+      />
+      <View style={styles.container}>
+        <View style={styles.infoSection}>
+          <View style={styles.profileUserContainer}>
+            <Text style={styles.profileUserName}><Text style={{fontWeight: 'bold', fontSize: scale(18)}}>{memberInfo?.mem_name}님</Text> 점핑하이와 함께{'\n'}즐거운 쇼핑되세요!</Text>
+            <Image source={IMAGES.icons.giftWhite} style={styles.giftIcon} />
           </View>
-          <Text style={styles.profileName}>사용자</Text>
-          <TouchableOpacity style={styles.editButton}>
-            <Text style={styles.editButtonText}>프로필 수정</Text>
-          </TouchableOpacity>
+
+          <View style={styles.infoContainer}>
+            <TouchableOpacity style={styles.infoItem} onPress={() => navigation.navigate('ShoppingOrderHistory')}>
+              <Image source={IMAGES.icons.orderGreen} style={styles.infoIcon} />
+              <Text style={styles.infoText}>주문내역</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.infoItem} onPress={() => navigation.navigate('ShoppingReview')}>
+              <Image source={IMAGES.icons.speechGreen} style={styles.infoIcon} />
+              <Text style={styles.infoText}>내 리뷰</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.infoItem} onPress={() => navigation.navigate('ShoppingInquiry')}>
+              <Image source={IMAGES.icons.doubleTalkGreen} style={styles.infoIcon} />
+              <Text style={styles.infoText}>문의</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{marginTop: scale(10), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
+            <TouchableOpacity style={styles.bellContainer}>
+              <Image source={IMAGES.icons.bellGreen} style={styles.infoIcon} />
+              <Text style={styles.infoText}>알림</Text>
+            </TouchableOpacity>
+
+            <View style={styles.inventoryContainer}>
+              <TouchableOpacity style={{flexDirection: 'row', alignItems: 'center'}}>
+                <Image source={IMAGES.icons.pointBlue} style={styles.inventoryImg} />
+                <View style={{marginRight: scale(10)}}>
+                  <Text style={styles.inventoryText}>포인트</Text>
+                  <Text style={{...styles.inventoryText, color: '#5588FF'}}>5000P</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={{flexDirection: 'row', alignItems: 'center'}}>
+                <Image source={IMAGES.icons.couponBlue} style={styles.inventoryImg} />
+                <View>
+                  <Text style={styles.inventoryText}>쿠폰</Text>
+                  <Text style={{...styles.inventoryText, color: '#5588FF'}}>10장</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
-        <View style={styles.menuContainer}>
-          <Text style={styles.sectionTitle}>쇼핑 정보</Text>
-          
-          <TouchableOpacity style={styles.menuItem}>
-            <Icon name="cart-outline" size={20} color="#333" />
-            <Text style={styles.menuText}>주문 내역</Text>
-            <Icon name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.menuItem}>
-            <Icon name="heart-outline" size={20} color="#333" />
-            <Text style={styles.menuText}>찜 목록</Text>
-            <Icon name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.menuItem}>
-            <Icon name="star-outline" size={20} color="#333" />
-            <Text style={styles.menuText}>상품 리뷰</Text>
-            <Icon name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
+        <View style={styles.contentSection}>
+          <View>
+            <TouchableOpacity style={styles.menuItem}>
+              <Text style={styles.menuText}>공지사항</Text>
+              <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ShoppingAddress')}>
+              <Text style={styles.menuText}>배송지 관리</Text>
+              <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ShoppingZZim')}>
+              <Text style={styles.menuText}>찜한 상품 보기</Text>
+              <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ShoppingCart')}>
+              <Text style={styles.menuText}>장바구니 보기</Text>
+              <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Home')}>
+              <Text style={styles.menuText}>쇼핑 나가기</Text>
+              <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
+            </TouchableOpacity>
+          </View>
         </View>
-
-        <View style={styles.menuContainer}>
-          <Text style={styles.sectionTitle}>계정 설정</Text>
-          
-          <TouchableOpacity style={styles.menuItem}>
-            <Icon name="person-outline" size={20} color="#333" />
-            <Text style={styles.menuText}>계정 정보</Text>
-            <Icon name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.menuItem}>
-            <Icon name="lock-closed-outline" size={20} color="#333" />
-            <Text style={styles.menuText}>비밀번호 변경</Text>
-            <Icon name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.menuItem}>
-            <Icon name="notifications-outline" size={20} color="#333" />
-            <Text style={styles.menuText}>알림 설정</Text>
-            <Icon name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </View>
+      </View>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#42B649',
   },
-  topHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  infoSection: {
     paddingHorizontal: scale(16),
-    paddingTop: scale(40),
-    paddingBottom: scale(10),
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
   },
-  headerTitle: {
-    fontSize: scale(18),
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  content: {
-    flex: 1,
-  },
-  profileSection: {
+  profileUserContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: scale(30),
-    borderBottomWidth: 8,
-    borderBottomColor: '#F5F5F5',
+    justifyContent: 'space-between',
   },
-  profileImageContainer: {
-    width: scale(80),
-    height: scale(80),
-    borderRadius: scale(40),
-    backgroundColor: '#F5F5F5',
+  profileUserName: {
+    fontSize: scale(16),
+    fontWeight: '400',
+    color: '#FFFFFF',
+    lineHeight: scale(22),
+  },
+  giftIcon: {
+    width: scale(100),
+    height: scale(100),
+    resizeMode: 'contain',
+    marginRight: scale(20),
+  },
+  infoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: scale(15),
+    height: scale(100),
+    paddingHorizontal: scale(30),
+    marginTop: scale(5),
+  },
+  infoItem: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: scale(15),
+    height: scale(100),
+    paddingHorizontal: scale(10),
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: scale(10),
+    width: '30%',
   },
-  profileImage: {
-    width: scale(40),
-    height: scale(40),
+  inventoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFE291',
+    borderRadius: scale(15),
+    height: scale(100),
+    width: '66.5%',
+    paddingHorizontal: scale(20),
   },
-  profileName: {
-    fontSize: scale(18),
-    fontWeight: 'bold',
-    marginBottom: scale(10),
+  inventoryImg: {
+    width: scale(30),
+    height: scale(30),
+    resizeMode: 'contain',
+    marginRight: scale(8),
   },
-  editButton: {
-    paddingHorizontal: scale(15),
-    paddingVertical: scale(8),
-    backgroundColor: '#EEEEEE',
-    borderRadius: scale(20),
+  inventoryText: {
+    fontSize: scale(14),
+    fontWeight: '500',
+    color: '#202020',
   },
-  editButtonText: {
-    fontSize: scale(12),
-    color: '#666',
-  },
-  menuContainer: {
-    paddingHorizontal: scale(16),
-    paddingTop: scale(20),
-    paddingBottom: scale(10),
-    borderBottomWidth: 8,
-    borderBottomColor: '#F5F5F5',
-  },
-  sectionTitle: {
-    fontSize: scale(16),
-    fontWeight: 'bold',
+  infoIcon: {
+    width: scale(30),
+    height: scale(30),
+    resizeMode: 'contain',
     marginBottom: scale(15),
+  },
+  infoText: {
+    fontSize: scale(14),
+    fontWeight: '500',
+    color: '#202020',
+  },
+  contentSection: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopRightRadius: scale(20),
+    borderTopLeftRadius: scale(20),
+    marginTop: scale(30),
+    paddingHorizontal: scale(20),
+    paddingTop: scale(24),
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: scale(15),
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
+    justifyContent: 'space-between',
+    paddingVertical: scale(10),
+  },
+  arrowIcon: {
+    width: scale(12),
+    height: scale(12),
+    resizeMode: 'contain',
   },
   menuText: {
-    flex: 1,
     fontSize: scale(14),
-    marginLeft: scale(10),
+    fontWeight: '500',
+    color: '#202020',
   },
+  homeBtn: {
+    padding: scale(10),
+  },
+  homeIcon: {
+    width: scale(18),
+    height: scale(18),
+    resizeMode: 'contain',
+  }
 });
 
 export default ShoppingMypage; 

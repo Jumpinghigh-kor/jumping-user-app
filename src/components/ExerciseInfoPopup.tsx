@@ -292,15 +292,35 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
         response = await insertMemberExercise(insertData);
       }
 
+      setIsLoading(false);
+      
       if (response.success) {
-        showPopup('success', '운동 정보가 저장되었습니다.');
+        // iOS에서는 먼저 모달을 닫고 성공 메시지 표시
+        if (Platform.OS === 'ios') {
+          // 콜백 함수 미리 저장
+          const updateCallback = onExerciseInfoUpdated;
+          
+          // 먼저 모달 닫기
+          onClose();
+          
+          // 약간의 지연 후 성공 팝업 표시 및 콜백 실행
+          setTimeout(() => {
+            if (updateCallback) {
+              updateCallback();
+            }
+            
+            showPopup('success', '운동 정보가 저장되었습니다.');
+          }, 300);
+        } else {
+          // Android는 기존 방식대로
+          showPopup('success', '운동 정보가 저장되었습니다.');
+        }
       } else {
         showPopup('error', response.message || '운동 정보 저장에 실패했습니다.');
       }
     } catch (error) {
-      showPopup('error', '운동 정보 저장 중 오류가 발생했습니다.');
-    } finally {
       setIsLoading(false);
+      showPopup('error', '운동 정보 저장 중 오류가 발생했습니다.');
     }
   };
 
@@ -342,8 +362,7 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
         animationType="fade"
         statusBarTranslucent
         onRequestClose={onClose}>
-        <View style={styles.absolute}>
-          <View style={styles.overlay} />
+        <View style={styles.modalContainer}>
           <View style={styles.contentWrapper}>
             <View style={styles.container}>
               <View style={styles.header}>
@@ -422,7 +441,7 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
                           </View>
                         )}
                       </View>
-                      <Text style={styles.timeUnitText}>시</Text>
+                      <Text style={styles.timeUnitText}>시간</Text>
                     </View>
 
                     <Text style={styles.timeSeparator}>:</Text>
@@ -503,6 +522,7 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
                       <Text style={styles.skipButtonText}>건너뛰기</Text>
                     </TouchableOpacity>
                   </View>
+                  <Text style={styles.heartRateText}>0 입력 또는 건너뛰기 할 시 평균 심박수값으로 측정 됩니다.</Text>
                 </View>
               </View>
 
@@ -529,13 +549,21 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
         message={commonPopup.message}
         type={commonPopup.type}
         onConfirm={() => {
+          // 상태 업데이트 전에 콜백 실행
+          const isSuccess = commonPopup.type === 'default';
+          
+          // 팝업 먼저 닫기
           setCommonPopup({ ...commonPopup, visible: false });
-          if (commonPopup.type === 'default') {
-            // 성공 시 콜백 호출
-            if (onExerciseInfoUpdated) {
-              onExerciseInfoUpdated();
-            }
-            onClose();
+          
+          // 성공시에만 콜백 및 닫기 처리
+          if (isSuccess) {
+            // iOS에서 약간 지연시켜 팝업이 닫힌 후 처리하도록 함
+            setTimeout(() => {
+              if (onExerciseInfoUpdated) {
+                onExerciseInfoUpdated();
+              }
+              onClose();
+            }, Platform.OS === 'ios' ? 300 : 0);
           }
         }}
       />
@@ -544,40 +572,31 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  absolute: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
   contentWrapper: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 2,
   },
   container: {
     width: '85%',
     backgroundColor: '#333333',
     borderRadius: scale(12),
     padding: scale(20),
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+      },
+      android: {
+        elevation: 10,
+      },
+    }),
   },
   header: {
     width: '100%',
@@ -636,8 +655,8 @@ const styles = StyleSheet.create({
     borderColor: '#444444',
   },
   selectedButton: {
-    backgroundColor: '#6BC46A',
-    borderColor: '#6BC46A',
+    backgroundColor: '#43B549',
+    borderColor: '#43B549',
   },
   intensityText: {
     color: '#FFFFFF',
@@ -722,7 +741,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   selectedOption: {
-    backgroundColor: '#6BC46A',
+    backgroundColor: '#43B549',
   },
   selectOptionText: {
     color: '#FFFFFF',
@@ -766,11 +785,16 @@ const styles = StyleSheet.create({
     borderRadius: scale(8),
   },
   skipButtonActive: {
-    backgroundColor: '#6BC46A',
+    backgroundColor: '#43B549',
   },
   skipButtonText: {
     color: '#FFFFFF',
     fontSize: scale(14),
+  },
+  heartRateText: {
+    color: '#FFFFFF',
+    fontSize: scale(11),
+    marginTop: scale(5),
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -786,7 +810,7 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     flex: 1,
-    backgroundColor: '#6BC46A',
+    backgroundColor: '#43B549',
     paddingVertical: scale(12),
     borderRadius: scale(25),
     alignItems: 'center',

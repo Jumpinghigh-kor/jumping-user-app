@@ -56,16 +56,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: scale(20),
+    paddingVertical: scale(20),
     paddingHorizontal: scale(16),
-    paddingTop: Platform.OS === 'ios' ? scale(50) : scale(20),
   },
   backButton: {
     width: '33.3%',
   },
   backIcon: {
-    width: scale(20),
-    height: scale(20),
+    width: scale(24),
+    height: scale(24),
     resizeMode: 'contain',
   },
   title: {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,87 +7,111 @@ import {
   Image,
   ScrollView,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {useNavigation} from '@react-navigation/native';
 import {scale} from '../utils/responsive';
 import IMAGES from '../utils/images';
+import CommonHeader from '../components/CommonHeader';
+import { getMemberZzimAppList, MemberZzimItem } from '../api/services/memberZzimAppService';
+import { useAppSelector } from '../store/hooks';
+import ProductListItem from '../components/ProductListItem';
+
+// ProductType 인터페이스와 호환되도록 MemberZzimItem을 변환하는 함수
+const adaptToProductType = (item: MemberZzimItem) => {
+  // 타입 단언을 사용하여 MemberZzimItem 타입 체크를 우회
+  const extendedItem = item as any;
+
+  return {
+    ...item,
+    title: extendedItem.title || '', 
+    original_price: extendedItem.original_price || 0,
+    price: extendedItem.price || 0,
+    discount: extendedItem.discount || 0
+  };
+};
 
 const ShoppingZZim = () => {
   const navigation = useNavigation();
+  const memberInfo = useAppSelector(state => state.member.memberInfo);
+  const [zzimList, setZzimList] = useState<MemberZzimItem[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  // 임시 더미 데이터 - 찜 목록
-  const dummyFavorites = [
-    {
-      id: '1',
-      name: '찜한 상품 1',
-      price: 15000,
-      discount: 10,
-      image: 'https://via.placeholder.com/150',
-    },
-    {
-      id: '2',
-      name: '찜한 상품 2',
-      price: 25000,
-      discount: 15,
-      image: 'https://via.placeholder.com/150',
-    },
-    {
-      id: '3',
-      name: '찜한 상품 3',
-      price: 30000,
-      discount: 5,
-      image: 'https://via.placeholder.com/150',
-    },
-  ];
+  const loadZzimList = async () => {
+    if (!memberInfo?.mem_id) return;
+    
+    try {
+      setLoading(true);
+      const response = await getMemberZzimAppList({ mem_id: memberInfo.mem_id });
+      if (response.success && response.data) {
+        setZzimList(response.data);
+      }
+    } catch (error) {
+      console.error('찜 목록 로드 오류:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const renderFavoriteItem = ({item}) => {
-    return (
-      <View style={styles.favoriteItem}>
-        <Image 
-          source={{uri: item.image}} 
-          style={styles.productImage}
-        />
-        <View style={styles.productInfo}>
-          <Text style={styles.productName}>{item.name}</Text>
-          <View style={styles.priceContainer}>
-            <Text style={styles.discount}>{item.discount}%</Text>
-            <Text style={styles.price}>
-              {Math.round(item.price * (1 - item.discount/100)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원
-            </Text>
-          </View>
-        </View>
-        <TouchableOpacity style={styles.favoriteButton}>
-          <Icon name="heart" size={22} color="#F04D4D" />
-        </TouchableOpacity>
-      </View>
-    );
+  useEffect(() => {
+    loadZzimList();
+  }, []);
+
+  const handleProductPress = (item) => {
+    navigation.navigate('ShoppingDetail', { product: item });
+  };
+
+  // 찜 상태가 변경되었을 때 호출되는 함수
+  const handleZzimStateChange = (updatedItem) => {
+    // 상태가 'N'으로 변경되면 목록에서 제거
+    if (updatedItem.zzim_yn === 'N') {
+      setZzimList(prevList => 
+        prevList.filter(item => item.product_app_id !== updatedItem.product_app_id)
+      );
+    }
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="chevron-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>찜 목록</Text>
-        <View style={{width: 24}} />
+    <>
+      <CommonHeader 
+        title="찜"
+        titleColor="#202020"
+        backIcon={IMAGES.icons.arrowLeftBlack}
+        backgroundColor="#FFFFFF"
+      />
+      <View style={styles.container}>
+        <Text style={styles.title}>내가 찜한 목록</Text>
+        {loading ? (
+          <View style={styles.emptyContainer}>
+            <ActivityIndicator size="large" color="#43B546" />
+          </View>
+        ) : zzimList.length > 0 ? (
+          <FlatList
+            data={zzimList}
+            renderItem={({item}) => ( 
+              <ProductListItem 
+                item={adaptToProductType(item)} 
+                onPress={handleProductPress} 
+                layout="grid"
+                onZzimPress={handleZzimStateChange}
+              />
+            )}
+            keyExtractor={item => item.product_app_id.toString()}
+            style={styles.content}
+            contentContainerStyle={styles.listContainer}
+            numColumns={2}
+            columnWrapperStyle={styles.productRow}
+            scrollEnabled={true}
+          />
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Icon name="heart-outline" size={40} color="#CBCBCB" />
+            <Text style={styles.emptyText}>찜한 상품이 없어요</Text>
+          </View>
+        )}
       </View>
-
-      {dummyFavorites.length > 0 ? (
-        <FlatList
-          data={dummyFavorites}
-          renderItem={renderFavoriteItem}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.favoritesList}
-        />
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Icon name="heart-outline" size={50} color="#CCCCCC" />
-          <Text style={styles.emptyText}>찜한 상품이 없습니다.</Text>
-        </View>
-      )}
-    </View>
+    </>
   );
 };
 
@@ -96,72 +120,44 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: scale(16),
-    paddingTop: scale(40),
-    paddingBottom: scale(10),
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
-  },
-  headerTitle: {
-    fontSize: scale(18),
+  title: {
+    fontSize: scale(16),
     fontWeight: 'bold',
-    color: '#000',
+    color: '#202020',
+    marginVertical: scale(10),
+    marginLeft: scale(16),
   },
-  favoritesList: {
-    padding: scale(16),
-  },
-  favoriteItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: scale(12),
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
-  },
-  productImage: {
-    width: scale(70),
-    height: scale(70),
-    borderRadius: scale(5),
-    backgroundColor: '#F5F5F5',
-  },
-  productInfo: {
+  content: {
     flex: 1,
-    marginLeft: scale(15),
   },
-  productName: {
-    fontSize: scale(14),
-    fontWeight: 'bold',
-    marginBottom: scale(5),
+  listContainer: {
+    padding: scale(16),
+    paddingBottom: scale(60),
   },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  price: {
-    fontSize: scale(14),
-    fontWeight: 'bold',
-  },
-  discount: {
-    fontSize: scale(14),
-    color: '#FF3B30',
-    fontWeight: 'bold',
-    marginRight: scale(5),
-  },
-  favoriteButton: {
-    padding: scale(10),
+  productRow: {
+    justifyContent: 'space-between',
   },
   emptyContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: scale(100),
   },
   emptyText: {
     fontSize: scale(16),
     color: '#888888',
     marginTop: scale(10),
+  },
+  headerRightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerIconButton: {
+    marginLeft: scale(15),
+  },
+  headerIcon: {
+    width: scale(20),
+    height: scale(20),
+    resizeMode: 'contain',
   },
 });
 
