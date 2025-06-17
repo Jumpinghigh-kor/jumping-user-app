@@ -10,6 +10,7 @@ import {useAppSelector} from '../store/hooks';
 import ShopBannerImgPicker from '../components/ShopBannerImgPicker';
 import ProductListItem from '../components/ProductListItem';
 import IMAGES from '../utils/images';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Define navigation type
 type RootStackParamList = {
@@ -45,7 +46,6 @@ const ShoppingHome: React.FC = () => {
           setSelectedCategory(response.data[0].common_code);
         }
       } catch (error) {
-        console.error('카테고리 코드 로드 오류:', error);
       }
     };
     
@@ -67,8 +67,6 @@ const ShoppingHome: React.FC = () => {
         big_category: selectedCategory
       });
       if (response.success) {
-        console.log('상품 로드 성공');
-
         // 상품 데이터 준비
         let updatedProducts = response.data || [];
         
@@ -77,12 +75,19 @@ const ShoppingHome: React.FC = () => {
         Alert.alert('알림', '상품을 불러오는데 실패했습니다.');
       }
     } catch (error) {
-      console.error('상품 로드 오류:', error);
       Alert.alert('알림', '상품을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
   };
+
+  // 렌더링 완료 신호 보내기
+  useEffect(() => {
+    if (!loading && productCategory.length > 0) {
+      // 모든 로딩이 완료되면 렌더링 완료 신호 설정
+      AsyncStorage.setItem('shoppingHomeRenderComplete', 'true');
+    }
+  }, [loading, productCategory]);
 
   const handleProductPress = (product: ExtendedProductType) => {
     navigation.navigate('ShoppingDetail', { product });
@@ -91,12 +96,14 @@ const ShoppingHome: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.topHeader}>
-        <View />
+        <View>
+          <Image source={IMAGES.logo.jumpingBlack} style={styles.headerLogo} />
+        </View>
         <View style={styles.topHeaderIcons}>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('ShoppingNotice')}>
             <Image source={IMAGES.icons.bellStrokeBlack} style={styles.headerIcon} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('ShoppingCart')}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('ShoppingOrderHistory')}>
             <Image source={IMAGES.icons.documentStrokeBlack} style={styles.headerIcon} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('ShoppingCart')}>
@@ -105,17 +112,7 @@ const ShoppingHome: React.FC = () => {
         </View>
       </View>
       
-      <ScrollView style={styles.scrollContainer}>
-        {/* <View style={styles.searchBarContainer}>
-          <TouchableOpacity 
-            style={styles.searchBar} 
-            onPress={() => navigation.navigate('ShoppingSearch')}
-          >
-            <Icon name="search-outline" size={18} color="#CBCBCB" style={styles.searchIcon} />
-            <Text style={styles.searchPlaceholder}>상품 검색하기</Text>
-          </TouchableOpacity>
-        </View> */}
-        
+      <ScrollView style={styles.scrollContainer}>        
         <View style={styles.bannerContainer}>
           <ShopBannerImgPicker style={styles.banner} />
         </View>
@@ -193,8 +190,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: scale(16),
-    marginTop: scale(20),
-    marginBottom: scale(10),
+    paddingVertical: scale(12),
+  },
+  headerLogo: {
+    width: scale(40),
+    height: scale(40),
+    resizeMode: 'contain',
   },
   brandName: {
     fontSize: scale(18),
@@ -208,27 +209,11 @@ const styles = StyleSheet.create({
   iconButton: {
     marginLeft: scale(12),
   },
-  searchBarContainer: {
-    paddingHorizontal: scale(16),
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EEEEEE',
-    borderRadius: scale(8),
-    paddingVertical: scale(10),
-    paddingHorizontal: scale(10),
-  },
-  searchIcon: {
-    marginRight: scale(8),
-  },
-  searchPlaceholder: {
-    color: '#CBCBCB',
-    fontSize: scale(14),
-  },
   bannerContainer: {
     width: '100%',
     maxHeight: scale(200),
+    borderBottomWidth: scale(7),
+    borderBottomColor: '#D9D9D9',
   },
   banner: {
     width: '100%',
@@ -260,7 +245,7 @@ const styles = StyleSheet.create({
   },
   selectedCategoryLine: {
     position: 'absolute',
-    bottom: scale(-4),
+    bottom: scale(-2.7),
     left: '20%',
     right: '20%',
     height: scale(3),
@@ -286,6 +271,7 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
+    marginTop: scale(120),
     justifyContent: 'center',
     alignItems: 'center',
   },

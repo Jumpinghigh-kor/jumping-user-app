@@ -18,7 +18,7 @@ import { scale } from '../utils/responsive';
 import IMAGES from '../utils/images';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CommonPopup from '../components/CommonPopup';
-import { formatDateYYYYMMDD, formatDateYYYYMMDDHHII } from '../utils/commonFunctions';
+import { formatDateYYYYMMDD, formatDateYYYYMMDDHHII } from '../utils/commonFunction';
 import type { AuthStackParamList } from '../navigation/AuthStackNavigator';
 
 const MAX_TITLE_LENGTH = 20;

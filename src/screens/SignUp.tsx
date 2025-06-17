@@ -115,7 +115,6 @@ const SignUp = () => {
         showError('회원 정보를 찾을 수 없습니다.');
       }
     } catch (error: any) {
-      console.log('error', error);
       showError('서버 통신 중 오류가 발생했습니다.');
     } finally {
       setIsSubmitting(false);

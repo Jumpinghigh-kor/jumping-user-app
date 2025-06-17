@@ -2,10 +2,14 @@ import UIKit
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
+import FirebaseCore
 
 @main
 class AppDelegate: RCTAppDelegate {
   override func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+    // Firebase 초기화
+    FirebaseApp.configure()
+    
     self.moduleName = "jumpingUserApp"
     self.dependencyProvider = RCTAppDependencyProvider()
 
@@ -13,7 +17,14 @@ class AppDelegate: RCTAppDelegate {
     // They will be passed down to the ViewController used by React Native.
     self.initialProps = [:]
 
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    
+    // RNSplashScreen show 호출 (Objective-C 방식)
+    if let splashScreenClass = NSClassFromString("RNSplashScreen") {
+      _ = splashScreenClass.performSelector(onMainThread: NSSelectorFromString("show"), with: nil, waitUntilDone: false)
+    }
+
+    return true
   }
 
   override func sourceURL(for bridge: RCTBridge) -> URL? {

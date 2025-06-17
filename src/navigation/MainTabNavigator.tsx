@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {getInquiryList} from '../api/services/inquiryService';
 import {getNoticesAppList} from '../api/services/noticesAppService';
 import ShoppingHome from '../screens/ShoppingHome';
+import CommonPopup from '../components/CommonPopup';
 const Tab = createBottomTabNavigator();
 const ShoppingStack = createNativeStackNavigator();
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -19,56 +20,9 @@ import { scale } from '../utils/responsive';
 
 // 커스텀 탭 바 컴포넌트
 const CustomTabBar = ({ state, descriptors, navigation }) => {
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const currentRoute = state.routes[state.index].name;
   const isShoppingTab = currentRoute === 'Shopping';
-
-  // 읽지 않은 알림이 있는지 체크
-  const checkUnreadNotifications = async () => {
-    try {
-      // 읽은 공지사항 가져오기
-      const readNoticesStr = await AsyncStorage.getItem('readNotices');
-      const readNotices = readNoticesStr ? JSON.parse(readNoticesStr) : [];
-      
-      // 읽은 문의 가져오기
-      const readInquiriesStr = await AsyncStorage.getItem('readInquiries');
-      const readInquiries = readInquiriesStr ? JSON.parse(readInquiriesStr) : [];
-      
-      // 공지사항 목록 가져오기
-      const noticesResponse = await getNoticesAppList();
-      let hasUnreadNotice = false;
-      if (noticesResponse.success && noticesResponse.data) {
-        hasUnreadNotice = noticesResponse.data.some(notice => 
-          !readNotices.includes(notice.notices_app_id)
-        );
-      }
-      
-      // 문의 목록 가져오기
-      const inquiriesResponse = await getInquiryList();
-      let hasUnreadInquiry = false;
-      if (inquiriesResponse.success && inquiriesResponse.data) {
-        hasUnreadInquiry = inquiriesResponse.data.some(inquiry => 
-          inquiry.answer && !readInquiries.includes(inquiry.inquiry_app_id)
-        );
-      }
-      
-      // 하나라도 읽지 않은 알림이 있으면 true로 설정
-      setHasUnreadNotifications(hasUnreadNotice || hasUnreadInquiry);
-    } catch (error) {
-      console.error('알림 확인 에러:', error);
-    }
-  };
-
-  useEffect(() => {
-    checkUnreadNotifications();
-    
-    // 10초마다 알림 체크 (옵션)
-    const interval = setInterval(() => {
-      checkUnreadNotifications();
-    }, 10000);
-    
-    return () => clearInterval(interval);
-  }, []);
+  const [showExitPopup, setShowExitPopup] = useState(false);
 
   return (
     <View style={[
@@ -138,7 +92,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
           
           <TouchableOpacity 
             style={styles.logoContainer}
-            onPress={() => navigation.navigate('Home')}
+            onPress={() => setShowExitPopup(true)}
           >
             <Image 
               source={IMAGES.logo.jumpingBlack}
@@ -168,7 +122,12 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
               });
 
               if (!isFocused && !event.defaultPrevented) {
-                navigation.navigate(route.name);
+                // Shopping 탭인 경우 RedirectScreen으로 이동
+                if (route.name === 'Shopping') {
+                  navigation.navigate('RedirectScreen');
+                } else {
+                  navigation.navigate(route.name);
+                }
               }
             };
 
@@ -210,9 +169,6 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
                         color: isFocused ? (isShoppingTab ? '#FF6347' : '#6BC46A') : '#8E8E93',
                         focused: isFocused,
                       })}
-                      {hasUnreadNotifications && (
-                        <View style={styles.notificationBadge} />
-                      )}
                     </View>
                     {label !== null && (
                       <Text
@@ -256,6 +212,21 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
           })}
         </View>
       )}
+      
+      <CommonPopup
+        visible={showExitPopup}
+        message="쇼핑몰을 나가시겠습니까?"
+        type="confirm"
+        backgroundColor='#FFFFFF'
+        textColor='#000000'
+        onConfirm={() => {
+          setShowExitPopup(false);
+          navigation.navigate('Home');
+        }}
+        onCancel={() => setShowExitPopup(false)}
+        confirmText="확인"
+        cancelText="취소"
+      />
     </View>
   );
 };
@@ -274,6 +245,7 @@ const MainTabNavigator = () => {
         },
         headerTitleAlign: 'center',
         headerTintColor: '#FFFFFF',
+        animation: 'fade',
       }}>
       <Tab.Screen
         name="Attendance"

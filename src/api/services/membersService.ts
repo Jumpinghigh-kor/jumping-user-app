@@ -4,8 +4,8 @@ import {axiosInstance} from '../config/axiosConfig';
 // 회원 정보 타입 정의
 export interface MemberInfo {
   mem_id: string;
-  name: string;
-  phone: string;
+  mem_name: string;
+  mem_phone: string;
   email: string;
   mem_nickname: string;
   mem_email_id: string;
@@ -13,6 +13,9 @@ export interface MemberInfo {
   center_name: string;
   sch_time: string
   mem_sch_id: number;
+  total_point: number;
+  mem_checkin_number: string;
+  coupon_cnt: number;
   // 필요한 다른 회원 정보 필드 추가
 }
 
@@ -57,7 +60,6 @@ export const updateMemberAppPassword = async (
     );
     return response.data;
   } catch (error: any) {
-    console.log(error.response.data);
     throw error;
   }
 };
@@ -81,6 +83,50 @@ export const completeSignup = async (memId: string, nickname: string) => {
       mem_id: memId,
       mem_nickname: nickname,
     });
+    return response.data;
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+// 푸시 토큰 업데이트 API
+export interface UpdatePushTokenRequest {
+  mem_id: string;
+  push_token: string;
+}
+
+export interface UpdatePushTokenResponse {
+  success: boolean;
+  message?: string;
+}
+
+export const updatePushToken = async (
+  params: UpdatePushTokenRequest
+): Promise<UpdatePushTokenResponse> => {
+  try {
+    const response = await axiosInstance.post('/members/updatePushToken', params);
+    return response.data;
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+// 푸시 알림 설정 업데이트 API
+export interface UpdatePushYnRequest {
+  mem_id: string;
+  push_yn: 'Y' | 'N';
+}
+
+export interface UpdatePushYnResponse {
+  success: boolean;
+  message?: string;
+}
+
+export const updatePushYn = async (
+  params: UpdatePushYnRequest
+): Promise<UpdatePushYnResponse> => {
+  try {
+    const response = await axiosInstance.post('/members/updatePushYn', params);
     return response.data;
   } catch (error: any) {
     throw error;

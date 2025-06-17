@@ -6,7 +6,7 @@ import { supabase } from '../utils/supabaseClient';
 import IMAGES from '../utils/images';
 import { getProductAppThumbnailImg } from '../api/services/productAppService';
 import { getMemberReviewAppList } from '../api/services/memberReviewAppService';
-import { updateMemberZzimApp } from '../api/services/memberZzimAppService';
+import { updateMemberZzimApp, insertMemberZzimApp, getMemberZzimAppDetail } from '../api/services/memberZzimAppService';
 import { useAppSelector } from '../store/hooks';
 
 // 상품 타입 정의
@@ -75,7 +75,7 @@ const ProductListItem: React.FC<ProductListItemProps> = ({
         const response = await getProductAppThumbnailImg();
         setProductThumbnailData(response.data);
       } catch (error) {
-        console.error('썸네일 데이터 로드 오류:', error);
+        
       }
     };
     
@@ -88,7 +88,7 @@ const ProductListItem: React.FC<ProductListItemProps> = ({
         const response = await getMemberReviewAppList();
         setProductReviewData(response.data);
       } catch (error) {
-        console.error('리뷰 데이터 로드 오류:', error);
+        
       }
     };
     
@@ -97,36 +97,65 @@ const ProductListItem: React.FC<ProductListItemProps> = ({
   
   // 찜 업데이트 함수
   const handleZzimUpdate = async () => {
-    if (!memberInfo?.mem_id || !item.zzim_app_id) {
+    if (!memberInfo?.mem_id) {
       return;
     }
     
     try {
-      // 현재 상태의 반대로 업데이트
-      const newZzimState = zzimState === 'Y' ? 'N' : 'Y';
-      
-      // 찜 상태 업데이트 API 호출
-      const response = await updateMemberZzimApp({
-        zzim_app_id: item.zzim_app_id,
-        zzim_yn: newZzimState,
-        mem_id: memberInfo.mem_id
+      // 먼저 현재 찜 상태를 조회
+      const detailResponse = await getMemberZzimAppDetail({
+        mem_id: memberInfo.mem_id,
+        product_app_id: item.product_app_id
       });
       
-      if (response.success) {
-        // 로컬 상태 업데이트
-        setZzimState(newZzimState);
+      if (detailResponse.success) {
+        const currentZzimData = detailResponse.data;
         
-        // 부모 컴포넌트에 상태 변경 알림 (onZzimPress가 있는 경우)
-        if (onZzimPress) {
-          const updatedItem = {
-            ...item,
-            zzim_yn: newZzimState
-          };
-          onZzimPress(updatedItem);
+        if (currentZzimData && currentZzimData.zzim_app_id) {
+          // 찜 데이터가 있는 경우: 상태 토글
+          const newZzimState = currentZzimData.zzim_yn === 'Y' ? 'N' : 'Y';
+          
+          const updateResponse = await updateMemberZzimApp({
+            zzim_app_id: currentZzimData.zzim_app_id,
+            zzim_yn: newZzimState,
+            mem_id: memberInfo.mem_id
+          });
+          
+          if (updateResponse.success) {
+            setZzimState(newZzimState);
+            
+            if (onZzimPress) {
+              const updatedItem = {
+                ...item,
+                zzim_yn: newZzimState,
+                zzim_app_id: currentZzimData.zzim_app_id
+              };
+              onZzimPress(updatedItem);
+            }
+          }
+        } else {
+          // 찜 데이터가 없는 경우: 새로 생성
+          const insertResponse = await insertMemberZzimApp({
+            mem_id: memberInfo.mem_id,
+            product_app_id: item.product_app_id
+          });
+          
+          if (insertResponse.success) {
+            setZzimState('Y');
+            
+            if (onZzimPress) {
+              const updatedItem = {
+                ...item,
+                zzim_yn: 'Y',
+                zzim_app_id: insertResponse.data?.zzim_app_id
+              };
+              onZzimPress(updatedItem);
+            }
+          }
         }
       }
     } catch (error) {
-      console.error('찜 상태 업데이트 오류:', error);
+      
     }
   };
   
@@ -140,7 +169,7 @@ const ProductListItem: React.FC<ProductListItemProps> = ({
   const thumbnailItem = effectiveThumbnailData.find(thumb => thumb.product_app_id === item.product_app_id);
   
   // 이 상품에 대한 리뷰 데이터 찾기
-  const productReviews = effectiveReviewData.filter(review => review.product_app_id === item.product_app_id) || [];
+  const productReviews = effectiveReviewData?.filter(review => review.product_app_id === item.product_app_id) || [];
   const reviewCnt = productReviews.length;
   
   // 평균 별점 계산
@@ -184,7 +213,7 @@ const ProductListItem: React.FC<ProductListItemProps> = ({
   };
   
   const imageUrl = getSupabaseImageUrl();
-  console.log('item::::', item)
+  
   // 최종 가격 계산
   const finalPrice = item.price || 
     (item.original_price && item.discount 

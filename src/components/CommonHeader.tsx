@@ -12,6 +12,7 @@ interface CommonHeaderProps {
   titleColor?: string; // Allow custom title color
   rightIcon?: React.ReactNode; // Add right icon support
   backgroundColor?: string; // Add background color prop
+  onCleanup?: () => void; // Add cleanup function prop for file deletion
 }
 
 const CommonHeader: React.FC<CommonHeaderProps> = ({ 
@@ -21,16 +22,26 @@ const CommonHeader: React.FC<CommonHeaderProps> = ({
   backIcon = IMAGES.icons.arrowLeftWhite,
   titleColor = '#FFFFFF',
   rightIcon,
-  backgroundColor = '#202020'
+  backgroundColor = '#202020',
+  onCleanup
 }) => {
   const navigation = useNavigation();
 
   const handleBackPress = () => {
+    // cleanup 함수가 있으면 먼저 실행
+    if (onCleanup) {
+      onCleanup();
+    }
+    
     if (onBackPress) {
       onBackPress();
     } else {
       navigation.goBack();
     }
+  };
+
+  const goHome = () => {
+    
   };
 
   return (
@@ -44,9 +55,9 @@ const CommonHeader: React.FC<CommonHeaderProps> = ({
         </TouchableOpacity>
       )}
       <Text style={[styles.title, { color: titleColor }]}>{title}</Text>
-      <View style={styles.emptyArea}>
+      <TouchableOpacity style={styles.emptyArea} onPress={goHome}>
         {rightIcon}
-      </View>
+      </TouchableOpacity>
     </View>
   );
 };

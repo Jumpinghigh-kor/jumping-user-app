@@ -10,7 +10,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import {NavigationContainer, NavigationContainerRef} from '@react-navigation/native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
-import {SafeAreaView, StyleSheet, Text, TextInput, View} from 'react-native';
+import {SafeAreaView, StyleSheet, Text, TextInput, View, Alert} from 'react-native';
 import {Provider} from 'react-redux';
 import store from './src/store';
 import AuthStackNavigator from './src/navigation/AuthStackNavigator';
@@ -18,6 +18,7 @@ import SplashScreen from 'react-native-splash-screen';
 import {setNavigationRef} from './src/utils/navigationUtils';
 import { setSessionExpiredHandler } from './src/api/config/axiosConfig';
 import CommonPopup from './src/components/CommonPopup';
+import pushNotificationService, { PushNotificationData, PushNotificationService } from './src/api/services/pushNotificationService';
 
 const App = () => {
   const navigationRef = useRef<NavigationContainerRef<any>>(null);
@@ -42,6 +43,9 @@ const App = () => {
         callback
       });
     });
+
+    // 푸시 알림 초기화
+    initializePushNotifications();
   }, []);
 
   // 세션 만료 팝업 처리
@@ -80,6 +84,28 @@ const App = () => {
 
   // 현재 화면에 따른 배경색 결정
   const backgroundColor = isShoppingScreen(currentRoute) ? '#FFFFFF' : '#202020';
+
+  // 푸시 알림 초기화 함수
+  const initializePushNotifications = async () => {
+    try {
+      console.log('푸시 알림 초기화 시작');
+      
+      // 푸시 알림 초기화 (권한 요청 + 토큰 받기)
+      const token = await pushNotificationService.initialize();
+      
+      if (token) {
+        console.log('푸시 알림 초기화 성공, FCM Token:', token);
+      } else {
+        console.log('푸시 알림 초기화 실패');
+      }
+    } catch (error) {
+      console.error('푸시 알림 초기화 중 오류:', error);
+    }
+  };
+
+  // useEffect(() => {
+  //   SplashScreen.hide();
+  // }, []);
 
   return (
     <View style={{flex: 1, backgroundColor}}>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,10 @@ import {
   Alert,
   Keyboard,
   Image,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal,
+  Animated,
+  PanResponder
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {scale} from '../utils/responsive';
@@ -26,10 +29,9 @@ import {
   SearchProduct
 } from '../api/services/memberSearchAppService';
 import IMAGES from '../utils/images';
-import { getProductAppThumbnailImg } from '../api/services/productAppService';
-import { supabase } from '../utils/supabaseClient';
 import { getMemberReviewAppList } from '../api/services/memberReviewAppService';
 import ShoppingReview from '../components/ShoppingReview';
+import ShoppingThumbnailImg from '../components/ShoppingThumbnailImg';
 
 // Navigation type
 type RootStackParamList = {
@@ -41,8 +43,6 @@ type RootStackParamList = {
 
 type ShoppingNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-
 const ShoppingSearch: React.FC = () => {
   const navigation = useNavigation<ShoppingNavigationProp>();
   const [recentSearches, setRecentSearches] = useState<MemberSearch[]>([]);
@@ -52,25 +52,53 @@ const ShoppingSearch: React.FC = () => {
   const searchInputRef = useRef<TextInput>(null);
   const memberInfo = useAppSelector(state => state.member.memberInfo);
   const [searchResults, setSearchResults] = useState<SearchProduct[]>([]);
-  const [thumbnailData, setThumbnailData] = useState<any>(null);
   const [reviewData, setReviewData] = useState<any>(null);
-  const [filterType, setFilterType] = useState('추천순');
+  const [filterType, setFilterType] = useState('new');
+  const [showSortModal, setShowSortModal] = useState(false);
+  const sortModalPan = useRef(new Animated.ValueXY()).current;
+
+  // 정렬 모달 PanResponder
+  const sortModalPanResponder = useMemo(() => 
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dy) > 10;
+      },
+      onPanResponderGrant: () => {
+        sortModalPan.extractOffset();
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          sortModalPan.y.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 100) {
+          setShowSortModal(false);
+        } else {
+          Animated.spring(sortModalPan, {
+            toValue: { x: 0, y: 0 },
+            useNativeDriver: false,
+            bounciness: 10,
+          }).start();
+        }
+      },
+    }),
+    [sortModalPan]
+  );
+
+  // pan 애니메이션 초기화
+  useEffect(() => {
+    if (showSortModal) {
+      sortModalPan.setValue({ x: 0, y: 0 });
+    }
+  }, [showSortModal, sortModalPan]);
 
   // 최초 진입 시 검색어 목록 가져오기
   useEffect(() => {
     fetchSearchHistory();
-    fetchThumbnailData();
     fetchReviewData();
   }, []);
-
-  const fetchThumbnailData = async () => {
-    try {
-      const response = await getProductAppThumbnailImg();
-      setThumbnailData(response.data);
-    } catch (error) {
-      console.error('썸네일 데이터 로드 오류:', error);
-    }
-  };
 
   const fetchSearchHistory = async () => {
     if (!memberInfo?.mem_id) return;
@@ -83,11 +111,9 @@ const ShoppingSearch: React.FC = () => {
       
       if (response.success) {
         setRecentSearches(response.data || []);
-      } else {
-        console.error('검색어 목록 조회 실패');
       }
     } catch (error) {
-      console.error('검색어 목록 조회 오류:', error);
+      
     } finally {
       setIsLoading(false);
     }
@@ -98,14 +124,10 @@ const ShoppingSearch: React.FC = () => {
       const response = await getMemberReviewAppList();
       setReviewData(response.data);
     } catch (error) {
-      console.error('리뷰 데이터 로드 오류:', error);
+      
     }
   };
 
-  const handleGoBack = () => {
-    navigation.goBack();
-  };
-  
   const handleSearchItemPress = (keyword: string) => {
     setSearchText(keyword);
     // 검색 실행
@@ -130,7 +152,7 @@ const ShoppingSearch: React.FC = () => {
         Alert.alert('알림', '검색어 삭제에 실패했습니다.');
       }
     } catch (error) {
-      console.error('검색어 삭제 오류:', error);
+      
       Alert.alert('알림', '검색어 삭제 중 오류가 발생했습니다.');
     }
   };
@@ -152,7 +174,7 @@ const ShoppingSearch: React.FC = () => {
       await Promise.all(deletePromises);
       setRecentSearches([]);
     } catch (error) {
-      console.error('검색어 일괄 삭제 오류:', error);
+      
       Alert.alert('알림', '검색어 삭제 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
@@ -186,16 +208,25 @@ const ShoppingSearch: React.FC = () => {
             mem_id: memberInfo.mem_id,
             keyword: searchKeyword
           };
+
+          console.log(currentFilter);
           
           // 추천순인 경우 search_type 파라미터 추가
-          if (currentFilter === '기본순') {
-            searchParams.search_type = 'search_recommend';
+          if (currentFilter === 'new') {
+            searchParams.search_type = 'new';
+          } else if (currentFilter === 'high_star') {
+            searchParams.search_type = 'high_star';
+          } else if (currentFilter === 'low_star') {
+            searchParams.search_type = 'low_star';
+          } else if (currentFilter === 'high_price') {
+            searchParams.search_type = 'high_price';
+          } else if (currentFilter === 'low_price') {
+            searchParams.search_type = 'low_price';
           }
           
           const searchResponse = await getSearchProduct(searchParams);
           
           if (searchResponse.success) {
-            console.log('검색 결과:', searchResponse.data.length, '개 상품');
             setSearchResults(searchResponse.data);
             // 약간의 지연 후 로딩 상태 해제 (데이터 렌더링 완료 후)
             setTimeout(() => {
@@ -203,63 +234,22 @@ const ShoppingSearch: React.FC = () => {
             }, 300);
             return; // 여기서 함수 종료하여 finally 블록의 setIsLoading(false) 실행 방지
           } else {
-            console.error('상품 검색 실패');
+            
           }
         } catch (searchError) {
-          console.error('상품 검색 오류:', searchError);
+          
         }
       } else {
-        console.error('검색어 저장 실패');
+        
       }
       setIsLoading(false); // 오류가 발생한 경우에만 여기서 로딩 상태 해제
     } catch (error) {
-      console.error('검색 오류:', error);
+      
       Alert.alert('알림', '검색 중 오류가 발생했습니다.');
       setIsLoading(false); // 오류가 발생한 경우 로딩 상태 해제
     }
   };
   
-  // 썸네일 이미지 URL 생성 함수
-  const getSupabaseImageUrl = (item: SearchProduct) => {
-    const thumbnailItem = thumbnailData?.find(thumb => thumb.product_app_id === item.product_app_id);
-    
-    if (!thumbnailItem) return item.image;
-    
-    // file_path와 file_name으로 이미지 경로 생성
-    if (thumbnailItem.file_path && thumbnailItem.file_name) {
-      const imagePath = `${thumbnailItem.file_path}/${thumbnailItem.file_name}`.replace(/^\//, '');
-      const { data } = supabase.storage.from('product').getPublicUrl(imagePath);
-      if (data && data.publicUrl) {
-        return data.publicUrl;
-      }
-    }
-
-    // image_url이 있는 경우
-    if (thumbnailItem.image_url) {
-      // 경로만 있는 경우 Supabase URL로 변환
-      if (!thumbnailItem.image_url.includes('http')) {
-        const { data } = supabase.storage.from('product').getPublicUrl(thumbnailItem.image_url);
-        if (data && data.publicUrl) {
-          return data.publicUrl;
-        }
-      }
-      return thumbnailItem.image_url;
-    }
-    
-    return item.image;
-  };
-
-  // 필터 토글 함수
-  const toggleFilter = () => {
-    const newFilterType = filterType === '추천순' ? '기본순' : '추천순';
-    setFilterType(newFilterType);
-    
-    // 검색 결과가 있는 경우 필터 변경 시 재검색
-    if (isSearched && searchResults.length > 0) {
-      handleSearch(searchText.trim(), newFilterType);
-    }
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.searchHeader}>
@@ -280,7 +270,10 @@ const ShoppingSearch: React.FC = () => {
           </View>
         </View>
         
-        <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
           <Text style={styles.closeText}>닫기</Text>
         </TouchableOpacity>
       </View>
@@ -290,16 +283,15 @@ const ShoppingSearch: React.FC = () => {
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#43B546" />
-              <Text style={styles.loadingText}>검색 중...</Text>
             </View>
           ) : searchResults.length > 0 ? (
             <View style={styles.searchResultContainer}>
               <TouchableOpacity 
                 style={styles.filterContainer} 
-                onPress={toggleFilter}
+                onPress={() => setShowSortModal(true)}
               >
                 <Image source={IMAGES.icons.filterGray} style={styles.filterIcon} />
-                <Text style={styles.filterText}>{filterType}</Text>
+                <Text style={styles.filterText}>{filterType === 'new' ? '최신순' : filterType === 'high_star' ? '별점높은순' : filterType === 'low_star' ? '별점낮은순' : filterType === 'high_price' ? '높은가격순' : '낮은가격순'}</Text>
               </TouchableOpacity>
               <FlatList
                 data={searchResults}
@@ -309,12 +301,14 @@ const ShoppingSearch: React.FC = () => {
                     onPress={() => navigation.navigate('ShoppingDetail', { product: item })}
                   >
                     <View style={styles.productRow}>
-                      <Image 
-                        source={{uri: getSupabaseImageUrl(item)}} 
-                        style={styles.productImage}
+                      <ShoppingThumbnailImg 
+                        productAppId={item.product_app_id}
+                        width={scale(120)} 
+                        height={scale(120)}
+                        borderRadius={scale(10)}
                       />
                       <View style={styles.productDetails}>
-                        <Text style={styles.productName}>{item.title}</Text>
+                        <Text style={styles.productName} numberOfLines={2} ellipsizeMode="tail">{item.title}</Text>
                         {item.discount > 0 && (
                           <View style={styles.priceContainer}>
                             <Text style={styles.discountText}>{item.discount}%</Text>
@@ -387,6 +381,93 @@ const ShoppingSearch: React.FC = () => {
           )}
         </>
       )}
+
+      {/* 정렬 모달 */}
+      <Modal
+        visible={showSortModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowSortModal(false)}
+      >
+        <View style={styles.sortModalOverlay}>
+          <Animated.View
+            style={[
+              styles.sortModalContent,
+              {
+                transform: [{ translateY: sortModalPan.y }]
+              }
+            ]}
+          >
+            <View
+              {...sortModalPanResponder.panHandlers}
+              style={styles.dragArea}
+            >
+              <Image source={IMAGES.icons.smallBarGray} style={styles.modalBar} />
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.sortOption}
+              onPress={() => {
+                setFilterType('new');
+                setShowSortModal(false);
+                if (isSearched && searchResults.length > 0) {
+                  handleSearch(searchText.trim(), 'new');
+                }
+              }}
+            >
+              <Text style={styles.sortOptionText}>최신순</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.sortOption}
+              onPress={() => {
+                setFilterType('high_star');
+                setShowSortModal(false);
+                if (isSearched && searchResults.length > 0) {
+                  handleSearch(searchText.trim(), 'high_star');
+                }
+              }}
+            >
+              <Text style={styles.sortOptionText}>별점높은순</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.sortOption}
+              onPress={() => {
+                setFilterType('low_star');
+                setShowSortModal(false);
+                if (isSearched && searchResults.length > 0) {
+                  handleSearch(searchText.trim(), 'low_star');
+                }
+              }}
+            >
+              <Text style={styles.sortOptionText}>별점낮은순</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.sortOption}
+              onPress={() => {
+                setFilterType('high_price');
+                setShowSortModal(false);
+                if (isSearched && searchResults.length > 0) {
+                  handleSearch(searchText.trim(), 'high_price');
+                }
+              }}
+            >
+              <Text style={styles.sortOptionText}>높은가격순</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.sortOption}
+              onPress={() => {
+                setFilterType('low_price');
+                setShowSortModal(false);
+                if (isSearched && searchResults.length > 0) {
+                  handleSearch(searchText.trim(), 'low_price');
+                }
+              }}
+            >
+              <Text style={styles.sortOptionText}>낮은가격순</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -485,13 +566,13 @@ const styles = StyleSheet.create({
   },
   searchResultContainer: {
     flex: 1,
-    padding: scale(16),
+    padding: scale(14),
   },
   filterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    marginBottom: scale(15),
+    marginBottom: scale(5),
   },
   filterText: {
     fontSize: scale(14),
@@ -509,47 +590,42 @@ const styles = StyleSheet.create({
   productRow: {
     flexDirection: 'row',
   },
-  productImage: {
-    width: scale(120),
-    height: scale(120),
-    borderRadius: scale(10),
-    marginRight: scale(10),
-    backgroundColor: '#EEEEEE',
-  },
   productDetails: {
-    paddingTop: scale(10),
+    flex: 1,
+    marginLeft: scale(10),
+    justifyContent: 'space-evenly',
   },
   productName: {
-    fontSize: scale(14),
+    fontSize: scale(12),
     color: '#202020',
-    marginBottom: scale(4),
+    marginBottom: scale(2),
   },
   priceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: scale(4),
+    marginBottom: scale(2),
   },
   discountText: {
-    fontSize: scale(16),
+    fontSize: scale(14),
     color: '#F04D4D',
     fontWeight: '500',
     marginRight: scale(8),
   },
   originalPriceText: {
-    fontSize: scale(16),
+    fontSize: scale(14),
     color: '#CBCBCB',
     textDecorationLine: 'line-through',
   },
   priceText: {
-    fontSize: scale(18),
+    fontSize: scale(16),
     fontWeight: 'bold',
     color: '#202020',
-    marginBottom: scale(4),
+    marginBottom: scale(2),
   },
   freeShippingText: {
-    fontSize: scale(14),
+    fontSize: scale(12),
     color: '#202020',
-    marginBottom: scale(4),
+    marginBottom: scale(2),
   },
   noResultContainer: {
     justifyContent: 'center',
@@ -571,6 +647,42 @@ const styles = StyleSheet.create({
     marginTop: scale(10),
     fontSize: scale(14),
     color: '#666',
+  },
+  sortModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  sortModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: scale(20),
+    borderTopRightRadius: scale(20),
+    width: '100%',
+    maxHeight: '40%',
+    minHeight: '40%',
+    padding: scale(20),
+  },
+  dragArea: {
+    width: '100%',
+    height: scale(30),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -scale(10),
+    marginBottom: scale(5),
+  },
+  modalBar: {
+    width: scale(40),
+    height: scale(30),
+    resizeMode: 'contain',
+  },
+  sortOption: {
+    padding: scale(15),
+  },
+  sortOptionText: {
+    fontSize: scale(16),
+    color: '#202020',
+    textAlign: 'center',
   },
 });
 

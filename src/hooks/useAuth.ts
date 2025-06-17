@@ -21,7 +21,6 @@ export const useAuth = () => {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.MEM_ID, mem_id);
     } catch (error) {
-      console.error('회원 ID 저장 실패:', error);
     }
   };
 
@@ -30,7 +29,6 @@ export const useAuth = () => {
     try {
       return await AsyncStorage.getItem(STORAGE_KEYS.MEM_ID);
     } catch (error) {
-      console.error('회원 ID 불러오기 실패:', error);
       return null;
     }
   };
@@ -47,9 +45,13 @@ export const useAuth = () => {
   const logout = async () => {
     try {
       await AsyncStorage.removeItem(STORAGE_KEYS.MEM_ID);
+      // 자동로그인 정보는 유지 (의도적으로 로그아웃하는 경우가 아니라면)
+      // await AsyncStorage.removeItem('autoLogin');
+      // await AsyncStorage.removeItem('savedEmail');
+      // await AsyncStorage.removeItem('savedPassword');
+      
       // 추가적인 로그아웃 로직 (리덕스 상태 초기화 등)
     } catch (error) {
-      console.error('로그아웃 실패:', error);
     }
   };
 

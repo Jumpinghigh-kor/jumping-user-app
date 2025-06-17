@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,15 +9,16 @@ import {
   FlatList,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { scale } from '../utils/responsive';
 import IMAGES from '../utils/images';
 import CommonHeader from '../components/CommonHeader';
-import { getTargetMemberReviewAppList, Review } from '../api/services/memberReviewAppService';
+import { getCompleteMemberReviewAppList, Review } from '../api/services/memberReviewAppService';
 import { getMemberOrderAppList, MemberOrderAppItem } from '../api/services/memberOrderAppService';
 import { useAppSelector } from '../store/hooks';
 import ShoppingThumbnailImg from '../components/ShoppingThumbnailImg';
+import { commonStyle, layoutStyle } from '../styles/common';
 
 // 네비게이션 타입 정의
 type RootStackParamList = {
@@ -25,6 +26,7 @@ type RootStackParamList = {
   ShoppingReviewModify: {
     reviewAppId?: number;
     productAppId: number;
+    productDetailAppId: number;
     productName: string;
     brandName: string;
     productTitle: string;
@@ -48,13 +50,26 @@ const ShoppingReview: React.FC = () => {
   
   const memberInfo = useAppSelector(state => state.member.memberInfo);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (memberInfo?.mem_id) {
+        // 초기 로드 시 리뷰 목록 가져오기
+        fetchMemberReviewAppList();
+        
+        if (activeTab === 'write') {
+          fetchMemberOrderAppList();
+        }
+      }
+    }, [activeTab])
+  );
+
   useEffect(() => {
     if (activeTab === 'list' && memberInfo?.mem_id) {
       fetchMemberReviewAppList();
     } else if (activeTab === 'write' && memberInfo?.mem_id) {
       fetchMemberOrderAppList();
     }
-  }, [activeTab, memberInfo?.mem_id]);
+  }, [activeTab]);
 
   const fetchMemberReviewAppList = async () => {
     if (!memberInfo?.mem_id) return;
@@ -62,15 +77,12 @@ const ShoppingReview: React.FC = () => {
     setLoading(true);
     
     try {
-      const response = await getTargetMemberReviewAppList({ mem_id: Number(memberInfo.mem_id) } as any);
+      const response = await getCompleteMemberReviewAppList({ mem_id: Number(memberInfo.mem_id) } as any);
       if (response.success) {
-        console.log('response.data', response.data);
         setMemberReviewAppList(response.data);
-      } else {
-        console.log('response.message', response.message);
       }
     } catch (err: any) {
-      console.log('err', err);
+      
     } finally {
       setLoading(false);
     }
@@ -89,10 +101,10 @@ const ShoppingReview: React.FC = () => {
       if (response.success && response.data) {
         setMemberOrderAppList(response.data);
       } else {
-        console.log('주문 목록 조회 실패:', response.message);
+        
       }
     } catch (err: any) {
-      console.log('주문 목록 조회 오류:', err);
+      
     } finally {
       setLoading(false);
     }
@@ -106,7 +118,7 @@ const ShoppingReview: React.FC = () => {
       <Image source={IMAGES.icons.homeStrokeBlack} style={styles.homeIcon} />
     </TouchableOpacity>
   );
-
+  
   return (
     <>
       <CommonHeader 
@@ -156,30 +168,22 @@ const ShoppingReview: React.FC = () => {
                       <Text style={styles.orderDateText}>주문일자 {item?.order_dt}</Text>
                       <View style={{flexDirection: 'row', alignItems: 'flex-start'}}>
                         <ShoppingThumbnailImg 
-                          productAppId={item?.product_app_id || 0}
+                          productAppId={item?.product_app_id}
                           width={scale(80)} 
                           height={scale(80)}
-                          style={styles.thumbnailImage}
                         />
-                        <View style={{flexDirection: 'column',paddingVertical: scale(9),marginLeft: scale(4), justifyContent: 'space-between', alignSelf:'stretch'}}>
+                        <View style={{flexDirection: 'column', marginLeft: scale(10), alignSelf: 'stretch', justifyContent: 'space-evenly', flex: 1}}>
                           <Text style={styles.productName}>{item.brand_name}</Text>
-                          <Text style={styles.productTitle}>{item.product_title}</Text>
-                          <Text style={styles.productInfo}>{item.product_name} {item.option_amount}{item.option_type == 'WEIGHT' ? 'KG' : item.option_type == 'SIZE' ? item.option_type : ''} / {item.order_quantity}개</Text>
+                          <Text style={styles.productTitle} numberOfLines={2} ellipsizeMode="tail">{item.product_title}</Text>
+                          <Text style={styles.productInfo}>{item.product_name} {item.option_amount}{item.option_unit} / {item.order_quantity}개</Text>
                         </View>
                       </View>
                       <TouchableOpacity 
                         style={styles.writeReviewBtn}
                         onPress={() => {
                           navigation.navigate('ShoppingReviewModify', {
-                            productAppId: item.product_app_id,
-                            productName: item.product_name,
-                            brandName: item.brand_name,
-                            productTitle: item.product_title,
-                            optionType: item.option_type,
-                            optionQuantity: item.order_quantity,
-                            optionAmount: item.option_amount
+                            ...item,
                           });
-                          console.log('리뷰 쓰기', item);
                         }}
                       >
                         <Text style={styles.writeReviewBtnText}>리뷰 쓰기</Text>
@@ -208,12 +212,11 @@ const ShoppingReview: React.FC = () => {
                       <View style={{flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between'}}>
                         <View style={{flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'flex-start'}}>
                           <ShoppingThumbnailImg 
-                            productAppId={item?.product_app_id || 0}
+                            productAppId={item?.product_app_id}
                             width={scale(80)} 
                             height={scale(80)}
-                            style={styles.thumbnailImage}
                           />
-                          <View>
+                          <View style={[commonStyle.ml10]}>
                             <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', marginBottom: scale(5)}}>
                               <View style={styles.starContainer}>
                                 {[1, 2, 3, 4, 5].map((star) => (
@@ -234,13 +237,7 @@ const ShoppingReview: React.FC = () => {
                           style={styles.editBtn}
                           onPress={() => {
                             navigation.navigate('ShoppingReviewModify', {
-                              reviewAppId: item.review_app_id,
-                              productAppId: item.product_app_id,
-                              productName: item.product_name,
-                              brandName: item.brand_name,
-                              content: item.content,
-                              starPoint: item.star_point,
-                              reviewTitle: item.review_title
+                              ...item,
                             });
                           }}
                         >
@@ -303,7 +300,7 @@ const styles = StyleSheet.create({
     fontSize: scale(16),
   },
   loader: {
-    marginTop: scale(30),
+    marginTop: scale(80),
   },
   contentContainer: {
     flex: 1,
@@ -371,10 +368,6 @@ const styles = StyleSheet.create({
   editBtnText: {
     fontSize: scale(14),
     color: '#FFFFFF',
-  },
-  thumbnailImage: {
-    marginRight: scale(10),
-    borderRadius: scale(8),
   },
   emptyContainer: {
     justifyContent: 'center',

@@ -1,20 +1,21 @@
 import React, {useEffect, useState} from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Alert, Image, Platform, ScrollView} from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity, Alert, Image, Platform, ScrollView, Switch} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import IMAGES from '../utils/images';
 import {useAuth} from '../hooks/useAuth';
 import {scale} from '../utils/responsive';
 import {privacyPolicyText, termsOfServiceText} from '../utils/termsData';
-import {getInquiryList} from '../api/services/inquiryService';
-import {getNoticesAppList} from '../api/services/noticesAppService';
 import {getUpdateLogAppInfo, UpdateLogInfo} from '../api/services/updateLogAppService';
-import { formatDateYYYYMMDD } from '../utils/commonFunctions';
+import { formatDateYYYYMMDD } from '../utils/commonFunction';
 import ProfileImagePicker from '../components/ProfileImagePicker';
 import { getMemberImageFile } from '../api/services/profileService';
 import { supabase } from '../utils/supabaseClient';
 import { useProfileImage } from '../hooks/useProfileImage';
 import CommonModal from '../components/CommonModal';
+import {getNoticesAppList} from '../api/services/noticesAppService';
+import {getInquiryList} from '../api/services/inquiryService';
+import {updatePushYn} from '../api/services/membersService';
 
 // Package.json 버전 정보 가져오기
 const appVersion = require('../../package.json').version;
@@ -26,17 +27,85 @@ const MyPage = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalContent, setModalContent] = useState('');
-  const [hasUnreadNotices, setHasUnreadNotices] = useState(false);
-  const [hasUnreadInquiries, setHasUnreadInquiries] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateLogInfo | null>(null);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+  const [isPushEnabled, setIsPushEnabled] = useState(false);
+
+  // 읽지 않은 알림이 있는지 체크
+  const checkUnreadNotifications = async () => {
+    try {
+      // 읽은 공지사항 가져오기
+      const readNoticesStr = await AsyncStorage.getItem('readNotices');
+      const readNotices = readNoticesStr ? JSON.parse(readNoticesStr) : [];
+      
+      // 읽은 문의 가져오기
+      const readInquiriesStr = await AsyncStorage.getItem('readInquiries');
+      const readInquiries = readInquiriesStr ? JSON.parse(readInquiriesStr) : [];
+      
+      // 공지사항 목록 가져오기
+      const noticesResponse = await getNoticesAppList();
+      let hasUnreadNotice = false;
+      if (noticesResponse.success && noticesResponse.data) {
+        hasUnreadNotice = noticesResponse.data.some(notice => 
+          !readNotices.includes(notice.notices_app_id)
+        );
+      }
+      
+      // 문의 목록 가져오기
+      const inquiriesResponse = await getInquiryList();
+      let hasUnreadInquiry = false;
+      if (inquiriesResponse.success && inquiriesResponse.data) {
+        hasUnreadInquiry = inquiriesResponse.data.some(inquiry => 
+          inquiry.answer && !readInquiries.includes(inquiry.inquiry_app_id)
+        );
+      }
+      
+      // 하나라도 읽지 않은 알림이 있으면 true로 설정
+      setHasUnreadNotifications(hasUnreadNotice || hasUnreadInquiry);
+    } catch (error) {
+      console.error('알림 체크 실패:', error);
+    }
+  };
+
+  // 푸시 알림 설정 불러오기
+  const loadPushSetting = async () => {
+    try {
+      const pushSetting = await AsyncStorage.getItem('@push_enabled');
+      setIsPushEnabled(pushSetting === 'true');
+    } catch (error) {
+      console.error('푸시 설정 불러오기 실패:', error);
+    }
+  };
+
+  // 푸시 알림 설정 저장하기
+  const savePushSetting = async (enabled: boolean) => {
+    try {
+      // API 호출
+      if (memberInfo?.mem_id) {
+        const response = await updatePushYn({
+          mem_id: memberInfo.mem_id,
+          push_yn: enabled ? 'Y' : 'N'
+        });
+        
+        if (response.success) {
+          await AsyncStorage.setItem('@push_enabled', enabled.toString());
+          setIsPushEnabled(enabled);
+        } else {
+          console.error('푸시 설정 업데이트 실패:', response.message);
+        }
+      }
+    } catch (error) {
+      console.error('푸시 설정 저장 실패:', error);
+    }
+  };
 
   useFocusEffect(
     React.useCallback(() => {
       loadMemberInfo();
-      checkUnreadNotices();
-      checkUnreadInquiries();
       fetchUpdateInfo();
       loadProfileImage();
+      checkUnreadNotifications();
+      loadPushSetting();
     }, [memberInfo?.mem_id]),
   );
 
@@ -46,40 +115,6 @@ const MyPage = () => {
       
       if (response.success && response.data) {
         setUpdateInfo(response.data);
-      }
-    } catch (error) {
-      
-    }
-  };
-
-  const checkUnreadNotices = async () => {
-    try {
-      const readNoticesStr = await AsyncStorage.getItem('readNotices');
-      const readNotices = readNoticesStr ? JSON.parse(readNoticesStr) : [];
-      
-      const response = await getNoticesAppList();
-      if (response.success && response.data) {
-        const unreadExists = response.data.some(notice => 
-          !readNotices.includes(notice.notices_app_id)
-        );
-        setHasUnreadNotices(unreadExists);
-      }
-    } catch (error) {
-      
-    }
-  };
-
-  const checkUnreadInquiries = async () => {
-    try {
-      const readInquiriesStr = await AsyncStorage.getItem('readInquiries');
-      const readInquiries = readInquiriesStr ? JSON.parse(readInquiriesStr) : [];
-      
-      const response = await getInquiryList();
-      if (response.success && response.data) {
-        const unreadExists = response.data.some(inquiry => 
-          inquiry.answer && !readInquiries.includes(inquiry.inquiry_app_id)
-        );
-        setHasUnreadInquiries(unreadExists);
       }
     } catch (error) {
       
@@ -102,9 +137,10 @@ const MyPage = () => {
             onImageUpdate={loadProfileImage}
           />
           <View style={{marginVertical: scale(10)}}>
-          <Text style={styles.nickname}>{memberInfo?.mem_nickname}</Text>
-          <Text style={styles.centerName}>{memberInfo?.center_name}</Text>
+            <Text style={styles.nickname}>{memberInfo?.mem_nickname}</Text>
+            <Text style={styles.centerName}>{memberInfo?.center_name}</Text>
           </View>
+          <Text style={styles.emailId}>회원번호 : {memberInfo?.mem_checkin_number}</Text>
           <Text style={styles.emailId}>{memberInfo?.mem_email_id}</Text>
         </View>
 
@@ -116,8 +152,11 @@ const MyPage = () => {
           >
             <View style={styles.menuTextContainer}>
               <Text style={styles.menuText}>공지사항</Text>
-              {hasUnreadNotices && (
-                <View style={styles.notificationDot} />
+              {hasUnreadNotifications && (
+                <Image 
+                  source={IMAGES.icons.exclamationMarkRed}
+                  style={styles.notificationDot}
+                />
               )}
             </View>
             <Image 
@@ -130,12 +169,7 @@ const MyPage = () => {
             style={styles.menuItem}
             onPress={() => navigation.navigate('InquiryList' as never)}
           >
-            <View style={styles.menuTextContainer}>
-              <Text style={styles.menuText}>문의</Text>
-              {hasUnreadInquiries && (
-                <View style={styles.notificationDot} />
-              )}
-            </View>
+            <Text style={styles.menuText}>문의</Text>
             <Image 
               source={IMAGES.icons.arrowRightWhite} 
               style={styles.menuArrow} 
@@ -174,7 +208,7 @@ const MyPage = () => {
             style={styles.menuItem}
             onPress={() => navigation.navigate('Settings' as never)}
           >
-            <Text style={styles.menuText}>환경설정</Text>
+            <Text style={styles.menuText}>내 계정 정보</Text>
             <Image 
               source={IMAGES.icons.arrowRightWhite} 
               style={styles.menuArrow} 
@@ -197,6 +231,18 @@ const MyPage = () => {
               )}
             </View>
           </TouchableOpacity>
+          
+          <View style={styles.menuItem}>
+            <Text style={styles.menuText}>푸시 알람 받기</Text>
+            <Switch
+              trackColor={{ false: '#767577', true: '#43B546' }}
+              thumbColor={isPushEnabled ? '#FFFFFF' : '#f4f3f4'}
+              ios_backgroundColor="#3e3e3e"
+              onValueChange={savePushSetting}
+              value={isPushEnabled}
+              style={styles.switchButton}
+            />
+          </View>
         </View>
       </ScrollView>
 
@@ -209,7 +255,6 @@ const MyPage = () => {
             : modalContent
         }
         onClose={() => setModalVisible(false)}
-        showCloseButton={true}
       />
     </View>
   );
@@ -270,9 +315,18 @@ const styles = StyleSheet.create({
     paddingVertical: scale(15),
     paddingHorizontal: scale(16),
   },
+  menuTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   menuText: {
     color: '#ffffff',
     fontSize: scale(12),
+  },
+  notificationDot: {
+    width: scale(12),
+    height: scale(12),
+    marginLeft: scale(4),
   },
   versionText: {
     color: '#999999',
@@ -286,17 +340,10 @@ const styles = StyleSheet.create({
     width: scale(16),
     height: scale(16),
     tintColor: '#999999',
+    resizeMode: 'contain',
   },
-  menuTextContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  notificationDot: {
-    width: scale(6),
-    height: scale(6),
-    borderRadius: scale(3),
-    backgroundColor: '#FF0000',
-    marginLeft: scale(5),
+  switchButton: {
+    transform: [{scaleX: 0.8}, {scaleY: 0.8}],
   },
 });
 

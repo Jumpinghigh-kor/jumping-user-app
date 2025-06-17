@@ -88,6 +88,9 @@ const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
     setShowBottomModal(false);
     
     try {
+      // iOS에서 Modal 닫힘 대기
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const result = await launchImageLibrary({
         mediaType: 'photo',
         quality: 0.8,
@@ -107,8 +110,13 @@ const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
       } else {
         setShowErrorPopup(true);
       }
+    } catch (error) {
+      setShowErrorPopup(true);
     } finally {
-      setIsGalleryOpen(false);
+      // iOS에서 상태 초기화 지연
+      setTimeout(() => {
+        setIsGalleryOpen(false);
+      }, 200);
     }
   };
 
@@ -394,7 +402,7 @@ const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
         <CommonPopup
           visible={showSuccessPopup}
           title="성공"
-          message="프로필 이미지가 업데이트되었습니다."
+          message="프로필 이미지가 업데이트되었습니다"
           confirmText="확인"
           onConfirm={handleSuccessClose}
           type="default"

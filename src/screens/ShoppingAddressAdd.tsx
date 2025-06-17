@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,24 +9,57 @@ import {
   Platform,
   ScrollView,
   Modal,
-  Image
+  Image,
+  ActivityIndicator
 } from 'react-native';
 import CommonHeader from '../components/CommonHeader';
 import IMAGES from '../utils/images';
 import { scale } from '../utils/responsive';
 import SearchAddress from '../components/SearchAddress';
+import { useAppSelector } from '../store/hooks';
+import { insertMemberShippingAddress, updateMemberShippingAddress } from '../api/services/memberShippingAddressService';
+import CommonPopup from '../components/CommonPopup';
 
-const ShoppingAddressAdd = ({ navigation }) => {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
-  const [detailAddress, setDetailAddress] = useState('');
-  const [zipCode, setZipCode] = useState('');
+const ShoppingAddressAdd = ({ navigation, route }) => {
+  const addressData = route.params?.addressData;
+  const [name, setName] = useState(addressData?.receiver_name || '');
+  const [phone, setPhone] = useState(addressData?.receiver_phone ? addressData.receiver_phone.replace(/-/g, '') : '');
+  const [address, setAddress] = useState(addressData?.address || '');
+  const [detailAddress, setDetailAddress] = useState(addressData?.address_detail || '');
+  const [zipCode, setZipCode] = useState(addressData?.zip_code || '');
   const [isAddressSearchVisible, setIsAddressSearchVisible] = useState(false);
-  const [isDefaultAddress, setIsDefaultAddress] = useState(false);
+  const [isDefaultAddress, setIsDefaultAddress] = useState(addressData?.default_yn === 'Y');
   const [entranceMethod, setEntranceMethod] = useState('password');
   const [entrancePassword, setEntrancePassword] = useState('');
   const [etcMessage, setEtcMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState('');
+  const [addressName, setAddressName] = useState(addressData?.shipping_address_name || '');
+  const [isWarning, setIsWarning] = useState(true);
+
+  const memberInfo = useAppSelector(state => state.member.memberInfo);
+
+  useEffect(() => {
+    if (addressData?.enter_way) {
+      switch(addressData.enter_way) {
+        case 'PASSWORD':
+          setEntranceMethod('PASSWORD');
+          setEntrancePassword(addressData.enter_memo || '');
+          break;
+        case 'SECURITY_CALL':
+          setEntranceMethod('SECURITY_CALL');
+          break;
+        case 'FREE':
+          setEntranceMethod('FREE');
+          break;
+        case 'ETC':
+          setEntranceMethod('ETC');
+          setEtcMessage(addressData.enter_memo || '');
+          break;
+      }
+    }
+  }, [addressData]);
 
   // 전화번호 형식 검증 (숫자만, 11자리)
   const handlePhoneChange = (text: string) => {
@@ -56,10 +89,111 @@ const ShoppingAddressAdd = ({ navigation }) => {
     setIsDefaultAddress(!isDefaultAddress);
   };
 
+  // 주소 저장 함수
+  const handleSaveAddress = async () => {
+    // 유효성 검사
+    if (!name) {
+      setPopupMessage('받는 사람 이름을 입력해주세요.');
+      setShowPopup(true);
+      return;
+    }
+    
+    if (!phone || phone.length < 10) {
+      setPopupMessage('올바른 전화번호를 입력해주세요.');
+      setShowPopup(true);
+      return;
+    }
+    
+    if (!address) {
+      setPopupMessage('주소를 입력해주세요.');
+      setShowPopup(true);
+      return;
+    }
+    
+    if (!detailAddress) {
+      setPopupMessage('상세 주소를 입력해주세요.');
+      setShowPopup(true);
+      return;
+    }
+    
+    // 입장 방법에 따른 메모 설정
+    let enterWay = '';
+    let enterMemo = '';
+    
+    switch (entranceMethod) {
+      case 'PASSWORD':
+        enterWay = 'PASSWORD';
+        enterMemo = entrancePassword;
+        break;
+      case 'SECURITY_CALL':
+        enterWay = 'SECURITY_CALL';
+        enterMemo = '';
+        break;
+      case 'FREE':
+        enterWay = 'FREE';
+        enterMemo = '';
+        break;
+      case 'ETC':
+        enterWay = 'ETC';
+        enterMemo = etcMessage;
+        break;
+    }
+    
+    // 비밀번호나 기타사항 입력 필드에 값이 없는 경우 체크
+    if ((entranceMethod === 'PASSWORD' && !entrancePassword) || 
+        (entranceMethod === 'ETC' && !etcMessage)) {
+      setPopupMessage('공동 현관 출입방법을 입력해주세요.');
+      setShowPopup(true);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      const params: any = {
+        mem_id: memberInfo.mem_id,
+        shipping_address_name: addressName || detailAddress.substring(0, 10),
+        receiver_name: name,
+        receiver_phone: phone,
+        default_yn: isDefaultAddress ? 'Y' : 'N' as 'Y' | 'N',
+        del_yn: 'N' as 'Y' | 'N',
+        address: address,
+        address_detail: detailAddress,
+        zip_code: zipCode,
+        enter_way: enterWay,
+        enter_memo: enterMemo
+      };
+      
+      let response;
+      
+      // If editing, use update API
+      if (addressData) {
+        params.shipping_address_id = addressData.shipping_address_id;
+        response = await updateMemberShippingAddress(params);
+      } else {
+        response = await insertMemberShippingAddress(params);
+      }
+      
+      if (response.success) {
+        setPopupMessage(addressData ? '배송지가 수정되었습니다.' : '배송지가 추가되었습니다.');
+        setShowPopup(true);
+        setIsWarning(false);
+      } else {
+        setPopupMessage(response.message || (addressData ? '배송지 수정에 실패했습니다.' : '배송지 추가에 실패했습니다.'));
+        setShowPopup(true);
+      }
+    } catch (error) {
+      setPopupMessage(addressData ? '배송지 수정 중 오류가 발생했습니다.' : '배송지 추가 중 오류가 발생했습니다.');
+      setShowPopup(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <CommonHeader 
-        title="배송지 추가"
+        title={addressData ? "배송지 수정" : "배송지 추가"}
         titleColor="#202020"
         backIcon={IMAGES.icons.arrowLeftBlack}
         backgroundColor="#FFFFFF"
@@ -70,6 +204,19 @@ const ShoppingAddressAdd = ({ navigation }) => {
       >
         <ScrollView>
           <View style={styles.formContainer}>
+            <View style={styles.inputSection}>
+              <Text style={styles.inputTitle}>배송지 이름</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  addressName ? styles.inputFilled : null
+                ]}
+                placeholder="배송지 이름을 입력해 주세요"
+                placeholderTextColor="#848484"
+                value={addressName}
+                onChangeText={setAddressName}
+              />
+            </View>
             {/* 받는 사람 */}
             <View style={styles.inputSection}>
               <Text style={styles.inputTitle}>받는 사람</Text>
@@ -157,18 +304,18 @@ const ShoppingAddressAdd = ({ navigation }) => {
               {/* 비밀번호 */}
               <TouchableOpacity 
                 style={styles.radioContainer}
-                onPress={() => setEntranceMethod('password')}
+                onPress={() => setEntranceMethod('PASSWORD')}
               >
                 <View style={styles.radioWrapper}>
                   <Image 
-                    source={entranceMethod === 'password' ? IMAGES.icons.circleStrokeGreen : IMAGES.icons.circleStrokeGray} 
+                    source={entranceMethod === 'PASSWORD' ? IMAGES.icons.circleStrokeGreen : IMAGES.icons.circleStrokeGray} 
                     style={styles.radioImage} 
                   />
                   <Text style={styles.radioText}>비밀번호</Text>
                 </View>
               </TouchableOpacity>
               
-              {entranceMethod === 'password' && (
+              {entranceMethod === 'PASSWORD' && (
                 <View>
                   <TextInput
                     style={[
@@ -188,11 +335,11 @@ const ShoppingAddressAdd = ({ navigation }) => {
               {/* 경비실 호출 */}
               <TouchableOpacity 
                 style={styles.radioContainer}
-                onPress={() => setEntranceMethod('security')}
+                onPress={() => setEntranceMethod('SECURITY_CALL')}
               >
                 <View style={styles.radioWrapper}>
                   <Image 
-                    source={entranceMethod === 'security' ? IMAGES.icons.circleStrokeGreen : IMAGES.icons.circleStrokeGray} 
+                    source={entranceMethod === 'SECURITY_CALL' ? IMAGES.icons.circleStrokeGreen : IMAGES.icons.circleStrokeGray} 
                     style={styles.radioImage} 
                   />
                   <Text style={styles.radioText}>경비실 호출</Text>
@@ -202,11 +349,11 @@ const ShoppingAddressAdd = ({ navigation }) => {
               {/* 자유 출입가능 */}
               <TouchableOpacity 
                 style={styles.radioContainer}
-                onPress={() => setEntranceMethod('free')}
+                onPress={() => setEntranceMethod('FREE')}
               >
                 <View style={styles.radioWrapper}>
                   <Image 
-                    source={entranceMethod === 'free' ? IMAGES.icons.circleStrokeGreen : IMAGES.icons.circleStrokeGray} 
+                    source={entranceMethod === 'FREE' ? IMAGES.icons.circleStrokeGreen : IMAGES.icons.circleStrokeGray} 
                     style={styles.radioImage} 
                   />
                   <Text style={styles.radioText}>자유 출입가능</Text>
@@ -216,18 +363,18 @@ const ShoppingAddressAdd = ({ navigation }) => {
               {/* 기타사항 */}
               <TouchableOpacity 
                 style={styles.radioContainer}
-                onPress={() => setEntranceMethod('etc')}
+                onPress={() => setEntranceMethod('ETC')}
               >
                 <View style={styles.radioWrapper}>
                   <Image 
-                    source={entranceMethod === 'etc' ? IMAGES.icons.circleStrokeGreen : IMAGES.icons.circleStrokeGray} 
+                    source={entranceMethod === 'ETC' ? IMAGES.icons.circleStrokeGreen : IMAGES.icons.circleStrokeGray} 
                     style={styles.radioImage} 
                   />
                   <Text style={styles.radioText}>기타사항</Text>
                 </View>
               </TouchableOpacity>
               
-              {entranceMethod === 'etc' && (
+              {entranceMethod === 'ETC' && (
                 <TextInput
                   style={[
                     styles.input,
@@ -243,6 +390,21 @@ const ShoppingAddressAdd = ({ navigation }) => {
             </View>
           </View>
         </ScrollView>
+        
+        {/* 저장 버튼 */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity 
+            style={styles.saveButton} 
+            onPress={handleSaveAddress}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.saveButtonText}>{addressData ? "수정" : "저장"}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
       
       {/* 주소 검색 모달 */}
@@ -278,6 +440,20 @@ const ShoppingAddressAdd = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      {/* 알림 팝업 */}
+      <CommonPopup
+        visible={showPopup}
+        message={popupMessage}
+        type={isWarning ? 'warning' : 'default'}
+        confirmText="확인"
+        onConfirm={() => {
+          setShowPopup(false);
+          if (popupMessage === '배송지가 수정되었습니다.' || popupMessage === '배송지가 추가되었습니다.') {
+            navigation.goBack();
+          }
+        }}
+      />
     </>
   );
 };
@@ -410,6 +586,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#202020',
     marginLeft: scale(10),
+  },
+  buttonContainer: {
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(16),
+    borderTopWidth: 1,
+    borderTopColor: '#EEEEEE',
+    backgroundColor: '#FFFFFF',
+  },
+  saveButton: {
+    backgroundColor: '#43B546',
+    height: scale(48),
+    borderRadius: scale(12),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: scale(16),
+    fontWeight: '500',
   },
 });
 

@@ -53,17 +53,19 @@ const Login = () => {
         if (savedEmail && savedPassword) {
           setEmail(savedEmail);
           setPassword(savedPassword);
+          setAutoLogin(true); // 자동로그인 상태 복원
           handleLogin(savedEmail, savedPassword);
         }
       }
     } catch (error) {
-      console.log('자동 로그인 체크 중 오류 발생:', error);
+      console.log('자동 로그인 체크 실패:', error);
     }
   };
 
   const handleLogin = async (emailParam?: string, passwordParam?: string) => {
     const emailToUse = emailParam || email;
     const passwordToUse = passwordParam || password;
+    const isAutoLoginAttempt = !!(emailParam && passwordParam); // 자동로그인 시도인지 확인
     
     if (!emailToUse || !passwordToUse) {
       setError('이메일과 비밀번호를 입력해주세요.');
@@ -79,20 +81,21 @@ const Login = () => {
         mem_email_id: emailToUse,
         mem_app_password: passwordToUse,
       });
-
-      console.log('response', response);
       
       if (response.success) {
         // 자동 로그인 설정 저장
-        if (autoLogin) {
+        if (isAutoLoginAttempt || autoLogin) {
+          // 자동로그인 시도이거나 수동 로그인에서 자동로그인을 체크한 경우
           await AsyncStorage.setItem('autoLogin', 'true');
           await AsyncStorage.setItem('savedEmail', emailToUse);
           await AsyncStorage.setItem('savedPassword', passwordToUse);
-        } else {
+        } else if (!isAutoLoginAttempt && !autoLogin) {
+          // 수동 로그인에서 자동로그인을 체크하지 않은 경우만 삭제
           await AsyncStorage.removeItem('autoLogin');
           await AsyncStorage.removeItem('savedEmail');
           await AsyncStorage.removeItem('savedPassword');
         }
+        // isAutoLoginAttempt이고 autoLogin이 false인 경우는 아무것도 하지 않음 (기존 정보 유지)
         
         // 토큰 저장
         await AsyncStorage.setItem('access_token', response.data.access_token);
@@ -127,7 +130,7 @@ const Login = () => {
           });
         }
       } else {
-        const message = response?.message || '로그인에 실패했습니다.';
+        const message = response?.data?.message || '로그인에 실패했습니다.';
         setError(message);
         setErrorPopup(true);
       }

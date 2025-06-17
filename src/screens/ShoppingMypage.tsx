@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,14 @@ import {
   ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect, CommonActions} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {scale} from '../utils/responsive';
 import IMAGES from '../utils/images';
 import CommonHeader from '../components/CommonHeader';
+import CommonPopup from '../components/CommonPopup';
 import { useAppSelector } from '../store/hooks';
+import { useAuth } from '../hooks/useAuth';
 
 // 네비게이션 타입 정의
 type RootStackParamList = {
@@ -26,6 +28,15 @@ type ShoppingNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 const ShoppingMypage: React.FC = () => {
   const navigation = useNavigation<ShoppingNavigationProp>();
   const memberInfo = useAppSelector(state => state.member.memberInfo);
+  const { loadMemberInfo } = useAuth();
+  const [showExitPopup, setShowExitPopup] = useState(false);
+
+  // 화면이 포커스될 때마다 회원 정보 새로고침
+  useFocusEffect(
+    React.useCallback(() => {
+      loadMemberInfo();
+    }, [])
+  );
 
   return (
     <>
@@ -38,44 +49,58 @@ const ShoppingMypage: React.FC = () => {
       <View style={styles.container}>
         <View style={styles.infoSection}>
           <View style={styles.profileUserContainer}>
-            <Text style={styles.profileUserName}><Text style={{fontWeight: 'bold', fontSize: scale(18)}}>{memberInfo?.mem_name}님</Text> 점핑하이와 함께{'\n'}즐거운 쇼핑되세요!</Text>
-            <Image source={IMAGES.icons.giftWhite} style={styles.giftIcon} />
+            <Text style={styles.profileUserName}>
+              <Text style={{fontWeight: 'bold', fontSize: scale(18)}}>{memberInfo?.mem_name}님 </Text>
+                점핑하이와 함께{'\n'}즐거운 쇼핑되세요!
+              </Text>
           </View>
-
           <View style={styles.infoContainer}>
-            <TouchableOpacity style={styles.infoItem} onPress={() => navigation.navigate('ShoppingOrderHistory')}>
+            <TouchableOpacity
+              style={styles.infoItem}
+              onPress={() => navigation.navigate('ShoppingOrderHistory')}
+            >
               <Image source={IMAGES.icons.orderGreen} style={styles.infoIcon} />
               <Text style={styles.infoText}>주문내역</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.infoItem} onPress={() => navigation.navigate('ShoppingReview')}>
+            <TouchableOpacity
+              style={styles.infoItem}
+              onPress={() => navigation.navigate('ShoppingReview')}
+            >
               <Image source={IMAGES.icons.speechGreen} style={styles.infoIcon} />
               <Text style={styles.infoText}>내 리뷰</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.infoItem} onPress={() => navigation.navigate('ShoppingInquiry')}>
-              <Image source={IMAGES.icons.doubleTalkGreen} style={styles.infoIcon} />
-              <Text style={styles.infoText}>문의</Text>
+            <TouchableOpacity
+              style={styles.infoItem}
+              onPress={() => navigation.navigate('ShoppingNotice')}
+            >
+              <Image source={IMAGES.icons.bellGreen} style={styles.infoIcon} />
+              <Text style={styles.infoText}>알림</Text>
             </TouchableOpacity>
           </View>
 
           <View style={{marginTop: scale(10), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
-            <TouchableOpacity style={styles.bellContainer}>
-              <Image source={IMAGES.icons.bellGreen} style={styles.infoIcon} />
-              <Text style={styles.infoText}>알림</Text>
-            </TouchableOpacity>
-
+            <View>
+              <Image source={IMAGES.icons.giftWhite} style={styles.giftIcon} />
+            </View>
             <View style={styles.inventoryContainer}>
-              <TouchableOpacity style={{flexDirection: 'row', alignItems: 'center'}}>
+              <TouchableOpacity
+                style={{flexDirection: 'row', alignItems: 'center'}}
+                onPress={() => navigation.navigate('ShoppingPoint')}
+              >
                 <Image source={IMAGES.icons.pointBlue} style={styles.inventoryImg} />
                 <View style={{marginRight: scale(10)}}>
                   <Text style={styles.inventoryText}>포인트</Text>
-                  <Text style={{...styles.inventoryText, color: '#5588FF'}}>5000P</Text>
+                  <Text style={{...styles.inventoryText, color: '#5588FF'}}>{!memberInfo?.total_point ? '0' : memberInfo?.total_point}P</Text>
                 </View>
               </TouchableOpacity>
-              <TouchableOpacity style={{flexDirection: 'row', alignItems: 'center'}}>
+              <TouchableOpacity
+                style={{flexDirection: 'row', alignItems: 'center'}}
+                onPress={() => navigation.navigate('ShoppingCoupon')}
+              >
                 <Image source={IMAGES.icons.couponBlue} style={styles.inventoryImg} />
                 <View>
                   <Text style={styles.inventoryText}>쿠폰</Text>
-                  <Text style={{...styles.inventoryText, color: '#5588FF'}}>10장</Text>
+                  <Text style={{...styles.inventoryText, color: '#5588FF'}}>{memberInfo?.coupon_cnt}장</Text>
                 </View>
               </TouchableOpacity>
             </View>
@@ -84,10 +109,6 @@ const ShoppingMypage: React.FC = () => {
 
         <View style={styles.contentSection}>
           <View>
-            <TouchableOpacity style={styles.menuItem}>
-              <Text style={styles.menuText}>공지사항</Text>
-              <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
-            </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ShoppingAddress')}>
               <Text style={styles.menuText}>배송지 관리</Text>
               <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
@@ -100,12 +121,32 @@ const ShoppingMypage: React.FC = () => {
               <Text style={styles.menuText}>장바구니 보기</Text>
               <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Home')}>
+            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ShoppingSettings')}>
+              <Text style={styles.menuText}>환경설정</Text>
+              <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={() => {
+              setShowExitPopup(true);
+            }}>
               <Text style={styles.menuText}>쇼핑 나가기</Text>
               <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* 쇼핑 나가기 확인 팝업 */}
+        <CommonPopup
+          visible={showExitPopup}
+          title="쇼핑몰을 나가시겠습니까?"
+          message="쇼핑몰을 나가시겠습니까?"
+          backgroundColor='#FFFFFF'
+          textColor='#202020'
+          onConfirm={() => {
+            setShowExitPopup(false);
+            navigation.popToTop();
+          }}
+          onCancel={() => setShowExitPopup(false)}
+        />
       </View>
     </>
   );
@@ -123,6 +164,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: scale(5),
   },
   profileUserName: {
     fontSize: scale(16),
@@ -144,7 +186,7 @@ const styles = StyleSheet.create({
     borderRadius: scale(15),
     height: scale(100),
     paddingHorizontal: scale(30),
-    marginTop: scale(5),
+    marginTop: scale(20),
   },
   infoItem: {
     flexDirection: 'column',

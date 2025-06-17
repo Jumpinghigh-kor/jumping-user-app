@@ -17,6 +17,7 @@ export interface MemberOrderAppItem {
   order_status: string;
   option_amount: number;
   option_type: string;
+  option_unit: string;
 }
 
 export interface GetMemberOrderAppResponse {
@@ -30,7 +31,6 @@ export const getMemberOrderAppList = async (params: GetMemberOrderAppRequest): P
     const response = await axiosInstance.post('/member-order-app/getMemberOrderAppList', params);
     return response.data;
   } catch (error) {
-    console.error('주문 목록 조회 오류:', error);
     throw error;
   }
 };

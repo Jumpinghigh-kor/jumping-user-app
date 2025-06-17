@@ -5,12 +5,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  ScrollView,
   FlatList,
+  Alert,
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {scale} from '../utils/responsive';
 import IMAGES from '../utils/images';
 import CommonHeader from '../components/CommonHeader';
@@ -38,7 +38,7 @@ const ShoppingZZim = () => {
   const [zzimList, setZzimList] = useState<MemberZzimItem[]>([]);
   const [loading, setLoading] = useState(true);
   
-  const loadZzimList = async () => {
+  const loadZzimList = React.useCallback(async () => {
     if (!memberInfo?.mem_id) return;
     
     try {
@@ -48,15 +48,18 @@ const ShoppingZZim = () => {
         setZzimList(response.data);
       }
     } catch (error) {
-      console.error('찜 목록 로드 오류:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [memberInfo?.mem_id]);
 
-  useEffect(() => {
-    loadZzimList();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      setZzimList([]);
+      setLoading(true);
+      loadZzimList();
+    }, [loadZzimList])
+  );
 
   const handleProductPress = (item) => {
     navigation.navigate('ShoppingDetail', { product: item });

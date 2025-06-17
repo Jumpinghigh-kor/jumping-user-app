@@ -5,10 +5,14 @@ import com.facebook.react.ReactActivityDelegate;
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint;
 import com.facebook.react.defaults.DefaultReactActivityDelegate;
 import android.os.Bundle;
+import org.devio.rn.splashscreen.SplashScreen;
 
 public class MainActivity extends ReactActivity {
   @Override
   protected void onCreate(Bundle savedInstanceState) {
+    // 스플래시 테마를 앱 테마로 변경
+    setTheme(R.style.AppTheme);
+    // SplashScreen.show(this);
     super.onCreate(null);
   }
 

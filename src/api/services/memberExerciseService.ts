@@ -4,9 +4,12 @@ import {axiosInstance} from '../config/axiosConfig';
 interface InsertMemberExerciseRequest {
   mem_id: number;
   exercise_dt: string;
-  exercise_time: string;
-  intensity_level: string;
-  heart_rate: string | null;
+  jumping_exercise_time: string;
+  jumping_intensity_level: string;
+  jumping_heart_rate: string | null;
+  other_exercise_time: string;
+  other_exercise_type: string;
+  other_exercise_calory: string;
   reg_dt: string;
   reg_id: number;
   mod_dt: string;
@@ -24,9 +27,12 @@ interface MemberExerciseInfoResponse {
     exercise_id: number;
     mem_id: number;
     exercise_dt: string;
-    exercise_time: string;
-    intensity_level: string;
-    heart_rate: string | null;
+    jumping_exercise_time: string;
+    jumping_intensity_level: string;
+    jumping_heart_rate: string | null;
+    other_exercise_time: string;
+    other_exercise_type: string;
+    other_exercise_calory: string;
   }>;
 }
 
@@ -34,9 +40,12 @@ interface UpdateMemberExerciseRequest {
   exercise_id: number;
   mem_id: number;
   exercise_dt: string;
-  exercise_time: string;
-  intensity_level: string;
-  heart_rate: string | null;
+  jumping_exercise_time: string;
+  jumping_intensity_level: string;
+  jumping_heart_rate: string | null;
+  other_exercise_time: string;
+  other_exercise_type: string;
+  other_exercise_calory: string;
   mod_dt: string;
   mod_id: number;
 }
@@ -52,9 +61,12 @@ interface MemberExerciseListResponse {
     exercise_id: number;
     mem_id: number;
     exercise_dt: string;
-    exercise_time: string;
-    intensity_level: string;
-    heart_rate: string | null;
+    jumping_exercise_time: string;
+    jumping_intensity_level: string;
+    jumping_heart_rate: string | null;
+    other_exercise_time: string;
+    other_exercise_type: string;
+    other_exercise_calory: string;
   }>;
   message?: string;
 }

@@ -72,7 +72,7 @@ class AuthService {
         try {
           await axiosInstance.post('/auth/logout', { refresh_token: refreshToken });
         } catch (error) {
-          console.log('Logout API error:', error);
+          
           // API 오류가 있어도 로컬 로그아웃은 진행
         }
       }
@@ -96,27 +96,17 @@ class AuthService {
         };
       }
       
-      console.log('Manual refresh token call with:', refreshToken.substring(0, 10) + '...');
-      
       // 요청 형식을 서버 API와 일치시킴 - refresh_token 키 사용
       const response = await axiosInstance.post<RefreshTokenResponse>('auth/refresh-token', {
         refresh_token: refreshToken  // 서버에서 기대하는 키 이름으로 수정
       });
       
-      console.log('Manual refresh response:', response.data);
-      
       if (response.data.success && response.data.data?.access_token) {
         const newToken = response.data.data.access_token;
-        console.log('New access token saved:', newToken.substring(0, 10) + '...');
         await AsyncStorage.setItem('access_token', newToken);
       }
-      
       return response.data;
     } catch (error) {
-      console.error('Manual refresh token error:', 
-        axios.isAxiosError(error) ? error.response?.data : error
-      );
-      
       if (axios.isAxiosError(error) && error.response?.data) {
         return error.response.data as RefreshTokenResponse;
       }

@@ -11,6 +11,11 @@ export interface Notice {
   // 추가 필드가 있다면 여기에 정의
 }
 
+// 공지사항 목록 조회 요청 인터페이스
+export interface GetNoticesRequest {
+  notices_location?: string;
+}
+
 export interface GetNoticesResponse {
   success: boolean;
   message?: string;
@@ -18,9 +23,9 @@ export interface GetNoticesResponse {
 }
 
 // 공지사항 목록 조회 API
-export const getNoticesAppList = async (): Promise<GetNoticesResponse> => {
+export const getNoticesAppList = async (params?: GetNoticesRequest): Promise<GetNoticesResponse> => {
   try {
-    const response = await axiosInstance.post('/notices-app/getNoticesAppList');
+    const response = await axiosInstance.post('/notices-app/getNoticesAppList', params || {});
     return response.data;
   } catch (error: any) {
     throw error;

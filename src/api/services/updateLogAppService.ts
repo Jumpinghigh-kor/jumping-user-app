@@ -18,7 +18,6 @@ export const getUpdateLogAppInfo = async (): Promise<GetUpdateLogAppInfoResponse
     const response = await axiosInstance.post('/update-log-app/getUpdateLogAppInfo');
     return response.data;
   } catch (error: any) {
-    console.log(error.response.data);
     throw error;
   }
 };

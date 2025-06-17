@@ -22,7 +22,7 @@ const SERVER_IP = 'http://192.168.0.173:3000/';
 
 const BASE_URL = SERVER_IP;
 
-console.log('Using API URL:', BASE_URL); // URL 확인용 로그
+
 
 const instance = axios.create({
   baseURL: BASE_URL,
@@ -48,11 +48,9 @@ const refreshAccessToken = async (): Promise<string | null> => {
     const refreshToken = await AsyncStorage.getItem('refresh_token');
     
     if (!refreshToken) {
-      console.log('No refresh token available');
       return null;
     }
     
-    console.log('Attempting to refresh token with:', refreshToken.substring(0, 10) + '...');
     
     // BASE_URL 끝에 슬래시가 있으므로 슬래시로 시작하는 경로를 사용하면 중복됨
     // 올바른 URL 형식으로 수정
@@ -60,18 +58,13 @@ const refreshAccessToken = async (): Promise<string | null> => {
       ? `${BASE_URL}auth/refresh-token` 
       : `${BASE_URL}/auth/refresh-token`;
     
-    console.log('Refresh token URL:', refreshUrl);
-    
     // 서버 요구사항에 맞게 refresh_token 키 사용
     const response = await axios.post(refreshUrl, { 
       refresh_token: refreshToken 
     });
     
-    console.log('Refresh token response:', response.data);
-    
     if (response.data.success && response.data.data && response.data.data.access_token) {
       const newAccessToken = response.data.data.access_token;
-      console.log('New access token acquired:', newAccessToken.substring(0, 10) + '...');
       await AsyncStorage.setItem('access_token', newAccessToken);
       
       // 리프레시 성공했으므로 실패 카운트 초기화
@@ -79,25 +72,15 @@ const refreshAccessToken = async (): Promise<string | null> => {
       
       return newAccessToken;
     } else {
-      console.log('Refresh response did not contain a valid token:', response.data);
       return null;
     }
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error('Token refresh network error:', 
-        error.response?.status, 
-        error.response?.data || error.message
-      );
-    } else {
-      console.error('Token refresh error:', error);
-    }
     return null;
   }
 };
 
 // 토큰 갱신 후 대기 중인 요청들을 처리하는 함수
 const onRefreshed = (token: string) => {
-  console.log('Executing queued requests with new token');
   refreshSubscribers.forEach(callback => callback(token));
   refreshSubscribers = [];
 };
@@ -109,8 +92,6 @@ const addSubscriber = (callback: (token: string) => void) => {
 
 // 로그아웃 처리 함수
 const handleLogout = async () => {
-  console.log('Logging out due to token refresh failure');
-  
   // 세션 만료 알림이 이미 표시된 경우 중복 표시하지 않음
   if (isSessionExpiredPopupShown) return;
   
@@ -150,15 +131,12 @@ instance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    console.log('Response error:', error.response?.status, error.config?.url);
     
     // 401 에러이고 재시도하지 않은 요청인 경우
     if (error.response?.status === 401 && !originalRequest._retry) {
-      console.log('Handling 401 error for:', originalRequest.url);
       
       if (isRefreshing) {
         // 토큰 리프레시 중인 경우, 요청을 대기열에 추가
-        console.log('Token refresh in progress, adding request to queue');
         try {
           const newToken = await new Promise<string>((resolve, reject) => {
             addSubscriber((token: string) => {
@@ -172,11 +150,9 @@ instance.interceptors.response.use(
           });
           
           // 새 토큰으로 원래 요청 재시도
-          console.log('Retrying request with new token');
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
           return instance(originalRequest);
         } catch (error) {
-          console.error('Error waiting for token refresh:', error);
           return Promise.reject(error);
         }
       }
@@ -190,7 +166,7 @@ instance.interceptors.response.use(
         
         if (newToken) {
           // 리프레시 성공
-          console.log('Token refresh successful, retrying original request');
+          
           isRefreshing = false;
           onRefreshed(newToken);
           
@@ -200,16 +176,14 @@ instance.interceptors.response.use(
         } else {
           // 리프레시 실패, 다시 시도
           refreshFailCount++;
-          
+  
           if (refreshFailCount < MAX_REFRESH_ATTEMPTS) {
-            console.log(`Token refresh failed, attempt ${refreshFailCount}/${MAX_REFRESH_ATTEMPTS}`);
             isRefreshing = false;
             // 1초에서 0.3초로 줄여 대기 시간 감소
             await new Promise(resolve => setTimeout(resolve, 300));
             return instance(originalRequest);
           } else {
             // 최대 시도 횟수 초과, 로그아웃 처리
-            console.log('Max refresh attempts reached, logging out');
             isRefreshing = false;
             refreshFailCount = 0;
             await handleLogout();
@@ -217,17 +191,14 @@ instance.interceptors.response.use(
           }
         }
       } catch (refreshError) {
-        console.error('Exception during token refresh:', refreshError);
         isRefreshing = false;
         refreshFailCount++;
         
         if (refreshFailCount < MAX_REFRESH_ATTEMPTS) {
-          console.log(`Token refresh exception, attempt ${refreshFailCount}/${MAX_REFRESH_ATTEMPTS}`);
           // 1초에서 0.3초로 줄여 대기 시간 감소
           await new Promise(resolve => setTimeout(resolve, 300));
           return instance(originalRequest);
         } else {
-          console.log('Max refresh attempts reached after exception, logging out');
           refreshFailCount = 0;
           await handleLogout();
           return Promise.reject(refreshError);

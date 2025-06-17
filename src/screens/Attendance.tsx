@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,10 @@ import MemberOrdersPopup from '../components/MemberOrdersPopup';
 import {MemberOrder} from '../types/order.types';
 import { scale } from '../utils/responsive';
 import IMAGES from '../utils/images';
+import CommonHeader from '../components/CommonHeader';
+import { useAppSelector } from '../store/hooks';
+import { getMemberAttendanceAppList, insertMemberAttendanceApp } from '../api/services/memberAttendanceAppService';
+import CustomToast from '../components/CustomToast';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -48,6 +52,8 @@ const Attendance = () => {
   });
 
   const [showMemberOrdersPopup, setShowMemberOrdersPopup] = useState(false);
+  const [showCustomToast, setShowCustomToast] = useState(false);
+  const [customToastMessage, setCustomToastMessage] = useState('');
 
   const navigation = useNavigation<NavigationProp>();
 
@@ -59,6 +65,8 @@ const Attendance = () => {
 
   useFocusEffect(
     React.useCallback(() => {
+      setInputNumber(''); // 화면 포커스 시 입력 번호 초기화
+      
       const fn_getMemberOrders = async () => {
         try {
           const memId = await AsyncStorage.getItem('mem_id');
@@ -72,7 +80,6 @@ const Attendance = () => {
             }
           }
         } catch (error) {
-          console.error('Failed to fetch orders:', error);
         }
       };
 
@@ -103,12 +110,8 @@ const Attendance = () => {
   };
 
   const showToast = (message: string) => {
-    if (Platform.OS === 'android') {
-      ToastAndroid.show(message, ToastAndroid.SHORT);
-    } else {
-      // iOS에서는 Alert을 짧게 표시
-      Alert.alert('', message, [{ text: 'OK', style: 'cancel' }], { cancelable: true });
-    }
+    setCustomToastMessage(message);
+    setShowCustomToast(true);
   };
 
   // 출석 처리 함수
@@ -125,7 +128,6 @@ const Attendance = () => {
       
       if (response.success) {
         hideAlert();
-        showToast('출석체크가 완료되었습니다.');
         
         // 입력 번호 초기화
         setInputNumber('');
@@ -138,6 +140,13 @@ const Attendance = () => {
         if (memberOrdersResponse.success && memberOrdersResponse.data) {
           setOrderList(memberOrdersResponse.data);
         }
+        
+        // CommonPopup으로 출석 완료 메시지 표시
+        showAlert({
+          visible: true,
+          message: '출석체크가 완료되었습니다.',
+          onConfirm: hideAlert,
+        });
         
       } else {
         showToast(response.message || '출석 처리 중 오류가 발생했습니다.');
@@ -176,8 +185,6 @@ const Attendance = () => {
         mem_id: parseInt(memId, 10),
         mem_checkin_number: inputNumber,
       });
-
-      console.log('validateResponse::', validateResponse);
 
       if (!validateResponse.success) {
         showAlert({
@@ -343,12 +350,19 @@ const Attendance = () => {
         orderList={orderList}
         selectedOrderId={selectedOrderId}
         onSelect={(orderId) => {
-          console.log('Order selected:', orderId);
           setSelectedOrderId(orderId);
           selectedOrderIdRef.current = orderId;
         }}
         onConfirm={handleOrderConfirm}
         onCancel={() => setShowMemberOrdersPopup(false)}
+      />
+
+      {/* 커스텀 토스트 */}
+      <CustomToast
+        visible={showCustomToast}
+        message={customToastMessage}
+        onHide={() => setShowCustomToast(false)}
+        position="top"
       />
     </View>
   );

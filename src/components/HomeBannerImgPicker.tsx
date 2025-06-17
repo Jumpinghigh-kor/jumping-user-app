@@ -44,7 +44,6 @@ const HomeBannerImgPicker: React.FC<HomeBannerImgPickerProps> = ({ style }) => {
         setDefaultBannerUrl(data.publicUrl);
       }
     } catch (err) {
-      console.error('기본 배너 URL 생성 중 오류:', err);
     }
   }, []);
 
@@ -99,7 +98,6 @@ const HomeBannerImgPicker: React.FC<HomeBannerImgPickerProps> = ({ style }) => {
                   imageUrl = data.publicUrl;
                 }
               } catch (err) {
-                console.error('Supabase URL 생성 중 오류:', err);
               }
             } else if (banner.banner_img_url) {
               // 기존 banner_img_url이 있는 경우
@@ -116,7 +114,6 @@ const HomeBannerImgPicker: React.FC<HomeBannerImgPickerProps> = ({ style }) => {
                     imageUrl = data.publicUrl;
                   }
                 } catch (err) {
-                  console.error('Supabase URL 생성 중 오류:', err);
                 }
               }
             } else {
@@ -149,7 +146,7 @@ const HomeBannerImgPicker: React.FC<HomeBannerImgPickerProps> = ({ style }) => {
   const handleBannerPress = (banner: BannerItem) => {
     if (banner.banner_link_url) {
       Linking.openURL(banner.banner_link_url).catch(err => 
-        console.error('배너 링크를 열 수 없습니다:', err)
+        console.log('배너 링크를 열 수 없습니다:', err)
       );
     }
   };
@@ -187,10 +184,6 @@ const HomeBannerImgPicker: React.FC<HomeBannerImgPickerProps> = ({ style }) => {
                 source={{ uri: banners[currentIndex].banner_img_url }}
                 style={styles.bannerImage}
                 resizeMode="contain"
-                onError={(e) => {
-                  console.error('배너 이미지 로드 오류:', e.nativeEvent.error);
-                  console.log('문제가 있는 이미지 URL:', banners[currentIndex].banner_img_url);
-                }}
               />
             ) : (
               <View style={styles.errorContainer}>
@@ -208,9 +201,6 @@ const HomeBannerImgPicker: React.FC<HomeBannerImgPickerProps> = ({ style }) => {
               source={{ uri: defaultBannerUrl }}
               style={styles.bannerImage}
               resizeMode="contain"
-              onError={(e) => {
-                console.error('기본 배너 이미지 로드 오류:', e.nativeEvent.error);
-              }}
             />
           </TouchableOpacity>
         ) : (

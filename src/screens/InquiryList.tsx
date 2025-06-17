@@ -18,7 +18,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {getInquiryList, Inquiry, createInquiry} from '../api/services/inquiryService';
 import {scale} from '../utils/responsive';
 import IMAGES from '../utils/images';
-import {formatDateYYYYMMDD} from '../utils/commonFunctions';
+import {formatDateYYYYMMDD} from '../utils/commonFunction';
 import type {AuthStackParamList} from '../navigation/AuthStackNavigator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CommonPopup from '../components/CommonPopup';

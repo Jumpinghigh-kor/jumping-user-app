@@ -24,33 +24,9 @@ type CartItem = {
   category: string;
 };
 
-// 임시 장바구니 데이터
-const initialCartItems: CartItem[] = [
-  {
-    id: '1',
-    name: '유기농 사과 1kg',
-    price: 12000,
-    originalPrice: 15000,
-    discount: 20,
-    image: 'https://via.placeholder.com/150',
-    quantity: 1,
-    category: 'FOOD',
-  },
-  {
-    id: '3',
-    name: '수분 크림 50ml',
-    price: 28000,
-    originalPrice: 35000,
-    discount: 20,
-    image: 'https://via.placeholder.com/150',
-    quantity: 2,
-    category: 'COSMETICS',
-  },
-];
-
 const CartList: React.FC = () => {
   const navigation = useNavigation();
-  const [cartItems, setCartItems] = useState<CartItem[]>(initialCartItems);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [totalDiscount, setTotalDiscount] = useState<number>(0);
 

@@ -15,11 +15,12 @@ import {useNavigation} from '@react-navigation/native';
 import {getNoticesAppList, Notice} from '../api/services/noticesAppService';
 import {scale} from '../utils/responsive';
 import IMAGES from '../utils/images';
-import {formatDateYYYYMMDD, formatDateYYYYMMDDHHII} from '../utils/commonFunctions';
+import {formatDateYYYYMMDD, formatDateYYYYMMDDHHII} from '../utils/commonFunction';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CommonHeader from '../components/CommonHeader';
 import { FONTS } from '../utils/fonts';
 import CommonModal from '../components/CommonModal';
+import CommonPopup from '../components/CommonPopup';
 
 const NoticesAppList = () => {
   const navigation = useNavigation();
@@ -28,6 +29,17 @@ const NoticesAppList = () => {
   const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [readNotices, setReadNotices] = useState<number[]>([]);
+  const [popupConfig, setPopupConfig] = useState<{
+    visible: boolean;
+    type: 'default' | 'warning';
+    message: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    type: 'default',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     loadNotices();
@@ -45,6 +57,15 @@ const NoticesAppList = () => {
     }
   };
 
+  const showPopup = (message: string) => {
+    setPopupConfig({
+      visible: true,
+      type: 'warning',
+      message,
+      onConfirm: () => setPopupConfig(prev => ({...prev, visible: false})),
+    });
+  };
+
   const loadNotices = async () => {
     setLoading(true);
     try {
@@ -52,11 +73,11 @@ const NoticesAppList = () => {
       if (response.success) {
         setNotices(response.data || []);
       } else {
-        Alert.alert('알림', '공지사항을 불러오는데 실패했습니다.');
+        showPopup('공지사항을 불러오는데 실패했습니다.');
       }
     } catch (error) {
       
-      Alert.alert('알림', '공지사항을 불러오는데 실패했습니다.');
+      showPopup('공지사항을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -95,7 +116,7 @@ const NoticesAppList = () => {
               <View style={styles.notificationDot} />
             )}
             </View>
-          <Text style={styles.noticeDate}>{formatDateYYYYMMDD(item.reg_dt)}</Text>
+          <Text style={styles.noticeDate}>{item.reg_dt}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -131,6 +152,13 @@ const NoticesAppList = () => {
           onClose={() => setModalVisible(false)}
         />
       </View>
+
+      <CommonPopup
+        visible={popupConfig.visible}
+        message={popupConfig.message}
+        type={popupConfig.type}
+        onConfirm={popupConfig.onConfirm}
+      />
     </>
   );
 };

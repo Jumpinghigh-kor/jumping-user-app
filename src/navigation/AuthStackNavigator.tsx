@@ -21,6 +21,15 @@ import ShoppingAddress from '../screens/ShoppingAddress';
 import ShoppingAddressAdd from '../screens/ShoppingAddressAdd';
 import ShoppingReview from '../screens/ShoppingReview';
 import ShoppingReviewModify from '../screens/ShoppingReviewModify';
+import ShoppingPayment from '../screens/ShoppingPayment';
+import ShoppingPoint from '../screens/ShoppingPoint';
+import ShoppingOrderHistory from '../screens/ShoppingOrderHistory';
+import ShoppingInquiry from '../screens/ShoppingInquiry';
+import ShoppingNotice from '../screens/ShoppingNotice';
+import ShoppingSettings from '../screens/ShoppingSettings';
+import ShoppingShippingState from '../screens/ShoppingShippingState';
+import RedirectScreen from '../screens/RedirectScreen';
+import ShoppingCoupon from '../screens/ShoppingCoupon';
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -49,6 +58,14 @@ export type AuthStackParamList = {
   ShoppingAddressAdd: undefined;
   ShoppingReview: undefined;
   ShoppingReviewModify: undefined;
+  ShoppingPayment: undefined;
+  ShoppingPoint: undefined;
+  ShoppingOrderHistory: undefined;
+  ShoppingNotice: undefined;
+  ShoppingSettings: undefined;
+  ShoppingShippingState: undefined;
+  ShoppingCoupon: undefined;
+  RedirectScreen: undefined;
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -65,6 +82,8 @@ const AuthStackNavigator = () => {
         headerTitleStyle: {
           fontWeight: 'bold',
         },
+        animation: 'fade',
+        animationDuration: 300,
       }}>
       <Stack.Screen
         name="Login"
@@ -169,6 +188,46 @@ const AuthStackNavigator = () => {
       <Stack.Screen
         name="ShoppingReviewModify"
         component={ShoppingReviewModify}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingPayment"
+        component={ShoppingPayment}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingPoint"
+        component={ShoppingPoint}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingOrderHistory"
+        component={ShoppingOrderHistory}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingNotice"
+        component={ShoppingNotice}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingSettings"
+        component={ShoppingSettings}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingShippingState"
+        component={ShoppingShippingState}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="RedirectScreen"
+        component={RedirectScreen}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingCoupon"
+        component={ShoppingCoupon}
         options={{headerShown: false}}
       />
     </Stack.Navigator>

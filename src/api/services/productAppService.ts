@@ -11,6 +11,11 @@ export interface Product {
   small_category: string;
   image: string;
   reg_dt: string;
+  product_name: string;
+  brand_name: string;
+  option_gender: string;
+  option_amount: number;
+  option_unit: string;
   // 추가 필드가 있다면 여기에 정의
 }
 
@@ -50,3 +55,13 @@ export const getProductAppThumbnailImg = async (): Promise<GetProductsResponse> 
     throw error;
   }
 }
+
+// 상품 상세 목록 조회 API
+export const getProductDetailAppList = async (params: {product_app_id: number}): Promise<GetProductsResponse> => {
+  try {
+    const response = await axiosInstance.post('/product-app/getProductDetailAppList', params);
+    return response.data;
+  } catch (error: any) {
+    throw error;
+  }
+};

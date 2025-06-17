@@ -21,10 +21,10 @@ import {scale} from '../utils/responsive';
 import IMAGES from '../utils/images';
 import CommonHeader from '../components/CommonHeader';
 import ExerciseSummary from '../components/ExerciseSummary';
-import AttendancePopup from '../components/AttendancePopup';
 import {getMemberExerciseList} from '../api/services/memberExerciseService';
 import {useAuth} from '../hooks/useAuth';
 import ExerciseInfoPopup from '../components/ExerciseInfoPopup';
+import CustomToast from '../components/CustomToast';
 
 type RootStackParamList = {
   Home: undefined;
@@ -56,19 +56,24 @@ const AttendanceRecord = () => {
   const navigation = useNavigation<NavigationProp>();
   const [accumulatedData, setAccumulatedData] = useState({
     totalCalories: 0,
-    totalDistance: 0,
+    totalJumpingCalories: 0,
+    totalOtherCalories: 0,
     averageHeartRate: 0,
+    averageRestTime: 0,
+    averageSleepTime: 0,
   });
   const {memberInfo} = useAuth();
   const [showAttendancePopup, setShowAttendancePopup] = useState(false);
   const [clickedDate, setClickedDate] = useState('');
+  const [showCustomToast, setShowCustomToast] = useState(false);
+  const [customToastMessage, setCustomToastMessage] = useState('');
 
   const fetchCheckinLog = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const memId = await AsyncStorage.getItem('mem_id');
+      const memId = memberInfo?.mem_id;
 
       if (!memId) {
         setError('회원 정보를 찾을 수 없습니다.');
@@ -82,7 +87,6 @@ const AttendanceRecord = () => {
       };
 
       const response = await getCheckinLogList(requestParams);
-
       if (response.success && Array.isArray(response.data)) {
         const dateTimeMap = response.data.reduce((acc, item) => {
           acc[item.ci_date_only] = item.ci_time_only;
@@ -113,21 +117,25 @@ const AttendanceRecord = () => {
       const yearMonth = `${year}${month < 10 ? '0' + month : month}`;
       
       // 운동 정보 API 호출
-      const response = await getMemberExerciseList(Number(memberInfo.mem_id), yearMonth, 'month');
+      const response = await getMemberExerciseList(Number(memberInfo.mem_id), yearMonth, '');
       
       if (response.success) {
         const exerciseData = Array.isArray(response.data) ? response.data || [] : [response.data || {}];
         
         // 누적 데이터 계산
         let totalCalories = 0;
-        let totalDistance = 0;
+        let totalJumpingCalories = 0;
+        let totalOtherCalories = 0;
         let totalHeartRate = 0;
         let heartRateCount = 0;
+        let dailyRestTimes = [];
+        let dailySleepTimes = [];
         
         exerciseData.forEach(data => {
-          // 칼로리 계산
+          // 점핑 운동 칼로리 계산
+          let jumpingCalories = 0;
           let baseCalories = 0;
-          switch (data.intensity_level) {
+          switch (data.jumping_intensity_level) {
             case 'LOW':
               baseCalories = 300;
               break;
@@ -141,52 +149,45 @@ const AttendanceRecord = () => {
               baseCalories = 0;
           }
           
-          // 운동 시간에 따른 칼로리 조정
-          if (data.exercise_time) {
-            const hours = parseInt(data.exercise_time.substring(0, 2), 10);
-            const minutes = parseInt(data.exercise_time.substring(2, 4), 10);
+          // 점핑 운동 시간에 따른 칼로리 조정
+          if (data.jumping_exercise_time && baseCalories > 0) {
+            const hours = parseInt(data.jumping_exercise_time.substring(0, 2), 10);
+            const minutes = parseInt(data.jumping_exercise_time.substring(2, 4), 10);
             const totalMinutes = hours * 60 + minutes;
             
             const timeRatio = totalMinutes / 60;
-            totalCalories += Math.round(baseCalories * timeRatio);
-          } else {
-            totalCalories += baseCalories;
+            jumpingCalories = Math.round(baseCalories * timeRatio);
           }
           
-          // 뛴거리 계산
-          let baseDistance = 0;
-          switch (data.intensity_level) {
-            case 'LOW':
-              baseDistance = 1.5;
-              break;
-            case 'MODERATE':
-              baseDistance = 4.5;
-              break;
-            case 'HIGH':
-              baseDistance = 9.5;
-              break;
-            default:
-              baseDistance = 0;
+          // 기타 운동 칼로리 추가
+          let otherCalories = 0;
+          if (data.other_exercise_calory) {
+            otherCalories = parseInt(data.other_exercise_calory, 10) || 0;
           }
           
-          // 운동 시간에 따른 거리 조정
-          if (data.exercise_time) {
-            const hours = parseInt(data.exercise_time.substring(0, 2), 10);
-            const minutes = parseInt(data.exercise_time.substring(2, 4), 10);
-            const totalMinutes = hours * 60 + minutes;
-            
-            const timeRatio = totalMinutes / 60;
-            totalDistance += baseDistance * timeRatio;
-          } else {
-            totalDistance += baseDistance;
-          }
+          // 그 날의 총 칼로리
+          const dayTotalCalories = jumpingCalories + otherCalories;
+          totalCalories += dayTotalCalories;
+          totalJumpingCalories += jumpingCalories;
+          totalOtherCalories += otherCalories;
           
-          // 심박수 계산
+          // 그 날의 필요 운동시간 계산: (칼로리 ÷ 1000) × 120분
+          const dayRequiredExerciseMinutes = Math.round((dayTotalCalories / 1000) * 120);
+          
+          // 그 날의 필요 휴식시간 계산: 운동시간 × 0.75
+          const dayRequiredRestMinutes = Math.round(dayRequiredExerciseMinutes * 0.75);
+          dailyRestTimes.push(dayRequiredRestMinutes);
+          
+          // 그 날의 필요 수면시간 계산: 8시간 + (칼로리 ÷ 500) × 20분
+          const dayRequiredSleepMinutes = Math.round(8 * 60 + (dayTotalCalories / 500) * 20);
+          dailySleepTimes.push(dayRequiredSleepMinutes);
+          
+          // 심박수 계산 (점핑 운동만, 기타 운동은 심박수 데이터 없음)
           let heartRate = 0;
-          if (data.heart_rate && parseInt(data.heart_rate, 10) > 0) {
-            heartRate = parseInt(data.heart_rate, 10);
-          } else {
-            switch (data.intensity_level) {
+          if (data.jumping_heart_rate && parseInt(data.jumping_heart_rate, 10) > 0) {
+            heartRate = parseInt(data.jumping_heart_rate, 10);
+          } else if (data.jumping_intensity_level) {
+            switch (data.jumping_intensity_level) {
               case 'LOW':
                 heartRate = 110;
                 break;
@@ -210,21 +211,26 @@ const AttendanceRecord = () => {
         // 평균 심박수 계산
         const averageHeartRate = heartRateCount > 0 ? Math.round(totalHeartRate / heartRateCount) : 0;
         
+        // 평균 필요 휴식시간 계산
+        const averageRestTime = dailyRestTimes.length > 0 ? Math.round(dailyRestTimes.reduce((a, b) => a + b, 0) / dailyRestTimes.length) : 0;
+        
+        // 평균 필요 수면시간 계산  
+        const averageSleepTime = dailySleepTimes.length > 0 ? Math.round(dailySleepTimes.reduce((a, b) => a + b, 0) / dailySleepTimes.length) : 0;
+        
         // 누적 데이터 설정
         setAccumulatedData({
           totalCalories,
-          totalDistance,
+          totalJumpingCalories,
+          totalOtherCalories,
           averageHeartRate,
+          averageRestTime,
+          averageSleepTime,
         });
       }
     } catch (error) {
-      console.error('운동 정보 조회 실패:', error);
       // 오류 발생 시 사용자에게 알림
-      if (Platform.OS === 'android') {
-        ToastAndroid.show('운동 정보를 불러오는데 실패했습니다.', ToastAndroid.SHORT);
-      } else {
-        Alert.alert('알림', '운동 정보를 불러오는데 실패했습니다.');
-      }
+      setCustomToastMessage('운동 정보를 불러오는데 실패했습니다.');
+      setShowCustomToast(true);
     } finally {
       setLoading(false);
     }
@@ -302,9 +308,13 @@ const AttendanceRecord = () => {
 
     const handleDayPress = () => {
       if (isCheckedIn && item.isCurrentMonth) {
-        // 출석한 날짜의 일(day)만 추출하여 저장
-        const day = item.date.getDate().toString();
-        setClickedDate(day);
+        // 선택된 월의 전체 날짜 정보를 YYYYMMDD 형식으로 생성
+        const year = selectedDate.getFullYear();
+        const month = selectedDate.getMonth() + 1;
+        const day = item.date.getDate();
+        const formattedDate = `${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}`;
+        console.log('formattedDate', formattedDate);
+        setClickedDate(formattedDate);
         setShowAttendancePopup(true);
       }
     };
@@ -399,6 +409,16 @@ const AttendanceRecord = () => {
           visible={showAttendancePopup}
           date={clickedDate}
           onClose={() => setShowAttendancePopup(false)}
+          onExerciseInfoUpdated={() => {
+            fetchExerciseData();
+          }}
+        />
+
+        {/* 커스텀 토스트 */}
+        <CustomToast
+          visible={showCustomToast}
+          message={customToastMessage}
+          onHide={() => setShowCustomToast(false)}
         />
       </ScrollView>
     </>

@@ -58,7 +58,6 @@ export const getMemberSearchAppList = async (params: GetMemberSearchRequest): Pr
     const response = await axiosInstance.post('/member-search-app/getMemberSearchAppList', params);
     return response.data;
   } catch (error: any) {
-    console.error('검색어 목록 조회 오류:', error);
     throw error;
   }
 };
@@ -68,7 +67,6 @@ export const insertMemberSearchApp = async (params: InsertMemberSearchRequest): 
     const response = await axiosInstance.post('/member-search-app/insertMemberSearchApp', params);
     return response.data;
   } catch (error: any) {
-    console.error('검색어 저장 오류:', error);
     throw error;
   }
 };
@@ -78,7 +76,6 @@ export const deleteMemberSearchApp = async (params: DeleteMemberSearchRequest): 
     const response = await axiosInstance.post('/member-search-app/deleteMemberSearchApp', params);
     return response.data;
   } catch (error: any) {
-    console.error('검색어 삭제 오류:', error);
     throw error;
   }
 };
@@ -88,7 +85,6 @@ export const getSearchProduct = async (params: GetSearchProductRequest): Promise
     const response = await axiosInstance.post('/member-search-app/getSearchProduct', params);
     return response.data;
   } catch (error: any) {
-    console.error('상품 검색 오류:', error);
     throw error;
   }
 }; 

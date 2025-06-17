@@ -49,7 +49,6 @@ export const getMemberZzimAppList = async (params: GetMemberZzimRequest): Promis
     const response = await axiosInstance.post('/member-zzim-app/getMemberZzimAppList', params);
     return response.data;
   } catch (error) {
-    console.error('찜 목록 조회 오류:', error);
     throw error;
   }
 };
@@ -59,18 +58,15 @@ export const insertMemberZzimApp = async (params: MemberZzimRequest): Promise<Me
     const response = await axiosInstance.post('/member-zzim-app/insertMemberZzimApp', params);
     return response.data;
   } catch (error) {
-    console.error('찜 등록 오류:', error);
     throw error;
   }
 };
 
 export const updateMemberZzimApp = async (params: UpdateMemberZzimRequest): Promise<MemberZzimResponse> => {
   try {
-    console.log('updateMemberZzimApp params:', params);
     const response = await axiosInstance.post('/member-zzim-app/updateMemberZzimApp', params);
     return response.data;
   } catch (error) {
-    console.error('찜 상태 업데이트 오류:', error);
     throw error;
   }
 };
@@ -80,7 +76,6 @@ export const getMemberZzimAppDetail = async (params: GetMemberZzimDetailRequest)
     const response = await axiosInstance.post('/member-zzim-app/getMemberZzimAppDetail', params);
     return response.data;
   } catch (error) {
-    console.error('찜 상세 조회 오류:', error);
     throw error;
   }
 }; 

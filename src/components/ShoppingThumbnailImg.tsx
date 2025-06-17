@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Image, StyleSheet, StyleProp, ImageStyle } from 'react-native';
+import { Image, StyleSheet, StyleProp, ImageStyle, View, Text } from 'react-native';
 import { scale } from '../utils/responsive';
 import { getProductAppThumbnailImg } from '../api/services/productAppService';
 import { supabase } from '../utils/supabaseClient';
-import IMAGES from 'src/utils/images';
+import IMAGES from '../utils/images';
 
 interface ShoppingThumbnailImgProps {
   productAppId: number;
@@ -11,6 +11,7 @@ interface ShoppingThumbnailImgProps {
   width?: number;
   height?: number;
   borderRadius?: number;
+  quantity?: number;
 }
 
 interface ThumbnailData {
@@ -25,11 +26,11 @@ const ShoppingThumbnailImg: React.FC<ShoppingThumbnailImgProps> = ({
   style,
   width = scale(80),
   height = scale(80),
-  borderRadius = scale(4)
+  borderRadius = scale(4),
+  quantity,
 }) => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [thumbnailData, setThumbnailData] = useState<ThumbnailData[] | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchThumbnailData();
@@ -39,7 +40,6 @@ const ShoppingThumbnailImg: React.FC<ShoppingThumbnailImgProps> = ({
     if (thumbnailData) {
       const url = getSupabaseImageUrl();
       setImageUrl(url);
-      setLoading(false);
     }
   }, [thumbnailData, productAppId]);
 
@@ -48,8 +48,6 @@ const ShoppingThumbnailImg: React.FC<ShoppingThumbnailImgProps> = ({
       const response = await getProductAppThumbnailImg();
       setThumbnailData(response.data || []);
     } catch (error) {
-      console.error('썸네일 데이터 로드 오류:', error);
-      setLoading(false);
     }
   };
 
@@ -94,14 +92,71 @@ const ShoppingThumbnailImg: React.FC<ShoppingThumbnailImgProps> = ({
 
   return (
     <>
-      {imageUrl && (
-        <Image
-          source={{ uri: imageUrl }}
-          style={[defaultStyles, style]}
-        />
+      {imageUrl ? (
+        <View style={{position: 'relative', overflow: 'hidden'}}>
+          <Image
+            source={{ uri: imageUrl }}
+            style={[defaultStyles, style]}
+            />
+          {quantity === 0 && (
+            <View style={styles.soldOutContainer}>
+              <Text style={styles.soldOutText}>품절</Text>
+            </View>
+          )}
+        </View>
+      ) : (
+        <>
+          <View style={[styles.noImageContainer, {
+            width,
+            height,
+            borderRadius,
+          }]}>
+            <Image 
+              source={IMAGES.icons.sadFaceGray} 
+              style={{width: scale(20), height: scale(20)}}
+            />
+            <Text style={styles.noImageText}>이미지가 없어요</Text>
+            {quantity === 0 && (
+              <View style={[styles.soldOutContainer, {
+                borderRadius,
+              }]}>
+                <Text style={styles.soldOutText}>품절</Text>
+              </View>
+            )}
+          </View>
+        </>
       )}
     </>
   );
 };
+
+const styles = StyleSheet.create({
+  noImageContainer: {
+    position: 'relative',
+    backgroundColor: '#EEEEEE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  noImageText: {
+    fontSize: scale(8),
+    color: '#848484',
+    marginTop: scale(10),
+  },
+  soldOutContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  soldOutText: {
+    fontSize: scale(14),
+    color: '#FFFFFF',
+  },
+});
 
 export default ShoppingThumbnailImg; 
