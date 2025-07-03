@@ -9,14 +9,17 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import IMAGES from '../utils/images';
 import CommonHeader from '../components/CommonHeader';
 import { useAppSelector } from '../store/hooks';
 import { scale } from '../utils/responsive';
-import { commonStyle, layoutStyle } from '../styles/common';
+import { commonStyle, layoutStyle } from '../assets/styles/common';
 import { getMemberOrderAppList } from '../api/services/memberOrderAppService';
 import ShoppingThumbnailImg from '../components/ShoppingThumbnailImg';
+import CommonPopup from '../components/CommonPopup';
+import { usePopup } from '../hooks/usePopup';
+import { cancelPayment } from '../api/services/portoneService';
 
 
 const ShoppingOrderHistory = () => {
@@ -26,35 +29,85 @@ const ShoppingOrderHistory = () => {
   const [loading, setLoading] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showYearDropdown, setShowYearDropdown] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const { popup, showWarningPopup, showConfirmPopup } = usePopup();
 
   // 현재 년도 기준 5년전까지 배열 생성
   const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: 6 }, (_, i) => currentYear - i);
+  const yearOptions = [
+    ...Array.from({ length: 5 }, (_, i) => ({ value: (currentYear - i).toString(), label: `${currentYear - i}년` }))
+  ];
 
-  useEffect(() => {
-    setLoading(true);
-    const fetchOrderList = async () => {
-      if (memberInfo?.mem_id) {
+  // 주문 목록 조회 함수
+  const fetchOrderList = async () => {
+    if (memberInfo?.mem_id) {
+      try {
+        const params: any = {
+          mem_id: memberInfo.mem_id,
+          screen_type: 'ORDER_HISTORY'
+        };
+        
+        // selectedYear가 있을 때만 year 파라미터 추가
+        if (selectedYear) {
+          params.year = selectedYear;
+        }
+
+        if (searchQuery) {
+          params.search_title = searchQuery;
+        }
+        
+        const response = await getMemberOrderAppList(params);
+        
+        if (response.success) {
+          setOrderAppList(response.data || []);
+        }
+      } catch (error) {
+        console.error('주문내역 조회 실패:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setLoading(true);
+      fetchOrderList();
+    }, [memberInfo?.mem_id, selectedYear, searchQuery])
+  );
+  
+  // 결제 취소 함수
+  const handleCancelPayment = async (orderItem: any) => {
+    if (!orderItem.imp_uid) {
+      showWarningPopup('결제 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    showConfirmPopup(
+      '결제를 취소하시겠습니까?',
+      async () => {
         try {
-          const response = await getMemberOrderAppList({
-            mem_id: memberInfo.mem_id,
-            screen_type: 'ORDER_HISTORY'
+          const response = await cancelPayment({
+            imp_uid: orderItem.imp_uid,
+            reason: '고객 요청에 의한 결제 취소'
           });
-          
-          if (response.success && response.data) {
-            setOrderAppList(response.data);
+
+          if (response.success) {
+            showWarningPopup('결제가 취소되었습니다.');
+            // 주문 목록 다시 조회
+            fetchOrderList();
+          } else {
+            showWarningPopup('결제 취소에 실패했습니다.');
           }
         } catch (error) {
-          console.error('주문내역 조회 실패:', error);
-        } finally {
-          setLoading(false);
+          console.error('결제 취소 실패:', error);
+          showWarningPopup('결제 취소 중 오류가 발생했습니다.');
         }
       }
-    };
+    );
+  };
 
-    fetchOrderList();
-  }, [memberInfo?.mem_id]);
-console.log(orderAppList);
   return (
     <>
       <CommonHeader 
@@ -62,6 +115,7 @@ console.log(orderAppList);
         titleColor="#202020"
         backIcon={IMAGES.icons.arrowLeftBlack}
         backgroundColor="#FFFFFF"
+        onBackPress={() => navigation.navigate('ShoppingMypage')}
       />
       <View style={styles.container}>
         {loading ? (
@@ -71,38 +125,65 @@ console.log(orderAppList);
         ) : (
           <>
             <View style={styles.searchContainer}>
-              <TouchableOpacity style={[layoutStyle.rowCenter, styles.searchIconContainer]}>
-                <Image source={IMAGES.icons.searchStrokeBlack} style={styles.searchIcon} />
-                <Text style={styles.searchText}>검색</Text>
-              </TouchableOpacity>
+              {!isSearching ? (
+                <TouchableOpacity 
+                  style={[layoutStyle.rowCenter, styles.searchIconContainer]}
+                  onPress={() => setIsSearching(true)}
+                >
+                  <Image source={IMAGES.icons.searchStrokeBlack} style={styles.searchIcon} />
+                  <Text style={styles.searchText}>검색</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.searchInputContainer}>
+                  <Image source={IMAGES.icons.searchStrokeBlack} style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInput}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder="검색어를 입력하세요"
+                    autoFocus
+                    onBlur={() => {
+                      if (!searchQuery) {
+                        setIsSearching(false);
+                      }
+                    }}
+                  />
+                  <TouchableOpacity onPress={() => {
+                    setSearchQuery('');
+                    setIsSearching(false);
+                  }}>
+                    <Text style={styles.cancelText}>취소</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
               <View style={styles.yearContainer}>
                 <TouchableOpacity 
                   style={styles.searchYearContainer}
                   onPress={() => setShowYearDropdown(!showYearDropdown)}
                 >
-                  <Text>{selectedYear}</Text>
+                  <Text>{`${selectedYear}년`}</Text>
                 </TouchableOpacity>
                 
                 {/* 년도 드롭박스 */}
                 {showYearDropdown && (
                   <View style={styles.yearDropdown}>
-                    {yearOptions.map((year) => (
+                    {yearOptions.map((option) => (
                       <TouchableOpacity
-                        key={year}
+                        key={option.value}
                         style={[
                           styles.yearOption,
-                          selectedYear === year && styles.selectedYearOption
+                          selectedYear.toString() === option.value && styles.selectedYearOption
                         ]}
                         onPress={() => {
-                          setSelectedYear(year);
+                          setSelectedYear(parseInt(option.value));
                           setShowYearDropdown(false);
                         }}
                       >
                         <Text style={[
                           styles.yearOptionText,
-                          selectedYear === year && styles.selectedYearOptionText
+                          selectedYear.toString() === option.value && styles.selectedYearOptionText
                         ]}>
-                          {year}년
+                          {option.label}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -120,6 +201,8 @@ console.log(orderAppList);
                 <ScrollView
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={[commonStyle.pb50]}
+                  alwaysBounceVertical={false}
+                  bounces={false}
                 >
                   {orderAppList.map((item) => (
                     <View key={item.order_app_id} style={styles.orderItem}>
@@ -127,36 +210,92 @@ console.log(orderAppList);
                         <Text style={styles.orderDate}>{item.order_dt}</Text>
                         <View style={styles.orderStatusContainer}>
                           <Text style={styles.orderStatusText}>
-                            {item.order_status === 'SHIPPINGING' ? '배송중' : item.order_status === 'SHIPPING_COMPLETE' ? '배송완료' : item.order_status === 'PURCHASE_CONFIRM' ? '구매확정' : '상품준비중'}
+                            {item.order_status === 'SHIPPINGING' ? '배송중' : item.order_status === 'SHIPPING_COMPLETE' ? '배송완료' : item.order_status === 'PURCHASE_CONFIRM' ? '구매확정' : '결제완료'}
                           </Text>
                         </View>
                       </View>
                       <View style={styles.orderItemImgContainer}>
-                        <ShoppingThumbnailImg
-                          productAppId={item.product_app_id}
-                          />
-                        <View style={[layoutStyle.columnStretchEvenly, {marginLeft: scale(10), flex: 1}]}>
-                          <Text style={styles.productName}>{item.brand_name}</Text>
-                          <Text style={styles.productTitle} numberOfLines={2} ellipsizeMode="tail">{item.product_title}</Text>
-                          <Text style={styles.productInfo}>{item.product_name} {item.option_amount}{item.option_unit} / {item.order_quantity}개</Text>
-                          <Text style={styles.productPrice}>{item.order_price}원</Text>
-                        </View>
+                        <TouchableOpacity 
+                          style={styles.orderItemImgContainer}
+                          onPress={() => {
+                            const productData = {
+                              product_app_id: item.product_app_id,
+                              product_detail_app_id: item.product_detail_app_id,
+                            };
+                            navigation.navigate('ShoppingDetail' as never, { productParams: productData } as never);
+                          }}
+                        >
+                          <ShoppingThumbnailImg
+                            productAppId={item.product_app_id}
+                            />
+                          <View style={[layoutStyle.columnStretchEvenly, {marginLeft: scale(10), flex: 1}]}>
+                            <Text style={styles.productName}>{item.brand_name}</Text>
+                            <Text style={styles.productTitle} numberOfLines={2} ellipsizeMode="tail">{item.product_title}</Text>
+                            <Text style={styles.productInfo}>{item.product_name} {item.option_amount}{item.option_unit} / {item.order_quantity}개</Text>
+                            <Text style={styles.productPrice}>{item.order_price}원</Text>
+                          </View>
+                        </TouchableOpacity>
+                      </View>
+                      <View style={[layoutStyle.rowCenter]}>
+                        {item.order_status === 'PAYMENT_COMPLETE' ? (
+                          <>
+                            <TouchableOpacity
+                              style={[styles.bottomBtnContainer, commonStyle.mr5]}
+                              onPress={() => handleCancelPayment(item)}
+                            >
+                              <Text style={styles.bottomBtnText}>결제 취소</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]}>
+                              <Text style={styles.bottomBtnText}>문의하기</Text>
+                            </TouchableOpacity>
+                          </>
+                        ) : item.order_status === 'SHIPPINGING' ? (
+                          <>                        
+                            <TouchableOpacity
+                              style={[styles.bottomBtnContainer, commonStyle.mr5]}
+                              onPress={() => navigation.navigate('ShoppingShipping' as never, { item } as never)}
+                            >
+                              <Text style={styles.bottomBtnText}>배송 현황</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]}>
+                              <Text style={styles.bottomBtnText}>문의하기</Text>
+                            </TouchableOpacity>
+                          </>
+                        ) : item.order_status === 'SHIPPING_COMPLETE' ? (
+                          <>
+                            <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.mr5]}>
+                              <Text style={styles.bottomBtnText}>구매 확정</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.bottomBtnContainer, commonStyle.mr5]}
+                              onPress={() => navigation.navigate('ShoppingReturn' as never, { item } as never)}
+                            >
+                              <Text style={styles.bottomBtnText}>반품/교환 요청</Text>
+                            </TouchableOpacity>
+                          </>
+                        ) : (
+                          <></>
+                        )}
+                      </View>
                     </View>
-                    <View style={[layoutStyle.rowCenter]}>
-                      <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.mr5]}>
-                        <Text style={styles.bottomBtnText}>배송 현황</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]}>
-                        <Text style={styles.bottomBtnText}>문의하기</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
-              </ScrollView>
-            )}
-          </>
-        )}
+                  ))}
+                </ScrollView>
+              )}
+            </>
+          )}
       </View>
+
+      <CommonPopup
+        visible={popup.visible}
+        message={popup.message}
+        backgroundColor="#FFFFFF"
+        textColor="#202020"
+        type={popup.type}
+        onConfirm={popup.onConfirm}
+        onCancel={popup.type === 'confirm' ? popup.onCancel : undefined}
+        confirmText="확인"
+        cancelText="취소"
+      />
     </>
   )
 };
@@ -190,17 +329,33 @@ const styles = StyleSheet.create({
     color: '#202020',
     fontWeight: '500',
   },
-  searchYearContainer: {
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#848484',
     borderRadius: scale(20),
     paddingVertical: scale(5),
     paddingHorizontal: scale(14),
+    flex: 1,
+    marginRight: scale(8),
+    gap: scale(4),
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: scale(14),
+    color: '#202020',
+    paddingVertical: 0,
+  },
+  cancelText: {
+    fontSize: scale(12),
+    color: '#848484',
+    fontWeight: '500',
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    marginTop: scale(120),
   },
   emptyContainer: {
     flex: 1,
@@ -284,19 +439,14 @@ const styles = StyleSheet.create({
   yearDropdown: {
     position: 'absolute',
     top: scale(35),
-    right: 0,
+    left: scale(4.5),
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#848484',
     borderRadius: scale(5),
-    maxHeight: scale(200),
-    minWidth: scale(80),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    maxHeight: scale(250),
     zIndex: 1000,
+    overflow: 'hidden',
   },
   yearOption: {
     padding: scale(10),
@@ -304,7 +454,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#EEEEEE',
   },
   selectedYearOption: {
-    backgroundColor: '#42B649',
+    backgroundColor: '#EEEEEE',
   },
   yearOptionText: {
     fontSize: scale(14),
@@ -312,8 +462,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   selectedYearOptionText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    color: '#202020',
+  },
+  searchYearContainer: {
+    borderWidth: 1,
+    borderColor: '#848484',
+    borderRadius: scale(20),
+    paddingVertical: scale(5),
+    paddingHorizontal: scale(14),
   },
 });
 

@@ -14,7 +14,7 @@ import CommonHeader from '../components/CommonHeader';
 import { useAppSelector } from '../store/hooks';
 import { scale } from '../utils/responsive';
 import { getMemberPointAppList, MemberPointApp } from '../api/services/memberPointAppService';
-import { commonStyle, layoutStyle } from '../styles/common';
+import { commonStyle, layoutStyle } from '../assets/styles/common';
 import { useAuth } from '../hooks/useAuth';
 
 
@@ -42,14 +42,12 @@ const ShoppingPoint = () => {
     const newDate = new Date(currentDate);
     newDate.setMonth(newDate.getMonth() - 1);
     setCurrentDate(newDate);
-    console.log('이전 달:', formatYearMonth(newDate));
   };
 
   const handleNextMonth = () => {
     const newDate = new Date(currentDate);
     newDate.setMonth(newDate.getMonth() + 1);
     setCurrentDate(newDate);
-    console.log('다음 달:', formatYearMonth(newDate));
   };
 
   useEffect(() => {
@@ -65,7 +63,7 @@ const ShoppingPoint = () => {
           if (response.success) {
             setPointList(response.data);
           }
-          console.log('API 응답:', response.data);
+          console.log(response.data);
         } catch (error) {
           console.error('포인트 목록 조회 실패:', error);
         } finally {

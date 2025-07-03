@@ -131,7 +131,7 @@ const NoticesAppList = () => {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#43B546" />
           </View>
-        ) : notices.length > 0 ? (
+        ) : notices?.length > 0 ? (
           <FlatList
             data={notices}
             renderItem={renderNoticeItem}

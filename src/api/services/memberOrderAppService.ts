@@ -3,6 +3,8 @@ import {axiosInstance} from '../config/axiosConfig';
 interface GetMemberOrderAppRequest {
   mem_id: string | number;
   screen_type: string;
+  year?: string;
+  search_title?: string;
 }
 
 export interface MemberOrderAppItem {

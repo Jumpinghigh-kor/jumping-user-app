@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -20,10 +20,11 @@ import {
 import { WebView } from 'react-native-webview';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {useFocusEffect} from '@react-navigation/native';
 import CommonHeader from '../components/CommonHeader';
 import IMAGES from '../utils/images';
 import { scale } from '../utils/responsive';
-import { getProductAppImgDetail, getProductDetailAppList } from '../api/services/productAppService';
+import { getProductAppImgDetail, getProductDetailAppList, getTargetProductDetailApp } from '../api/services/productAppService';
 import { getMemberReviewAppList } from '../api/services/memberReviewAppService';
 import { updateMemberZzimApp, getMemberZzimAppDetail, insertMemberZzimApp } from '../api/services/memberZzimAppService';
 import { supabase } from '../utils/supabaseClient';
@@ -32,13 +33,16 @@ import ProfileImagePicker from '../components/ProfileImagePicker';
 import ShoppingReview from '../components/ShoppingReview';
 import { useAppSelector } from '../store/hooks';
 import CustomPurchaseModal from '../components/CustomPurchaseModal';
-import { commonStyle, layoutStyle } from '../styles/common';
+import { commonStyle, layoutStyle } from '../assets/styles/common';
 import { createModalPanResponder } from '../utils/commonFunction';
 import ReviewImgPicker from '../components/ReviewImgPicker';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { getCouponAppList, insertMemberCouponApp, getMemberCouponAppList } from '../api/services/memberCouponApp';
+import { insertInquiryShoppingApp } from '../api/services/inquiryShoppingAppService';
 import CouponListItem from '../components/CouponListItem';
+import CommonPopup from '../components/CommonPopup';
 import CustomToast from '../components/CustomToast';
+import { useAuth } from '../hooks/useAuth';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -63,7 +67,7 @@ const ReviewItem = ({ review }) => {
         </View>
         <View style={styles.reviewContent}>
           <View style={styles.reviewHeader}>
-            <Text style={styles.reviewerName}>{review.mem_nickname}</Text>
+            <Text style={[styles.reviewerName, {color: review?.mem_app_status === 'EXIT' ? '#848484' : '#000000'}]}>{review?.mem_app_status === 'EXIT' ? '탈퇴한 회원' : review.mem_nickname}</Text>
           </View>
           <View style={styles.reviewStarsRow}>
             <View style={styles.starsRow}>
@@ -95,7 +99,8 @@ const ReviewItem = ({ review }) => {
                 reviewAppId={review.review_app_id}
                 disabled={true}
                 hideTitle={true}
-                />
+                route={'ShoppingDetail'}
+              />
             </View>
           )}
           <Text style={styles.reviewTitle}>{review.title}</Text>
@@ -108,13 +113,14 @@ const ReviewItem = ({ review }) => {
 };
 
 const ShoppingDetail = ({route, navigation}) => {
-  const { product } = route.params;
+  const { productParams } = route.params;
+  const { loadMemberInfo } = useAuth();
   
   // 상태 관리
   const [productImages, setProductImages] = useState([]);
   const [detailImages, setDetailImages] = useState([]);
   const [reviewData, setReviewData] = useState([]);
-  const [avgStarPoint, setAvgStarPoint] = useState(product.rating || "0");
+  const [avgStarPoint, setAvgStarPoint] = useState("0");
   const [loading, setLoading] = useState(true);
   const [activeSlide, setActiveSlide] = useState(0);
   const [activeTab, setActiveTab] = useState('info'); // 'info', 'review', 'inquiry'
@@ -132,6 +138,8 @@ const ShoppingDetail = ({route, navigation}) => {
   const [memberCouponData, setMemberCouponData] = useState([]);
   const [showCustomToast, setShowCustomToast] = useState(false);
   const [customToastMessage, setCustomToastMessage] = useState('');
+  const [showInquiryPopup, setShowInquiryPopup] = useState(false);
+  const [productDetailData, setProductDetailData] = useState([]);
   
   const memberInfo = useAppSelector(state => state.member.memberInfo);
   const scrollViewRef = useRef(null);
@@ -150,6 +158,21 @@ const ShoppingDetail = ({route, navigation}) => {
     [couponModalPan]
   );
 
+  // 상품 상세 데이터 가져오기
+  const fetchTargetProductDetailData = async () => {
+    try {
+      const response = await getTargetProductDetailApp({
+        product_app_id: productParams.product_app_id
+      });
+      
+      if (response.success && response.data) {
+        setProductDetailData(Array.isArray(response.data) ? response.data : [response.data]);
+      }
+    } catch (error) {
+      
+    }
+  };
+
   // pan 애니메이션 초기화
   useEffect(() => {
     if (showSortModal) {
@@ -165,7 +188,7 @@ const ShoppingDetail = ({route, navigation}) => {
 
   // Supabase 이미지 URL 생성 함수
   const getSupabaseImageUrl = (imageData) => {
-    if (!imageData) return product.image;
+    if (!imageData) return productParams.image;
     
     // file_path와 file_name으로 이미지 경로 생성
     if (imageData.file_path && imageData.file_name) {
@@ -183,14 +206,14 @@ const ShoppingDetail = ({route, navigation}) => {
       return imageData.image_url;
     }
     
-    return product.image;
+    return productParams.image;
   };
 
   // 상품 이미지 로드
   const fetchProductImages = async () => {
     try {
       const response = await getProductAppImgDetail({
-        product_app_id: product.product_app_id
+        product_app_id: productParams.product_app_id
       });
       
       if (response.success) {
@@ -213,13 +236,13 @@ const ShoppingDetail = ({route, navigation}) => {
         } else if (validImages.length > 0) {
           setProductImages(validImages);
         } else {
-          setProductImages([{ image_url: product.image }]);
+          setProductImages([{ image_url: productParams.image }]);
         }
         
         setDetailImages(detailImageList);
       }
     } catch (error) {
-      setProductImages([{ image_url: product.image }]);
+      setProductImages([{ image_url: productParams.image }]);
     } finally {
       setLoading(false);
     }
@@ -229,11 +252,11 @@ const ShoppingDetail = ({route, navigation}) => {
   const loadReviews = async () => {
     try {
       const response = await getMemberReviewAppList({
-        product_app_id: product.product_app_id,
+        product_app_id: productParams.product_app_id,
         filter: selectedSort,
         review_img_yn: showPhotoReviewOnly ? 'Y' : 'N'
       });
-      
+      console.log('response',response);
       if (response.success && response.data) {
         // 평균 별점 계산
         const starPoints = response.data.map(review => review.star_point).filter(Boolean);
@@ -255,7 +278,7 @@ const ShoppingDetail = ({route, navigation}) => {
       if (memberInfo?.mem_id) {
         const response = await getMemberZzimAppDetail({
           mem_id: memberInfo.mem_id,
-          product_app_id: product.product_app_id
+          product_app_id: productParams.product_app_id
         });
         
         if (response.success && response.data) {
@@ -271,8 +294,7 @@ const ShoppingDetail = ({route, navigation}) => {
   // 쿠폰 데이터 로드
   const loadCouponData = async () => {
     try {
-      const response = await getCouponAppList(product.product_app_id);
-      console.log('쿠폰 데이터:', response);
+      const response = await getCouponAppList(productParams.product_app_id);
       
       if (response.success && response.data) {
         setCouponData(response.data);
@@ -306,12 +328,20 @@ const ShoppingDetail = ({route, navigation}) => {
     }
   };
 
+  // 화면이 포커스될 때마다 멤버 정보 새로고침
+  useFocusEffect(
+    useCallback(() => {
+      loadMemberInfo();
+    }, [])
+  );
+
   // 초기 데이터 로드
   useEffect(() => {
     fetchProductImages();
     loadReviews();
-    loadCouponData();
-  }, [product.product_app_id]);
+    loadCouponData(); 
+    fetchTargetProductDetailData();
+  }, [productParams.product_app_id]);
 
   // 멤버 정보가 로드된 후 멤버 쿠폰 리스트 로드
   useEffect(() => {
@@ -407,7 +437,23 @@ const ShoppingDetail = ({route, navigation}) => {
                           <meta name="viewport" content="width=device-width, initial-scale=1.0">
                           <style>
                             body { margin: 0; padding: 0; }
-                            img { width: 100%; height: auto; display: block; margin-top: 20px; }
+                            img { 
+                              width: 100%; 
+                              height: auto; 
+                              display: block; 
+                              margin-top: 20px;
+                              -webkit-user-select: none;
+                              -moz-user-select: none;
+                              -ms-user-select: none;
+                              user-select: none;
+                              -webkit-touch-callout: none;
+                              -webkit-user-drag: none;
+                              -khtml-user-drag: none;
+                              -moz-user-drag: none;
+                              -o-user-drag: none;
+                              user-drag: none;
+                              pointer-events: none;
+                            }
                             ::-webkit-scrollbar { display: none; }
                             body { -ms-overflow-style: none; scrollbar-width: none; }
                           </style>
@@ -554,7 +600,7 @@ const ShoppingDetail = ({route, navigation}) => {
               <View style={styles.inquiryInputContainer}>
                 <TextInput
                   style={styles.inquiryInput}
-                  placeholder="문의 내용을 적어주세요"
+                  placeholder="소중한 의견을 적어주세요"
                   placeholderTextColor="#848484"
                   multiline={true}
                   numberOfLines={4}
@@ -562,7 +608,7 @@ const ShoppingDetail = ({route, navigation}) => {
                   onChangeText={setInquiryText}
                   maxLength={3000}
                 />
-                <TouchableOpacity style={styles.inquiryInputButton}>
+                <TouchableOpacity style={styles.inquiryInputButton} onPress={handleInquirySubmit}>
                   <Text style={styles.inquiryInputButtonText}>입력완료</Text>
                 </TouchableOpacity>
                 <Text style={styles.inquiryInputCount}>
@@ -577,19 +623,19 @@ const ShoppingDetail = ({route, navigation}) => {
                 {'\n'}서비스 개선을 위한 소중한 자료로 반영됩니다.
                 {'\n'}{'\n'}함께 만들어가는 쇼핑 경험,
                 {'\n'}작은 목소리도 크게 반영하겠습니다.
+                {'\n'}{'\n'}아래의 전화번호로 문의해주세요.
               </Text>
               <View style={styles.inquiryButtonContainer}>
                 <TouchableOpacity style={styles.inquiryButton} onPress={() => {
                   // 실제 클립보드에 복사
-                  Clipboard.setString('010-1234-5678');
-                  
-                  setCustomToastMessage('010-1234-5678가 복사되었습니다');
+                  Clipboard.setString(productDetailData[0]?.inquiry_phone_number);
+                  setCustomToastMessage(productDetailData[0]?.inquiry_phone_number + '가 복사되었습니다');
                   setShowCustomToast(true);
                 }}>
                   <View style={styles.clickContainer}>
                     <Text style={styles.clickText}>click</Text>
                   </View>
-                  <Text style={styles.inquiryButtonText}>010-1234-5678</Text>
+                  <Text style={styles.inquiryButtonText}>{productDetailData[0]?.inquiry_phone_number}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -602,8 +648,12 @@ const ShoppingDetail = ({route, navigation}) => {
   
   // 구매 모달 열기/닫기
   const handlePurchaseClick = () => setShowPurchaseModal(true);
-  const handleCloseModal = () => setShowPurchaseModal(false);
-  
+  const handleCloseModal = () => {
+    setShowPurchaseModal(false);
+    // 모달이 닫힐 때 멤버 정보 새로고침
+    loadMemberInfo();
+  };
+
   // 찜하기 버튼 핸들러
   const handleWishButtonClick = async () => {
     try {
@@ -627,7 +677,7 @@ const ShoppingDetail = ({route, navigation}) => {
         // 새로운 찜 데이터 생성
         const response = await insertMemberZzimApp({
           mem_id: memberInfo?.mem_id,
-          product_app_id: product.product_app_id
+          product_app_id: productParams.product_app_id
         });
         
         if (response.success) {
@@ -635,7 +685,7 @@ const ShoppingDetail = ({route, navigation}) => {
             zzim_app_id: response.data.zzim_app_id,
             zzim_yn: 'Y',
             mem_id: memberInfo?.mem_id,
-            product_app_id: product.product_app_id
+            product_app_id: productParams.product_app_id
           });
         } else {
           setIsWished(!newWishState); // 실패시 되돌리기
@@ -655,7 +705,6 @@ const ShoppingDetail = ({route, navigation}) => {
       });
       
       if (response.success && response.data) {
-        console.log('멤버 쿠폰 리스트:', response.data);
         setMemberCouponData(response.data);
       }
     } catch (error: any) {
@@ -663,6 +712,35 @@ const ShoppingDetail = ({route, navigation}) => {
     }
   };
 
+  // 문의 제출 핸들러
+  const handleInquirySubmit = async () => {
+    try {
+      if (!inquiryText.trim()) {
+        setShowInquiryPopup(true);
+        return;
+      }
+
+      const response = await insertInquiryShoppingApp({
+        mem_id: memberInfo?.mem_id,
+        product_app_id: productParams.product_app_id,
+        description: inquiryText
+      });
+
+      if (response.success) {
+        setCustomToastMessage('소중한 의견이 반영되었습니다.');
+        setShowCustomToast(true);
+        setInquiryText('');
+      } else {
+        setCustomToastMessage('소중한 의견이 반영되지 않았습니다.');
+        setShowCustomToast(true);
+      }
+    } catch (error) {
+      console.error('등록 실패:', error);
+      setCustomToastMessage('소중한 의견이 반영되지 않았습니다.');
+      setShowCustomToast(true);
+    }
+  };
+  
   return (
     <>
       <CommonHeader 
@@ -671,6 +749,11 @@ const ShoppingDetail = ({route, navigation}) => {
         rightIcon={
           <TouchableOpacity style={styles.cartButton} onPress={handleCartPress}>
             <Image source={IMAGES.icons.cartStrokeBlack} style={styles.cartIcon} />
+            {memberInfo?.cart_cnt && memberInfo.cart_cnt > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{memberInfo.cart_cnt}</Text>
+              </View>
+            )}
           </TouchableOpacity>}
         backgroundColor="#FFFFFF"
       />
@@ -712,12 +795,12 @@ const ShoppingDetail = ({route, navigation}) => {
           
           {/* 상품 정보 */}
           <View style={styles.productInfo}>
-            <Text style={styles.productName}>{product.title}</Text>
+            <Text style={styles.productName}>{productParams.title}</Text>
             
             {/* 리뷰 정보 */}
             {reviewData?.length > 0 ? (
               <ShoppingReview 
-                productAppId={product.product_app_id} 
+                productAppId={productParams.product_app_id} 
                 reviewData={reviewData}
               />
             ) : (
@@ -736,15 +819,15 @@ const ShoppingDetail = ({route, navigation}) => {
             {/* 가격 정보 */}
             <View style={styles.priceContainer}>
               <View style={styles.priceRow}>
-                {product.discount > 0 && (
+                {productDetailData[0]?.discount > 0 && (
                   <View style={styles.discountContainer}>
-                    <Text style={styles.discount}>{product.discount}%</Text>
-                    <Text style={styles.originalPrice}>{product.original_price}원</Text>
+                    <Text style={styles.discount}>{productDetailData[0]?.discount}%</Text>
+                    <Text style={styles.originalPrice}>{productDetailData[0]?.original_price.toLocaleString()}원</Text>
                   </View>
                 )}
               </View>
               <View style={[layoutStyle.rowBetween]}>
-                <Text style={styles.price}>{product.price}원</Text>
+                <Text style={styles.price}>{productDetailData[0]?.price.toLocaleString()}원</Text>
                 <View>
                   <TouchableOpacity
                     style={[commonStyle.pv10, layoutStyle.rowStart, {borderWidth: 1, borderColor: '#5588FF', borderRadius: scale(8), paddingHorizontal: scale(5), paddingVertical: scale(5)}]}
@@ -764,11 +847,18 @@ const ShoppingDetail = ({route, navigation}) => {
               <Text style={styles.deliveryTitle}>배송</Text>
               <View>
                 <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                  <Text style={styles.deliveryText}>무료배송</Text>
-                  <Image source={IMAGES.icons.infoGray} style={styles.deliveryInfoIcon} />
+                  <Text style={styles.deliveryText}>{productDetailData[0]?.delivery_fee}원</Text>
+                  {(productDetailData[0]?.free_shipping_amount && productDetailData[0]?.free_shipping_amount !== "0") && <Text>({productDetailData[0]?.free_shipping_amount}원 이상 구매 시 무료배송)</Text>}
+                </View>
+                <View>
+                  <Text style={{fontSize: scale(12), color: '#848484'}}>제주 및 도서지역 추가 6,000원</Text>
                 </View>
                 <Text style={styles.deliveryDate}>
-                  <Text style={{fontWeight: '600'}}>04.08(화)</Text> 이내 판매자 발송예정
+                  {productDetailData[0]?.today_send_yn === 'Y' ? (
+                    <Text style={{fontWeight: '500'}}>오늘 {productDetailData[0]?.today_send_time}까지 결제 시 당일 발송</Text>
+                  ) : (
+                    <Text style={{fontWeight: '500'}}>{productDetailData[0]?.not_today_send_day}일 이내 발송예정</Text>
+                  )}
                 </Text>
               </View>
             </View>
@@ -821,7 +911,7 @@ const ShoppingDetail = ({route, navigation}) => {
         <CustomPurchaseModal 
           visible={showPurchaseModal}
           onClose={handleCloseModal}
-          product={product}
+          product={productParams}
         />
 
         {/* 정렬 모달 */}
@@ -931,6 +1021,17 @@ const ShoppingDetail = ({route, navigation}) => {
           message={customToastMessage}
           onHide={() => setShowCustomToast(false)}
           position="bottom"
+        />
+
+        {/* 문의 입력 알림 팝업 */}
+        <CommonPopup
+          visible={showInquiryPopup}
+          title="알림"
+          message="소중한 의견을 입력해주세요."
+          type="warning"
+          backgroundColor="#FFFFFF"
+          textColor="#202020"
+          onConfirm={() => setShowInquiryPopup(false)}
         />
       </View>
     </>
@@ -1093,12 +1194,29 @@ const styles = StyleSheet.create({
   },
   cartButton: {
     width: scale(40),
-    alignItems: 'flex-end'
+    alignItems: 'flex-end',
+    position: 'relative',
   },
   cartIcon: {
     width: scale(20),
     height: scale(20),
     resizeMode: 'contain',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: scale(-5),
+    right: scale(-5),
+    backgroundColor: '#FF0000',
+    borderRadius: scale(15),
+    width: scale(13),
+    height: scale(13),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadgeText: {
+    fontSize: scale(8),
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
   dotsContainer: {
     position: 'absolute',
@@ -1221,11 +1339,13 @@ const styles = StyleSheet.create({
   deliveryContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    justifyContent: 'flex-start',
   },
   deliveryTitle: {
     fontSize: scale(14),
     marginRight: scale(10),
     color: '#848484',
+    marginTop: scale(2),
   },
   deliveryText: {
     fontSize: scale(14),
@@ -1254,7 +1374,7 @@ const styles = StyleSheet.create({
     height: scale(40),
     resizeMode: 'contain',
   },
-  noImageText: {  
+  noImageText: {
     fontSize: scale(14),
     color: '#848484',
     marginTop: scale(10),

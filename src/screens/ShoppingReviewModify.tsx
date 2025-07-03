@@ -26,7 +26,7 @@ import { deleteCommonFile } from '../api/services/commonCodeService';
 
 // 네비게이션 타입 정의
 type RootStackParamList = {
-  ShoppingReview: undefined;
+  ShoppingReview: { refresh?: boolean } | undefined;
 };
 
 type ShoppingNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -57,6 +57,7 @@ const ShoppingReviewModify: React.FC = () => {
   const [starPoint, setStarPoint] = useState(params?.review_app_id ? (params?.star_point || 5) : 0);
   const [reviewImages, setReviewImages] = useState<Asset[]>([]);
   const [fileIds, setFileIds] = useState<number[]>([]);
+  const [deletedReviewImgIds, setDeletedReviewImgIds] = useState<number[]>([]);
 
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
@@ -100,6 +101,10 @@ const ShoppingReviewModify: React.FC = () => {
     }
   };
 
+  const handleDeletedReviewImgIds = (deletedIds: number[]) => {
+    setDeletedReviewImgIds(deletedIds);
+  };
+
   const showPopup = (message: string, type: 'default' | 'warning' = 'default', onConfirm?: () => void) => {
     setPopupMessage(message);
     setPopupType(type);
@@ -135,7 +140,7 @@ const ShoppingReviewModify: React.FC = () => {
       if (reviewImages.length > 0) {
         uploadedFileNames = reviewImages.map(img => img.fileName).filter(Boolean);
       }
-
+      
       if (params?.review_app_id) {
         response = await updateMemberReviewApp({
           review_app_id: params.review_app_id,
@@ -144,7 +149,8 @@ const ShoppingReviewModify: React.FC = () => {
           star_point: starPoint,
           mem_id: Number(memberInfo?.mem_id),
           file_name: uploadedFileNames.length > 0 ? uploadedFileNames : undefined,
-          file_ids: fileIds.length > 0 ? fileIds : undefined
+          file_ids: fileIds.length > 0 ? fileIds : undefined,
+          review_app_img_id: deletedReviewImgIds.length > 0 ? deletedReviewImgIds : undefined
         });
       } else { 
         response = await insertMemberReviewApp({
@@ -161,7 +167,7 @@ const ShoppingReviewModify: React.FC = () => {
         setIsSubmitted(true);
         showPopup(params?.review_app_id ? '리뷰가 수정되었습니다.' : '리뷰가 작성되었습니다.', 'default', () => {
           setPopupVisible(false);
-          navigation.navigate('ShoppingReview');
+          navigation.navigate('ShoppingReview', { refresh: true });
         });
       } else {
         showPopup(response.message || (params?.review_app_id ? '리뷰 수정 중 오류가 발생했습니다.' : '리뷰 작성 중 오류가 발생했습니다.'), 'warning');
@@ -290,14 +296,16 @@ const ShoppingReviewModify: React.FC = () => {
           <Text style={styles.charCount}><Text style={{color: '#4C78E0'}}>{content.length}</Text> / 3000</Text>
         </View>
 
-        <View style={{marginBottom: scale(10)}}>
+        <View style={{marginBottom: scale(20)}}>
           <ReviewImgPicker 
             maxImages={3} 
             onImagesSelected={handleImagesSelected}
             onFileIdsChange={handleFileIdsChange}
+            onDeletedReviewImgIds={handleDeletedReviewImgIds}
             memberId={memberInfo?.mem_id}
             reviewAppId={params?.review_app_id}
           />
+          <Text style={styles.uploadDescription}>첨부파일은 최대 3장, 한 장당 최대 10MB까지 업로드 가능합니다</Text>
         </View>
 
         <View style={styles.buttonContainer}>
@@ -324,6 +332,8 @@ const ShoppingReviewModify: React.FC = () => {
         visible={popupVisible}
         message={popupMessage}
         type={popupType}
+        backgroundColor='#FFFFFF'
+        textColor='#202020'
         onConfirm={onPopupConfirm}
         {...(isDeleteConfirm && {
           onCancel: () => setPopupVisible(false),
@@ -457,6 +467,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: scale(16),
     fontWeight: '600',
+  },
+  uploadDescription: {
+    fontSize: scale(10),
+    color: '#717171',
   },
 });
 

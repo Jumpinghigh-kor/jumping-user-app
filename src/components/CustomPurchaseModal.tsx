@@ -409,7 +409,10 @@ const CustomPurchaseModal = ({ visible, onClose, product }) => {
                     quantity: option.selectedQuantity,
                     option_gender: option.option_gender,
                     option_amount: option.option_amount,
-                    option_unit: option.option_unit
+                    option_unit: option.option_unit,
+                    discount: product.discount,
+                    delivery_fee: product.delivery_fee,
+                    free_shipping_amount: product.free_shipping_amount
                   }));
                   
                   onClose();
@@ -438,6 +441,8 @@ const CustomPurchaseModal = ({ visible, onClose, product }) => {
       <CommonPopup
         visible={showPopup}
         message={popupMessage}
+        backgroundColor="#FFFFFF"
+        textColor="#202020"
         type="warning"
         onConfirm={handleClosePopup}
         confirmText="확인"

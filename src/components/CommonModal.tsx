@@ -16,14 +16,22 @@ interface CommonModalProps {
   visible: boolean;
   title: string;
   content: string;
+  height?: string;
   onClose: () => void;
+  background?: string;
+  textColor?: string;
+  children?: React.ReactNode;
 }
 
 const CommonModal: React.FC<CommonModalProps> = ({
   visible,
   title,
   content,
+  height,
   onClose,
+  background = '#333333',
+  textColor = '#FFFFFF',
+  children,
 }) => {
   const pan = React.useRef(new Animated.ValueXY()).current;
   
@@ -75,7 +83,10 @@ const CommonModal: React.FC<CommonModalProps> = ({
           style={[
             styles.modalContent,
             {
-              transform: [{ translateY: pan.y }]
+              transform: [{ translateY: pan.y }],
+              backgroundColor: background,
+              maxHeight: height ? height : '70%',
+              minHeight: height ? height : '70%',
             }
           ]}
         >
@@ -89,11 +100,15 @@ const CommonModal: React.FC<CommonModalProps> = ({
           </View>
           
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{title}</Text>
+            <Text style={[styles.modalTitle, { color: textColor }]}>{title}</Text>
           </View>
           
           <ScrollView style={styles.modalScrollView}>
-            <Text style={styles.modalText}>{content}</Text>
+            {children ? (
+              children
+            ) : (
+              <Text style={[styles.modalText, { color: textColor }]}>{content}</Text>
+            )}
           </ScrollView>
         </Animated.View>
       </View>
@@ -113,8 +128,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: scale(20),
     borderTopRightRadius: scale(20),
     width: '100%',
-    maxHeight: '70%',
-    minHeight: '70%',
     padding: scale(20),
   },
   dragArea: {

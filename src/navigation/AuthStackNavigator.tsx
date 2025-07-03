@@ -15,7 +15,7 @@ import ShoppingDetail from '../screens/ShoppingDetail';
 import ShoppingMypage from '../screens/ShoppingMypage';
 import ShoppingZZim from '../screens/ShoppingZZim';
 import ShoppingSearch from '../screens/ShoppingSearch';
-import ShoppingLoading from '../screens/ShoppingLoading';
+import ShoppingShipping from '../screens/ShoppingShipping';
 import ShoppingCart from '../screens/ShoppingCart';
 import ShoppingAddress from '../screens/ShoppingAddress';
 import ShoppingAddressAdd from '../screens/ShoppingAddressAdd';
@@ -24,12 +24,13 @@ import ShoppingReviewModify from '../screens/ShoppingReviewModify';
 import ShoppingPayment from '../screens/ShoppingPayment';
 import ShoppingPoint from '../screens/ShoppingPoint';
 import ShoppingOrderHistory from '../screens/ShoppingOrderHistory';
-import ShoppingInquiry from '../screens/ShoppingInquiry';
 import ShoppingNotice from '../screens/ShoppingNotice';
 import ShoppingSettings from '../screens/ShoppingSettings';
-import ShoppingShippingState from '../screens/ShoppingShippingState';
 import RedirectScreen from '../screens/RedirectScreen';
 import ShoppingCoupon from '../screens/ShoppingCoupon';
+import ShoppingReturn from '../screens/ShoppingReturn';
+import ShoppingHome from '../screens/ShoppingHome';
+import EventApp from '../screens/EventApp';
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -50,9 +51,9 @@ export type AuthStackParamList = {
   PasswordChange: undefined;
   ShoppingDetail: undefined;
   ShoppingMypage: undefined;
+  ShoppingHome: undefined;
   ShoppingZZim: undefined;
   ShoppingSearch: undefined;
-  ShoppingLoading: undefined;
   ShoppingCart: undefined;
   ShoppingAddress: undefined;
   ShoppingAddressAdd: undefined;
@@ -63,9 +64,13 @@ export type AuthStackParamList = {
   ShoppingOrderHistory: undefined;
   ShoppingNotice: undefined;
   ShoppingSettings: undefined;
-  ShoppingShippingState: undefined;
   ShoppingCoupon: undefined;
+  ShoppingShipping: undefined;
+  ShoppingReturn: undefined;
   RedirectScreen: undefined;
+  Event: {
+    eventId: number;
+  };
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -161,8 +166,8 @@ const AuthStackNavigator = () => {
         options={{headerShown: false}}
       />
       <Stack.Screen
-        name="ShoppingLoading"
-        component={ShoppingLoading}
+        name="ShoppingShipping"
+        component={ShoppingShipping}
         options={{headerShown: false}}
       />
       <Stack.Screen
@@ -216,11 +221,6 @@ const AuthStackNavigator = () => {
         options={{headerShown: false}}
       />
       <Stack.Screen
-        name="ShoppingShippingState"
-        component={ShoppingShippingState}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
         name="RedirectScreen"
         component={RedirectScreen}
         options={{headerShown: false}}
@@ -228,6 +228,16 @@ const AuthStackNavigator = () => {
       <Stack.Screen
         name="ShoppingCoupon"
         component={ShoppingCoupon}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingReturn"
+        component={ShoppingReturn}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="EventApp"
+        component={EventApp}
         options={{headerShown: false}}
       />
     </Stack.Navigator>

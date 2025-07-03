@@ -33,7 +33,7 @@ import HomeBannerImgPicker from '../components/HomeBannerImgPicker';
 import ExerciseGraph from '../components/ExerciseGraph';
 import ExerciseInfoPopup from '../components/ExerciseInfoPopup';
 import WaveAnimation from '../components/WaveAnimation';
-import { commonStyle } from '../styles/common';
+import { commonStyle } from '../assets/styles/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {getNoticesAppList} from '../api/services/noticesAppService';
 import {getInquiryList} from '../api/services/inquiryService';
@@ -81,12 +81,12 @@ const Home = () => {
   const ref = useRef<ScrollView>(null);
   const [showCustomToast, setShowCustomToast] = useState(false);
   const [customToastMessage, setCustomToastMessage] = useState('');
+  const [bannerKey, setBannerKey] = useState(0);
 
   // 푸시 토큰 가져와서 서버에 전송
   const initializePushToken = async () => {
     try {
       if (!memberInfo?.mem_id) {
-        console.log('mem_id가 없어서 푸시 토큰을 처리하지 않습니다.');
         return false;
       }
 
@@ -136,7 +136,7 @@ const Home = () => {
       }
       
       // 문의 목록 가져오기
-      const inquiriesResponse = await getInquiryList();
+      const inquiriesResponse = await getInquiryList({mem_id: parseInt(memberInfo.mem_id, 10)});
       let hasUnreadInquiry = false;
       if (inquiriesResponse.success && inquiriesResponse.data) {
         hasUnreadInquiry = inquiriesResponse.data.some(inquiry => 
@@ -155,6 +155,7 @@ const Home = () => {
     React.useCallback(() => {
       loadProfileImage();
       checkUnreadNotifications();
+      setBannerKey(prev => prev + 1);  // HomeBannerImgPicker 재렌더링 강제
     }, [memberInfo?.mem_id]),
   );
 
@@ -556,7 +557,7 @@ const Home = () => {
         </View>
 
         <View style={styles.contentSection}>
-          <HomeBannerImgPicker />
+          <HomeBannerImgPicker key={bannerKey} />
         </View>
 
         <View style={styles.contentSection}>

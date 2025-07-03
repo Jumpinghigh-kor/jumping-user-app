@@ -16,7 +16,8 @@ export const getMemberCouponAppList = async (getMemberCouponAppListDto: any) => 
   try {
     const response = await axiosInstance.post('/member-coupon-app/getMemberCouponAppList', {
       mem_id: getMemberCouponAppListDto.mem_id,
-      use_yn: getMemberCouponAppListDto.use_yn
+      use_yn: getMemberCouponAppListDto.use_yn,
+      date: getMemberCouponAppListDto.date
     });
     return response.data;
   } catch (error) {

@@ -17,16 +17,8 @@ import CommonPopup from '../components/CommonPopup';
 import { useAppSelector } from '../store/hooks';
 import { useAuth } from '../hooks/useAuth';
 
-// 네비게이션 타입 정의
-type RootStackParamList = {
-  Shopping: undefined;
-  ShoppingHome: undefined;
-};
-
-type ShoppingNavigationProp = NativeStackNavigationProp<RootStackParamList>;
-
 const ShoppingMypage: React.FC = () => {
-  const navigation = useNavigation<ShoppingNavigationProp>();
+  const navigation = useNavigation();
   const memberInfo = useAppSelector(state => state.member.memberInfo);
   const { loadMemberInfo } = useAuth();
   const [showExitPopup, setShowExitPopup] = useState(false);
@@ -45,6 +37,7 @@ const ShoppingMypage: React.FC = () => {
         titleColor="#FFFFFF"
         backIcon={IMAGES.icons.arrowLeftWhite}
         backgroundColor="#42B649"
+        onBackPress={() => navigation.navigate('MainTab', { screen: 'Shopping' })}
       />
       <View style={styles.container}>
         <View style={styles.infoSection}>
@@ -121,14 +114,14 @@ const ShoppingMypage: React.FC = () => {
               <Text style={styles.menuText}>장바구니 보기</Text>
               <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ShoppingSettings')}>
+            {/* <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ShoppingSettings')}>
               <Text style={styles.menuText}>환경설정</Text>
               <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <TouchableOpacity style={styles.menuItem} onPress={() => {
               setShowExitPopup(true);
             }}>
-              <Text style={styles.menuText}>쇼핑 나가기</Text>
+              <Text style={styles.menuText}>쇼핑몰 나가기</Text>
               <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
             </TouchableOpacity>
           </View>
@@ -143,7 +136,7 @@ const ShoppingMypage: React.FC = () => {
           textColor='#202020'
           onConfirm={() => {
             setShowExitPopup(false);
-            navigation.popToTop();
+            navigation.navigate('MainTab', { screen: 'Home' });
           }}
           onCancel={() => setShowExitPopup(false)}
         />
@@ -247,7 +240,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: scale(10),
+    paddingVertical: scale(15),
   },
   arrowIcon: {
     width: scale(12),

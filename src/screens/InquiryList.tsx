@@ -8,7 +8,6 @@ import {
   Modal,
   ScrollView,
   ActivityIndicator,
-  Alert,
   Image,
   TextInput,
   Platform,
@@ -23,6 +22,8 @@ import type {AuthStackParamList} from '../navigation/AuthStackNavigator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CommonPopup from '../components/CommonPopup';
 import CommonHeader from '../components/CommonHeader';
+import { useAppSelector } from '../store/hooks';
+import CustomToast from '../components/CustomToast';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -35,7 +36,7 @@ const InquiryList = () => {
   const [loading, setLoading] = useState(true);
   const [readInquiries, setReadInquiries] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<'createInquiry' | 'myInquiries'>('createInquiry');
-  const [memId, setMemId] = useState<string | null>(null);
+  const memberInfo = useAppSelector(state => state.member.memberInfo);
 
   // 문의하기 관련 상태
   const [title, setTitle] = useState('');
@@ -43,15 +44,14 @@ const InquiryList = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
 
   useFocusEffect(
     React.useCallback(() => {
       loadInquiries();
       loadReadInquiries();
-      AsyncStorage.getItem('mem_id').then(id => {
-        if (id) setMemId(id);
-      });
     }, [])
   );
 
@@ -69,15 +69,17 @@ const InquiryList = () => {
   const loadInquiries = async () => {
     setLoading(true);
     try {
-      const response = await getInquiryList();
+      const response = await getInquiryList({mem_id: parseInt(memberInfo.mem_id, 10)});
       if (response.success) {
         setInquiries(response.data || []);
       } else {
-        Alert.alert('알림', '문의사항을 불러오는데 실패했습니다.');
+        setToastMessage('문의사항을 불러오는데 실패했습니다.');
+        setShowToast(true);
       }
     } catch (error) {
-      
-      Alert.alert('알림', '문의사항을 불러오는데 실패했습니다.');
+      console.log(error.response.data);
+      setToastMessage('문의사항을 불러오는데 실패했습니다.');
+      setShowToast(true);
     } finally {
       setLoading(false);
     }
@@ -107,12 +109,14 @@ const InquiryList = () => {
   // 문의하기 관련 함수
   const validateForm = () => {
     if (!title.trim()) {
-      Alert.alert('알림', '제목을 입력해주세요.');
+      setToastMessage('제목을 입력해주세요.');
+      setShowToast(true);
       return false;
     }
     
     if (!content.trim()) {
-      Alert.alert('알림', '내용을 입력해주세요.');
+      setToastMessage('내용을 입력해주세요.');
+      setShowToast(true);
       return false;
     }
     
@@ -130,8 +134,9 @@ const InquiryList = () => {
       setIsSubmitting(true);
       setLoading(true);
       
-      if (!memId) {
-        Alert.alert('알림', '로그인이 필요합니다.');
+      if (!memberInfo?.mem_id) {
+        setToastMessage('로그인이 필요합니다.');
+        setShowToast(true);
         setIsSubmitting(false);
         setLoading(false);
         return;
@@ -140,17 +145,19 @@ const InquiryList = () => {
       const response = await createInquiry({
         title: title.trim(),
         content: content.trim(),
-        mem_id: parseInt(memId, 10),
+        mem_id: parseInt(memberInfo.mem_id, 10),
       });
       
       if (response.success) {
         setPopupMessage('문의가 등록되었습니다.');
         setPopupVisible(true);
       } else {
-        Alert.alert('알림', response.message || '문의 등록에 실패했습니다.');
+        setToastMessage(response.message || '문의 등록에 실패했습니다.');
+        setShowToast(true);
       }
     } catch (error) {
-      Alert.alert('알림', '문의 등록 중 오류가 발생했습니다.');
+      setToastMessage('문의 등록 중 오류가 발생했습니다.');
+      setShowToast(true);
     } finally {
       setLoading(false);
       setIsSubmitting(false);
@@ -165,52 +172,52 @@ const InquiryList = () => {
     loadInquiries();
   };
 
-  const renderInquiryItem = ({item}: {item: Inquiry}) => {
-    return (
-      <TouchableOpacity style={styles.inquiryItem} onPress={() => handleInquiryPress(item)}>
-        <View style={styles.inquiryContent}>
-          <View style={styles.titleContainer}>
-            <View style={{flexDirection: 'row', alignItems: 'center', width: scale(200)}}>
-              <Text style={styles.inquiryTitle} numberOfLines={1} ellipsizeMode="tail">{item.title}</Text>
-              {item.answer && !isInquiryRead(item.inquiry_app_id) && (
-                <View style={styles.notificationDot} />
-              )}
-            </View>
-            <Text style={styles.inquiryDate}>{formatDateYYYYMMDD(item.reg_dt)}</Text>
-          </View>
-        </View>
-        <View style={[styles.statusContainer, {borderColor: item.answer ? '#F04D4D' : '#B4B4B4', backgroundColor: item.answer ? '#F04D4D' : ''}]}>
-          <Text style={[styles.statusText, {color: item.answer ? '#FFFFFF' : '#B4B4B4'}]}>{item.answer ? '답변완료' : '접수'}</Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
   const renderTabContent = () => {
     if (activeTab === 'myInquiries') {
-  return (
-        <>
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#43B546" />
-        </View>
-      ) : inquiries.length > 0 ? (
-        <FlatList
-          data={inquiries}
-          renderItem={renderInquiryItem}
-          keyExtractor={(item) => item.inquiry_app_id.toString()}
-          contentContainerStyle={styles.listContainer}
-        />
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Image source={IMAGES.icons.speechGray} style={styles.speechIcon} />
-          <Text style={styles.emptyText}>등록된 문의가 없어요</Text>
-          <Text style={styles.emptyDesc}>문의하기 페이지에서{'\n'}궁금한 점에 대해 문의를 남겨주세요</Text>
-        </View>
-      )}
-        </>
-      );
-    } else {
+    return (
+      <>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#43B546" />
+          </View>
+        ) : inquiries.length > 0 ? (
+          <ScrollView
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            alwaysBounceVertical={false}
+          >
+            {inquiries.map((item) => (
+            <TouchableOpacity
+              key={item.inquiry_app_id}
+              style={styles.inquiryItem} onPress={() => handleInquiryPress(item)}
+            >
+              <View style={styles.inquiryContent}>
+                <View style={styles.titleContainer}>
+                  <View style={{flexDirection: 'row', alignItems: 'center', width: scale(200)}}>
+                    <Text style={styles.inquiryTitle} numberOfLines={1} ellipsizeMode="tail">{item.title}</Text>
+                    {item.answer && !isInquiryRead(item.inquiry_app_id) && (
+                      <View style={styles.notificationDot} />
+                    )}
+                  </View>
+                  <Text style={styles.inquiryDate}>{formatDateYYYYMMDD(item.reg_dt)}</Text>
+                </View>
+              </View>
+              <View style={[styles.statusContainer, {borderColor: item.answer ? '#F04D4D' : '#B4B4B4', backgroundColor: item.answer ? '#F04D4D' : ''}]}>
+                <Text style={[styles.statusText, {color: item.answer ? '#FFFFFF' : '#B4B4B4'}]}>{item.answer ? '답변완료' : '접수'}</Text>
+              </View>
+            </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Image source={IMAGES.icons.speechGray} style={styles.speechIcon} />
+            <Text style={styles.emptyText}>등록된 문의가 없어요</Text>
+            <Text style={styles.emptyDesc}>문의하기 페이지에서{'\n'}궁금한 점에 대해 문의를 남겨주세요</Text>
+          </View>
+        )}
+      </>
+    )} else {
       return (
         <>
           <View style={styles.formContainer}>
@@ -318,6 +325,13 @@ const InquiryList = () => {
         message={popupMessage}
         onConfirm={handlePopupConfirm}
         confirmText="확인"
+      />
+
+      <CustomToast
+        visible={showToast}
+        message={toastMessage}
+        position="bottom"
+        onHide={() => setShowToast(false)}
       />
     </View>
   );

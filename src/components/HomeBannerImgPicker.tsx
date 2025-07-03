@@ -12,7 +12,7 @@ import IMAGES from '../utils/images';
 import { scale } from '../utils/responsive';
 import { getBannerAppDetail } from '../api/services/bannerAppService';
 import { supabase } from '../utils/supabaseClient';
-import { useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 
 interface HomeBannerImgPickerProps {
   style?: object;
@@ -24,6 +24,8 @@ interface BannerItem {
   banner_link_url: string;
   file_path?: string;
   file_name?: string;
+  banner_type?: string;
+  navigation_path?: string;
 }
 
 const HomeBannerImgPicker: React.FC<HomeBannerImgPickerProps> = ({ style }) => {
@@ -31,8 +33,8 @@ const HomeBannerImgPicker: React.FC<HomeBannerImgPickerProps> = ({ style }) => {
   const [banners, setBanners] = useState<BannerItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [defaultBannerUrl, setDefaultBannerUrl] = useState<string | null>(null);
-  const bannersLoadedRef = useRef(false);
-  
+  const navigation = useNavigation();
+
   // 기본 배너 URL 가져오기
   useEffect(() => {
     try {
@@ -144,10 +146,19 @@ const HomeBannerImgPicker: React.FC<HomeBannerImgPickerProps> = ({ style }) => {
 
   // 배너 클릭 핸들러
   const handleBannerPress = (banner: BannerItem) => {
-    if (banner.banner_link_url) {
-      Linking.openURL(banner.banner_link_url).catch(err => 
+    console.log('banner',banner);
+    if(banner.banner_type === "EVENT"){
+      (navigation as any).navigate('EventApp', {
+        item: banner
+      });
+    }
+
+    if(banner.navigation_path && banner.navigation_path.includes('https://')){
+      Linking.openURL(banner.navigation_path).catch(err => 
         console.log('배너 링크를 열 수 없습니다:', err)
       );
+    } else if(banner?.navigation_path){
+      navigation.navigate(banner.navigation_path as never);
     }
   };
 
@@ -183,7 +194,7 @@ const HomeBannerImgPicker: React.FC<HomeBannerImgPickerProps> = ({ style }) => {
               <Image 
                 source={{ uri: banners[currentIndex].banner_img_url }}
                 style={styles.bannerImage}
-                resizeMode="contain"
+                resizeMode="cover"
               />
             ) : (
               <View style={styles.errorContainer}>
@@ -236,7 +247,7 @@ const styles = StyleSheet.create({
     marginHorizontal: scale(4),
   },
   activeDot: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#43B649',
   },
   errorContainer: {
     width: '100%',

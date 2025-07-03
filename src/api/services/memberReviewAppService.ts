@@ -21,6 +21,7 @@ export interface Review {
   brand_name: string;
   product_name: string;
   review_img_count: number;
+  admin_del_yn: string;
   // 추가 필드가 있다면 여기에 정의
 }
 
@@ -98,6 +99,7 @@ export const updateMemberReviewApp = async (params: {
   mem_id: number;
   file_name?: string[];
   file_ids?: number[];
+  review_app_img_id?: number[];
 }): Promise<MemberReviewResponse> => {
   try {
     const response = await axiosInstance.post('/member-review-app/updateMemberReviewApp', params);

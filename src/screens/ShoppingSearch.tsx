@@ -208,8 +208,6 @@ const ShoppingSearch: React.FC = () => {
             mem_id: memberInfo.mem_id,
             keyword: searchKeyword
           };
-
-          console.log(currentFilter);
           
           // 추천순인 경우 search_type 파라미터 추가
           if (currentFilter === 'new') {
@@ -298,7 +296,7 @@ const ShoppingSearch: React.FC = () => {
                 renderItem={({ item }) => (
                   <TouchableOpacity 
                     style={styles.productItem}
-                    onPress={() => navigation.navigate('ShoppingDetail', { product: item })}
+                    onPress={() => navigation.navigate('ShoppingDetail', { productParams: item })}
                   >
                     <View style={styles.productRow}>
                       <ShoppingThumbnailImg 

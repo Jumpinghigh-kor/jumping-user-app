@@ -62,7 +62,7 @@ const ShoppingZZim = () => {
   );
 
   const handleProductPress = (item) => {
-    navigation.navigate('ShoppingDetail', { product: item });
+    navigation.navigate('ShoppingDetail', { productParams: item });
   };
 
   // 찜 상태가 변경되었을 때 호출되는 함수

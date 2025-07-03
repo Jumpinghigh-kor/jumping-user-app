@@ -65,3 +65,12 @@ export const getProductDetailAppList = async (params: {product_app_id: number}):
     throw error;
   }
 };
+
+  export const getTargetProductDetailApp = async (params: {product_app_id: number}): Promise<GetProductsResponse> => {
+  try {
+    const response = await axiosInstance.post('/product-app/getTargetProductDetailApp', params);
+    return response.data;
+  } catch (error: any) {
+    throw error;
+  }
+}

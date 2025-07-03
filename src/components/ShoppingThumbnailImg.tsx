@@ -67,7 +67,7 @@ const ShoppingThumbnailImg: React.FC<ShoppingThumbnailImgProps> = ({
         return data.publicUrl;
       }
     }
-
+    
     // image_url이 있는 경우
     if (thumbnailItem.image_url) {
       // 경로만 있는 경우 Supabase URL로 변환

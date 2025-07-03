@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,37 +6,58 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
+  Modal,
+  Animated,
+  Platform,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import IMAGES from '../utils/images';
 import CommonHeader from '../components/CommonHeader';
 import { useAppSelector } from '../store/hooks';
-import { getNoticesAppList, Notice } from '../api/services/noticesAppService';
+import { getNoticesShoppingAppList, NoticeShoppingApp } from '../api/services/noticesShoppingAppService';
 import { scale } from '../utils/responsive';
+import { commonStyle, layoutStyle } from '../assets/styles/common';
+import { createModalPanResponder } from '../utils/commonFunction';
 
 
 const ShoppingNotice = () => {
   const navigation = useNavigation();
   const memberInfo = useAppSelector(state => state.member.memberInfo);
-  const [notices, setNotices] = useState<Notice[]>([]);
+  const [notices, setNotices] = useState<NoticeShoppingApp[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState('');
+
+  const filterModalPan = useRef(new Animated.ValueXY()).current;
+
+  const filterModalPanResponder = useMemo(() =>
+    createModalPanResponder(filterModalPan, () => setShowFilterModal(false)),
+    [filterModalPan]
+  );
 
   useEffect(() => {
-    const fetchNotices = async () => {
-      try {
-        setLoading(true);
-        const response = await getNoticesAppList({ notices_location: "SHOPPING" });
-        if (response.success) {
-          setNotices(response.data);
-        }
-        console.log('공지사항 응답:', response.data);
-      } catch (error) {
-        console.error('공지사항 조회 실패:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (showFilterModal) {
+      filterModalPan.setValue({ x: 0, y: 0 });
+    }
+  }, [showFilterModal, filterModalPan]);
 
+  const fetchNotices = async (filterType = '') => {
+    try {
+      setLoading(true);
+      const response = await getNoticesShoppingAppList({ notices_type: filterType });
+      if (response.success) {
+        setNotices(response.data);
+      }
+      
+    } catch (error) {
+      console.error('공지사항 조회 실패:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchNotices();
   }, []);
 
@@ -49,30 +70,106 @@ const ShoppingNotice = () => {
         backgroundColor="#FFFFFF"
       />
       <View style={styles.container}>
+        <TouchableOpacity 
+          style={[layoutStyle.rowEnd, commonStyle.ph16]}
+          onPress={() => setShowFilterModal(true)}
+        >
+          <Image source={IMAGES.icons.filterBlack} style={styles.filterIcon} />
+          <Text style={styles.filterText}>{selectedFilter === '' ? '전체' : selectedFilter === 'EVENT' ? '이벤트' : selectedFilter === 'NOTICE' ? '공지' : '쇼핑'}</Text>
+        </TouchableOpacity>
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#40B649" />
           </View>
-        ) : notices.length > 0 ? (
+        ) : notices?.length > 0 ? (
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
           >
             {notices.map((item) => (
-              <TouchableOpacity key={item.notices_app_id} style={styles.noticeItem}>
+              <View key={item.notices_shopping_app_id} style={styles.noticeItem}>
                 <View style={styles.noticeContent}>
-                  <Text style={styles.noticeTitle}>{item.title}</Text>
+                  <Text style={[styles.noticeType, {color: item.notices_type === 'EVENT' ? '#FECB3D' : item.notices_type === 'GUIDE' ? '#F04D4D' : item.notices_type === 'SHOPPING' ? '#43B649' : '#202020'}]}>{item.notices_type === 'EVENT' ? '이벤트' : item.notices_type === 'NOTICE' ? '공지' : '쇼핑'}</Text>
+                  <Text style={styles.noticeContent}>{item.content}</Text>
                   <Text style={styles.noticeDate}>{item.reg_dt}</Text>
                 </View>
-              </TouchableOpacity>
+              </View>
             ))}
           </ScrollView>
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>알림이 없습니다</Text>
+            <Image source={IMAGES.icons.bellGray} style={styles.emptyIcon} />
+            <Text style={styles.emptyText}>알림이 없어요</Text>
           </View>
         )}
+
+        {/* 필터 모달 */}
+        <Modal
+          visible={showFilterModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowFilterModal(false)}
+        >
+          <View style={styles.filterModalOverlay}>
+            <Animated.View
+              style={[
+                styles.filterModalContent,
+                {
+                  transform: [{ translateY: filterModalPan.y }]
+                }
+              ]}
+            >
+              <View
+                {...filterModalPanResponder.panHandlers}
+                style={styles.dragArea}
+              >
+                <Image source={IMAGES.icons.smallBarGray} style={styles.modalBar} />
+              </View>
+              
+              <TouchableOpacity 
+                style={styles.filterOption}
+                onPress={() => {
+                  setSelectedFilter('');
+                  setShowFilterModal(false);
+                  fetchNotices('');
+                }}
+              >
+                <Text style={styles.filterOptionText}>전체</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.filterOption}
+                onPress={() => {
+                  setSelectedFilter('EVENT');
+                  setShowFilterModal(false);
+                  fetchNotices('EVENT');
+                }}
+              >
+                <Text style={styles.filterOptionText}>이벤트</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.filterOption}
+                onPress={() => {
+                  setSelectedFilter('NOTICE');
+                  setShowFilterModal(false);
+                  fetchNotices('NOTICE');
+                }}
+              >
+                <Text style={styles.filterOptionText}>공지</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.filterOption}
+                onPress={() => {
+                  setSelectedFilter('SHOPPING');
+                  setShowFilterModal(false);
+                  fetchNotices('SHOPPING');
+                }}
+              >
+                <Text style={[styles.filterOptionText, {marginBottom: Platform.OS === 'ios' ? scale(30) : 0}]}>쇼핑</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+        </Modal>
       </View>
     </>
   );
@@ -82,6 +179,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  filterIcon: {
+    width: scale(12),
+    height: scale(12),
+    resizeMode: 'contain',
+  },
+  filterText: {
+    fontSize: scale(13),
+    color: '#202020',
+    marginLeft: scale(4),
   },
   loadingContainer: {
     flex: 1,
@@ -102,12 +209,14 @@ const styles = StyleSheet.create({
     padding: scale(16),
     marginBottom: scale(12),
   },
-  noticeContent: {
-    flex: 1,
+  noticeType: {
+    fontSize: scale(12),
+    fontWeight: '500',
+    marginBottom: scale(8),
   },
-  noticeTitle: {
+  noticeContent: {
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontWeight: '400',
     color: '#202020',
     marginBottom: scale(8),
   },
@@ -116,13 +225,48 @@ const styles = StyleSheet.create({
     color: '#848484',
   },
   emptyContainer: {
-    flex: 1,
+    marginTop: scale(80),
     justifyContent: 'center',
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: scale(16),
+    fontSize: scale(14),
     color: '#CBCBCB',
+    fontWeight: '500',
+  },
+  emptyIcon: {
+    width: scale(30),
+    height: scale(30),
+    resizeMode: 'contain',
+    marginBottom: scale(10),
+  },
+  filterModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  filterModalContent: {
+    backgroundColor: '#FFFFFF',
+    padding: scale(16),
+    borderTopLeftRadius: scale(10),
+    borderTopRightRadius: scale(10),
+  },
+  dragArea: {
+    alignItems: 'center',
+    padding: scale(16),
+  },
+  modalBar: {
+    width: scale(40),
+    height: scale(4),
+    borderRadius: scale(2),
+    backgroundColor: '#CBCBCB',
+  },
+  filterOption: {
+    padding: scale(16),
+  },
+  filterOptionText: {
+    fontSize: scale(14),
+    color: '#202020',
     fontWeight: 'bold',
   },
 });

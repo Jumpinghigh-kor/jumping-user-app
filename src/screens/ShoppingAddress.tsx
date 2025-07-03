@@ -13,7 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import CommonHeader from '../components/CommonHeader';
 import IMAGES from '../utils/images';
 import { scale } from '../utils/responsive';
-import { getMemberShippingAddressList, ShippingAddressItem, deleteMemberShippingAddress } from '../api/services/memberShippingAddressService';
+import { getMemberShippingAddressList, ShippingAddressItem, deleteMemberShippingAddress, updateSelectYn } from '../api/services/memberShippingAddressService';
 import { useAppSelector } from '../store/hooks';
 import CommonPopup from '../components/CommonPopup';
 
@@ -24,7 +24,8 @@ const ShoppingAddress = ({ navigation, route }) => {
   const [showDeletePopup, setShowDeletePopup] = useState(false);
   const [addressIdToDelete, setAddressIdToDelete] = useState<number | null>(null);
   const params = route?.params;
-  
+  const [selectedAddressId, setSelectedAddressId] = useState(params?.shippingAddressId);
+
   useFocusEffect(
     useCallback(() => {
       
@@ -36,6 +37,12 @@ const ShoppingAddress = ({ navigation, route }) => {
           
           if (response.success && response.data) {
             setAddressesList(response.data);
+            
+            // 기본배송지가 있으면 자동으로 선택
+            const defaultAddress = response.data.find(addr => addr.default_yn === 'Y');
+            if (defaultAddress) {
+              // setSelectedAddressId(defaultAddress.shipping_address_id);
+            }
           } 
         } catch (error) {
           
@@ -71,6 +78,19 @@ const ShoppingAddress = ({ navigation, route }) => {
       
     }
   };
+
+  const handleSelectAddress = async (shipping_address_id) => {
+    try {
+      await updateSelectYn({
+        mem_id: memberInfo.mem_id,
+        shipping_address_id: shipping_address_id,
+        select_yn: 'Y'
+      });
+      setSelectedAddressId(shipping_address_id);
+    } catch (error) {
+      console.error('배송지 선택 실패:', error);
+    }
+  };
   
   return (
     <>
@@ -87,7 +107,10 @@ const ShoppingAddress = ({ navigation, route }) => {
         <View>
           {addressesList.length > 0 ? (
             <View>
-              {addressesList.map((address) => (
+              {addressesList.map((address) => {
+                console.log('address', address);
+                console.log('selectedAddressId', selectedAddressId);
+                return (
                 <View key={address.shipping_address_id} style={{borderBottomWidth: 5, borderColor: '#EEEEEE', paddingVertical: scale(16), paddingHorizontal: scale(16)}}>
                   <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: scale(5)}}>
                     <Text style={styles.addressText}>{address.shipping_address_name}</Text>
@@ -117,16 +140,17 @@ const ShoppingAddress = ({ navigation, route }) => {
                     </TouchableOpacity>
                     {params && (
                       <TouchableOpacity 
-                        style={[styles.editContainer, {backgroundColor: address?.shipping_address_id === params?.shippingAddressId ? '#EEEEEE' : '#FFFFFF'}]}
-                        disabled={address?.shipping_address_id === params?.shippingAddressId}
+                        style={[styles.editContainer, {backgroundColor: address?.shipping_address_id === selectedAddressId ? '#EEEEEE' : '#FFFFFF'}]}
+                        disabled={address?.shipping_address_id === selectedAddressId}
+                        onPress={() => handleSelectAddress(address.shipping_address_id)}
                       >
-                        <Text style={[styles.editText, {color: address?.shipping_address_id === params?.shippingAddressId ? '#848484' : '#202020'}]}>선택</Text>
+                        <Text style={[styles.editText, {color: address?.shipping_address_id === selectedAddressId ? '#848484' : '#202020'}]}>선택</Text>
                       </TouchableOpacity>
                     )}
                     </View>
                   </View>
                 </View>
-              ))}
+              )})}
             </View>
           ) : (
             <View style={styles.emptyContainer}>
@@ -143,6 +167,8 @@ const ShoppingAddress = ({ navigation, route }) => {
       <CommonPopup
         visible={showDeletePopup}
         message="정말 삭제하시겠습니까?"
+        backgroundColor="#FFFFFF"
+        textColor="#202020"
         type="warning"
         confirmText="확인"
         cancelText="취소"

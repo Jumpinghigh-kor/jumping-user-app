@@ -313,7 +313,7 @@ const AttendanceRecord = () => {
         const month = selectedDate.getMonth() + 1;
         const day = item.date.getDate();
         const formattedDate = `${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}`;
-        console.log('formattedDate', formattedDate);
+
         setClickedDate(formattedDate);
         setShowAttendancePopup(true);
       }

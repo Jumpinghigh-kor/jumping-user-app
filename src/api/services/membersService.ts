@@ -16,6 +16,10 @@ export interface MemberInfo {
   total_point: number;
   mem_checkin_number: string;
   coupon_cnt: number;
+  cart_cnt: number;
+  mem_role: string;
+  push_yn: string;
+  push_token: string;
   // 필요한 다른 회원 정보 필드 추가
 }
 
@@ -82,6 +86,18 @@ export const completeSignup = async (memId: string, nickname: string) => {
     const response = await axiosInstance.post('/members/completeSignup', {
       mem_id: memId,
       mem_nickname: nickname,
+    });
+    return response.data;
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+// 회원 탈퇴 API
+export const updateMemberWithdrawal = async (memId: string) => {
+  try {
+    const response = await axiosInstance.post('/members/updateMemberWithdrawal', {
+      mem_id: memId,
     });
     return response.data;
   } catch (error: any) {

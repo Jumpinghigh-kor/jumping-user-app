@@ -470,8 +470,7 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
   const handleSave = async () => {
     // 유효성 검사 최적화
     const { jumping, other } = formData;
-    console.log('jumping', jumping);
-    console.log('other', other);
+
     if (!other.exerciseType && !jumping.intensityLevel) {
       setErrMsg({ msg: '점핑 피트니스 또는 기타 운동을 선택해주세요', type: 'exerciseType' });
       return;
@@ -551,7 +550,6 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
         showPopup('error', response.message || '운동 정보 저장에 실패했습니다');
       }
     } catch (error) {
-      console.log(error);
       setIsLoading(false);
       showPopup('error', '운동 정보 저장 중 오류가 발생했습니다');
     }

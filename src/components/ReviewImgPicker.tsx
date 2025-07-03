@@ -9,6 +9,7 @@ import {
   Platform,
   PermissionsAndroid,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { scale } from '../utils/responsive';
 import IMAGES from '../utils/images';
@@ -21,27 +22,34 @@ interface ReviewImgPickerProps {
   maxImages?: number;
   onImagesSelected: (images: Asset[]) => void;
   onFileIdsChange?: (fileIds: number[], filePaths?: string[]) => void;
+  onDeletedReviewImgIds?: (deletedIds: number[]) => void;
   memberId?: string | number;
   reviewAppId?: number;
   disabled?: boolean;
   hideTitle?: boolean;
+  route?: string;
 }
 
 const ReviewImgPicker: React.FC<ReviewImgPickerProps> = ({
   maxImages = 3,
   onImagesSelected,
   onFileIdsChange,
+  onDeletedReviewImgIds,
   memberId,
   reviewAppId,
   disabled = false,
   hideTitle = false,
+  route = 'ShoppingReview',
 }) => {
   const [selectedImages, setSelectedImages] = useState<Asset[]>([]);
   const [fileIds, setFileIds] = useState<number[]>([]);
   const [filePaths, setFilePaths] = useState<string[]>([]);
+  const [existingReviewImgIds, setExistingReviewImgIds] = useState<number[]>([]);
+  const [deletedReviewImgIds, setDeletedReviewImgIds] = useState<number[]>([]);
   const [showBottomModal, setShowBottomModal] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [loadingIndex, setLoadingIndex] = useState<number | null>(null);
 
   // 수정 모드일 때 기존 이미지 불러오기
   useEffect(() => {
@@ -79,6 +87,7 @@ const ReviewImgPicker: React.FC<ReviewImgPickerProps> = ({
         
         setSelectedImages(existingImages);
         onImagesSelected(existingImages);
+        setExistingReviewImgIds(response.data.map((img: any) => img.review_app_img_id));
       }
     } catch (error) {
       
@@ -193,16 +202,23 @@ const ReviewImgPicker: React.FC<ReviewImgPickerProps> = ({
     }
 
     try {
+      setLoadingIndex(index);
       const result = await launchImageLibrary({
         mediaType: 'photo',
-        quality: 0.8,
-        maxWidth: 500,
-        maxHeight: 500,
+        quality: 1.0,
+        maxWidth: 2000,
+        maxHeight: 2000,
         includeBase64: true,
       });
 
       if (result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
+        
+        // 파일 크기 체크 (10MB = 10 * 1024 * 1024 bytes)
+        if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
+          Alert.alert('파일 크기 초과', '파일 크기는 10MB 이하만 업로드 가능합니다.');
+          return;
+        }
         
         // Supabase에 업로드
         if (asset.base64 && memberId) {
@@ -217,12 +233,24 @@ const ReviewImgPicker: React.FC<ReviewImgPickerProps> = ({
               });
               
               if (response.success && response?.file_id) {
-                const newFileIds = [...fileIds, response.file_id];
-                const newFilePaths = [...filePaths, `review/${fileName}`];
+                const newFileIds = [...fileIds];
+                const newFilePaths = [...filePaths];
+                
+                // 배열 길이가 부족하면 채우기
+                while (newFileIds.length <= index) {
+                  newFileIds.push(null);
+                }
+                while (newFilePaths.length <= index) {
+                  newFilePaths.push(null);
+                }
+                
+                newFileIds[index] = response.file_id;
+                newFilePaths[index] = `review/${fileName}`;
+                
                 setFileIds(newFileIds);
                 setFilePaths(newFilePaths);
                 if (onFileIdsChange) {
-                  onFileIdsChange(newFileIds, newFilePaths);
+                  onFileIdsChange(newFileIds.filter(id => id !== null), newFilePaths.filter(path => path !== null));
                 }
               }
             } catch (error) {
@@ -241,11 +269,36 @@ const ReviewImgPicker: React.FC<ReviewImgPickerProps> = ({
       }
     } catch (error) {
       
+    } finally {
+      setLoadingIndex(null);
     }
   };
 
   const updateImage = (index: number, asset: Asset) => {
     const newImages = [...selectedImages];
+    
+    // 기존 이미지가 있고 새 이미지로 교체하는 경우
+    if (selectedImages[index] && existingReviewImgIds[index]) {
+      const existingImgId = existingReviewImgIds[index];
+      const newDeletedIds = [...deletedReviewImgIds, existingImgId];
+      setDeletedReviewImgIds(newDeletedIds);
+      if (onDeletedReviewImgIds) {
+        onDeletedReviewImgIds(newDeletedIds);
+      }
+      
+      // existingReviewImgIds에서 해당 인덱스 제거 (새 이미지 file_id가 fileIds에 담기도록)
+      const newExistingIds = [...existingReviewImgIds];
+      newExistingIds[index] = null;
+      setExistingReviewImgIds(newExistingIds);
+    }
+    
+    // 새로 업로드한 이미지가 있고 교체하는 경우 기존 fileId 제거
+    if (selectedImages[index] && fileIds[index] && !existingReviewImgIds[index]) {
+      const newFileIds = [...fileIds];
+      newFileIds[index] = null;
+      setFileIds(newFileIds);
+    }
+    
     // 배열 길이가 부족하면 채우기
     while (newImages.length <= index) {
       newImages.push(null);
@@ -258,6 +311,16 @@ const ReviewImgPicker: React.FC<ReviewImgPickerProps> = ({
   const removeImage = async (index: number) => {
     const imageToRemove = selectedImages[index];
     const fileIdToRemove = fileIds[index];
+    const existingImgId = existingReviewImgIds[index];
+    
+    // 기존 리뷰 이미지인 경우 삭제 목록에 추가
+    if (existingImgId) {
+      const newDeletedIds = [...deletedReviewImgIds, existingImgId];
+      setDeletedReviewImgIds(newDeletedIds);
+      if (onDeletedReviewImgIds) {
+        onDeletedReviewImgIds(newDeletedIds);
+      }
+    }
     
     // deleteCommonFile API 호출
     if (fileIdToRemove && memberId) {
@@ -272,20 +335,20 @@ const ReviewImgPicker: React.FC<ReviewImgPickerProps> = ({
     }
     
     // Supabase에서 파일 삭제
-    if (imageToRemove?.fileName) {
-      try {
-        const filePath = `review/${imageToRemove.fileName}`;
-        const { error } = await supabase.storage
-          .from('review')
-          .remove([filePath]);
+    // if (imageToRemove?.fileName) {
+    //   try {
+    //     const filePath = `review/${imageToRemove.fileName}`;
+    //     const { error } = await supabase.storage
+    //       .from('review')
+    //       .remove([filePath]);
         
-        if (error) {
-          console.error('Supabase 파일 삭제 실패:', error);
-        }
-      } catch (error) {
-        console.error('파일 삭제 중 오류:', error);
-      }
-    }
+    //     if (error) {
+    //       console.error('Supabase 파일 삭제 실패:', error);
+    //     }
+    //   } catch (error) {
+    //     console.error('파일 삭제 중 오류:', error);
+    //   }
+    // }
     
     const newImages = [...selectedImages];
     newImages[index] = null;
@@ -295,50 +358,81 @@ const ReviewImgPicker: React.FC<ReviewImgPickerProps> = ({
     // file_id도 함께 제거
     const newFileIds = [...fileIds];
     if (newFileIds[index] !== undefined) {
-      newFileIds.splice(index, 1);
+      newFileIds[index] = null;
       setFileIds(newFileIds);
       if (onFileIdsChange) {
-        onFileIdsChange(newFileIds, filePaths.filter((_, i) => i !== index));
+        onFileIdsChange(newFileIds.filter(id => id !== null), filePaths.filter((_, i) => newFileIds[i] !== null));
       }
+    }
+    
+    // existingReviewImgIds에서도 제거
+    const newExistingIds = [...existingReviewImgIds];
+    if (newExistingIds[index] !== undefined) {
+      newExistingIds[index] = null;
+      setExistingReviewImgIds(newExistingIds);
     }
   };
 
   // 표시할 이미지 박스 생성
   const renderImageBoxes = () => {
     const boxes = [];
-    for (let i = 0; i < maxImages; i++) {
-      boxes.push(
-        <TouchableOpacity 
-          key={i}
-          style={styles.photoBox}
-          onPress={() => handleImagePicker(i)}
-          disabled={disabled}
-        >
-          {selectedImages[i]?.uri ? (
-            <Image source={{ uri: selectedImages[i].uri }} style={styles.previewImage} />
-          ) : (
-            <>
-              <Image source={IMAGES.icons.imgUploadGray} style={styles.uploadIcon} />
-              <Text style={styles.uploadText}>사진 업로드</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      );
+    
+    // ShoppingDetail에서는 이미지가 있는 만큼만 박스 생성
+    if (route === 'ShoppingDetail') {
+      const imagesWithContent = selectedImages.filter(img => img && img.uri);
+      for (let i = 0; i < imagesWithContent.length; i++) {
+        boxes.push(
+          <TouchableOpacity 
+            key={i}
+            style={styles.photoBox}
+            onPress={() => handleImagePicker(i)}
+            disabled={disabled || loadingIndex === i}
+          >
+            {loadingIndex === i ? (
+              <ActivityIndicator size="small" color="#43B546" />
+            ) : (
+              <Image source={{ uri: imagesWithContent[i].uri }} style={styles.previewImage} />
+            )}
+          </TouchableOpacity>
+        );
+      }
+    } else {
+      // 다른 화면에서는 기존 로직대로 maxImages만큼 박스 생성
+      for (let i = 0; i < maxImages; i++) {
+        boxes.push(
+          <TouchableOpacity 
+            key={i}
+            style={styles.photoBox}
+            onPress={() => handleImagePicker(i)}
+            disabled={disabled || loadingIndex === i}
+          >
+            {loadingIndex === i ? (
+              <ActivityIndicator size="small" color="#43B546" />
+            ) : selectedImages[i]?.uri ? (
+              <Image source={{ uri: selectedImages[i].uri }} style={styles.previewImage} />
+            ) : (
+              <>
+                <Image source={IMAGES.icons.imgUploadGray} style={styles.uploadIcon} />
+                <Text style={styles.uploadText}>사진 업로드</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        );
+      }
     }
+    
     return boxes;
   };
-
+  
   return (
     <>
-      {selectedImages.length > 0 && (
-        <View style={styles.container}>
-          {!hideTitle && <Text style={styles.sectionTitle}>사진 업로드</Text>}
-          <View style={styles.photoUploadContainer}>
-            {renderImageBoxes()}
-          </View>
+      <View style={styles.container}>
+        {!hideTitle && <Text style={styles.sectionTitle}>사진 업로드</Text>}
+        <View style={styles.photoUploadContainer}>
+          {renderImageBoxes()}
         </View>
-      )}
-
+      </View>
+    
       <Modal
         visible={showBottomModal}
         transparent
@@ -377,7 +471,7 @@ const ReviewImgPicker: React.FC<ReviewImgPickerProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: scale(30),
+    marginBottom: scale(10),
   },
   sectionTitle: {
     fontSize: scale(16),

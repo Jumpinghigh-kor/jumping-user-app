@@ -9,7 +9,7 @@ import {
   FlatList,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { scale } from '../utils/responsive';
 import IMAGES from '../utils/images';
@@ -18,7 +18,7 @@ import { getCompleteMemberReviewAppList, Review } from '../api/services/memberRe
 import { getMemberOrderAppList, MemberOrderAppItem } from '../api/services/memberOrderAppService';
 import { useAppSelector } from '../store/hooks';
 import ShoppingThumbnailImg from '../components/ShoppingThumbnailImg';
-import { commonStyle, layoutStyle } from '../styles/common';
+import { commonStyle, layoutStyle } from '../assets/styles/common';
 
 // 네비게이션 타입 정의
 type RootStackParamList = {
@@ -43,6 +43,7 @@ type ShoppingNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const ShoppingReview: React.FC = () => {
   const navigation = useNavigation<ShoppingNavigationProp>();
+  const route = useRoute();
   const [activeTab, setActiveTab] = useState<'write' | 'list'>('write');
   const [memberReviewAppList, setMemberReviewAppList] = useState<Review[]>([]);
   const [memberOrderAppList, setMemberOrderAppList] = useState<MemberOrderAppItem[]>([]);
@@ -52,15 +53,18 @@ const ShoppingReview: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
-      if (memberInfo?.mem_id) {
-        // 초기 로드 시 리뷰 목록 가져오기
-        fetchMemberReviewAppList();
-        
-        if (activeTab === 'write') {
-          fetchMemberOrderAppList();
-        }
+      fetchMemberReviewAppList();
+      
+      if (activeTab === 'write') {
+        fetchMemberOrderAppList();
       }
-    }, [activeTab])
+      
+      // refresh 파라미터가 있으면 파라미터 초기화
+      const params = route.params as { refresh?: boolean } | undefined;
+      if (params?.refresh) {
+        navigation.setParams({ refresh: undefined });
+      }
+    }, [activeTab, (route.params as { refresh?: boolean } | undefined)?.refresh])
   );
 
   useEffect(() => {
@@ -109,15 +113,6 @@ const ShoppingReview: React.FC = () => {
       setLoading(false);
     }
   };
-
-  const homeIcon = (
-    <TouchableOpacity 
-      style={styles.homeBtn}
-      onPress={() => navigation.navigate('ShoppingHome')}
-    >
-      <Image source={IMAGES.icons.homeStrokeBlack} style={styles.homeIcon} />
-    </TouchableOpacity>
-  );
   
   return (
     <>
@@ -126,7 +121,9 @@ const ShoppingReview: React.FC = () => {
         titleColor="#202020"
         backIcon={IMAGES.icons.arrowLeftBlack}
         backgroundColor="#FFFFFF"
-        rightIcon={homeIcon}
+        onBackPress={() => {
+          navigation.navigate('ShoppingMypage');
+        }}
       />
       <View style={styles.container}>
         <View style={styles.tabContainer}>
@@ -234,7 +231,8 @@ const ShoppingReview: React.FC = () => {
                           </View>
                         </View>
                         <TouchableOpacity 
-                          style={styles.editBtn}
+                          style={[styles.editBtn, item.admin_del_yn === 'Y' && {backgroundColor: '#848484'}]}
+                          disabled={item.admin_del_yn === 'Y'}
                           onPress={() => {
                             navigation.navigate('ShoppingReviewModify', {
                               ...item,
@@ -247,6 +245,9 @@ const ShoppingReview: React.FC = () => {
                       <View style={{marginTop: scale(10)}}>
                         <Text style={styles.reviewTitle}>{item.review_title}</Text>
                         <Text style={styles.reviewContent}>{item.content}</Text>
+                        {item.admin_del_yn === 'Y' && (
+                          <Text style={styles.adminText}>{item.review_img_count}관리자에 의해 삭제된 댓글입니다</Text>
+                        )}
                       </View>
                     </View>
                   )}
@@ -410,6 +411,11 @@ const styles = StyleSheet.create({
     color: '#43B546',
     fontWeight: '600',
   },
+  adminText: {
+    fontSize: scale(12),
+    color: '#848484',
+    marginTop: scale(10),
+  }
 });
 
 export default ShoppingReview;

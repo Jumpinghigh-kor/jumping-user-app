@@ -5,7 +5,7 @@ import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import IMAGES from '../utils/images';
 import {useAuth} from '../hooks/useAuth';
 import {scale} from '../utils/responsive';
-import {privacyPolicyText, termsOfServiceText} from '../utils/termsData';
+import {privacyPolicyText, termsOfServiceText} from '../constants/termsData';
 import {getUpdateLogAppInfo, UpdateLogInfo} from '../api/services/updateLogAppService';
 import { formatDateYYYYMMDD } from '../utils/commonFunction';
 import ProfileImagePicker from '../components/ProfileImagePicker';
@@ -52,7 +52,7 @@ const MyPage = () => {
       }
       
       // 문의 목록 가져오기
-      const inquiriesResponse = await getInquiryList();
+      const inquiriesResponse = await getInquiryList({mem_id: parseInt(memberInfo.mem_id, 10)});
       let hasUnreadInquiry = false;
       if (inquiriesResponse.success && inquiriesResponse.data) {
         hasUnreadInquiry = inquiriesResponse.data.some(inquiry => 
@@ -137,7 +137,7 @@ const MyPage = () => {
             onImageUpdate={loadProfileImage}
           />
           <View style={{marginVertical: scale(10)}}>
-            <Text style={styles.nickname}>{memberInfo?.mem_nickname}</Text>
+            <Text style={styles.nickname}>{memberInfo?.mem_nickname}{ memberInfo?.mem_role === 'ADMIN' ? '(관리자)' : memberInfo?.mem_role === 'FRANCHISEE' ? '(점주)' : '(회원)'}</Text>
             <Text style={styles.centerName}>{memberInfo?.center_name}</Text>
           </View>
           <Text style={styles.emailId}>회원번호 : {memberInfo?.mem_checkin_number}</Text>
@@ -214,7 +214,19 @@ const MyPage = () => {
               style={styles.menuArrow} 
             />
           </TouchableOpacity>
-          
+
+          <View style={styles.menuItem}>
+            <Text style={styles.menuText}>푸시 알람 받기</Text>
+            <Switch
+              trackColor={{ false: '#767577', true: '#43B546' }}
+              thumbColor={isPushEnabled ? '#FFFFFF' : '#f4f3f4'}
+              ios_backgroundColor="#3e3e3e"
+              onValueChange={savePushSetting}
+              value={isPushEnabled}
+              style={styles.switchButton}
+            />
+          </View>
+
           <TouchableOpacity 
             style={styles.menuItem}
             onPress={() => {
@@ -231,18 +243,6 @@ const MyPage = () => {
               )}
             </View>
           </TouchableOpacity>
-          
-          <View style={styles.menuItem}>
-            <Text style={styles.menuText}>푸시 알람 받기</Text>
-            <Switch
-              trackColor={{ false: '#767577', true: '#43B546' }}
-              thumbColor={isPushEnabled ? '#FFFFFF' : '#f4f3f4'}
-              ios_backgroundColor="#3e3e3e"
-              onValueChange={savePushSetting}
-              value={isPushEnabled}
-              style={styles.switchButton}
-            />
-          </View>
         </View>
       </ScrollView>
 
@@ -343,7 +343,20 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   switchButton: {
-    transform: [{scaleX: 0.8}, {scaleY: 0.8}],
+    transform: Platform.OS === 'ios' ? [{scaleX: 0.8}, {scaleY: 0.8}] : [{scaleX: 1}, {scaleY: 1}],
+  },
+  settingsModalContent: {
+    padding: scale(10),
+  },
+  settingsMenuItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: scale(10),
+  },
+  settingsMenuText: {
+    color: '#ffffff',
+    fontSize: scale(12),
   },
 });
 

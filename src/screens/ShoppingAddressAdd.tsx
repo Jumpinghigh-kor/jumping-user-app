@@ -161,7 +161,8 @@ const ShoppingAddressAdd = ({ navigation, route }) => {
         address_detail: detailAddress,
         zip_code: zipCode,
         enter_way: enterWay,
-        enter_memo: enterMemo
+        enter_memo: enterMemo,
+        select_yn: route.params?.screen === 'ShoppingPayment' ? 'Y' : 'N' as 'Y' | 'N'
       };
       
       let response;
@@ -445,6 +446,8 @@ const ShoppingAddressAdd = ({ navigation, route }) => {
       <CommonPopup
         visible={showPopup}
         message={popupMessage}
+        backgroundColor='#FFFFFF'
+        textColor='#202020'
         type={isWarning ? 'warning' : 'default'}
         confirmText="확인"
         onConfirm={() => {

@@ -14,6 +14,7 @@ import { getBannerAppDetail } from '../api/services/bannerAppService';
 import { supabase } from '../utils/supabaseClient';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
 
 interface ShopBannerImgPickerProps {
   style?: object;
@@ -25,65 +26,27 @@ interface BannerItem {
   banner_link_url: string;
   file_path?: string;
   file_name?: string;
+  banner_type?: string;
+  navigation_path?: string;
 }
 
 const ShopBannerImgPicker: React.FC<ShopBannerImgPickerProps> = ({ style }) => {
   const [loading, setLoading] = useState(false);
   const [banners, setBanners] = useState<BannerItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [defaultBanners, setDefaultBanners] = useState<BannerItem[]>([]);
-
-  // 기본 배너 URL 가져오기
-  useEffect(() => {
-    try {
-      // 첫 번째 기본 배너
-      const { data: data1 } = supabase.storage
-        .from('banner')
-        .getPublicUrl('banner/shopping_banner_basic_001.jpg');
-      
-      // // 두 번째 기본 배너
-      // const { data: data2 } = supabase.storage
-      //   .from('banner')
-      //   .getPublicUrl('banner/shopping_banner_basic_002.jpg');
-      
-      const defaultBannerList: BannerItem[] = [];
-      
-      if (data1 && data1.publicUrl) {
-        defaultBannerList.push({
-          banner_app_id: 9001,
-          banner_img_url: data1.publicUrl,
-          banner_link_url: ''
-        });
-      }
-      
-      // if (data2 && data2.publicUrl) {
-      //   defaultBannerList.push({
-      //     banner_app_id: 9002,
-      //     banner_img_url: data2.publicUrl,
-      //     banner_link_url: ''
-      //   });
-      // }
-      
-      setDefaultBanners(defaultBannerList);
-    } catch (err) {
-    }
-  }, []);
-
+  const navigation = useNavigation();
   // 자동 슬라이드 기능
   useEffect(() => {
-    // 표시할 배너가 있는 경우 (API 배너 또는 기본 배너)
-    const displayBanners = banners.length > 0 ? banners : defaultBanners;
-    
-    if (displayBanners.length > 1) {
+    if (banners.length > 1) {
       const slideTimer = setInterval(() => {
         setCurrentIndex(prevIndex => 
-          prevIndex === displayBanners.length - 1 ? 0 : prevIndex + 1
+          prevIndex === banners.length - 1 ? 0 : prevIndex + 1
         );
       }, 5000); // 5초마다 슬라이드
       
       return () => clearInterval(slideTimer);
     }
-  }, [banners.length, defaultBanners.length]);
+  }, [banners.length]);
 
   // 배너 이미지 로드
   useEffect(() => {
@@ -104,7 +67,6 @@ const ShopBannerImgPicker: React.FC<ShopBannerImgPickerProps> = ({ style }) => {
         });
         
         if (response.success && response.data) {
-          
           // URL 처리하여 배너 목록 설정
           const processedBanners = response.data.map(banner => {
             // file_path와 file_name으로 이미지 경로 생성
@@ -146,7 +108,9 @@ const ShopBannerImgPicker: React.FC<ShopBannerImgPickerProps> = ({ style }) => {
             
             const processedBanner = {
               ...banner,
-              banner_img_url: imageUrl
+              banner_img_url: imageUrl,
+              banner_type: (banner as any).banner_type || '',
+              navigation_path: (banner as any).navigation_path || ''
             };
             
             return processedBanner;
@@ -169,10 +133,18 @@ const ShopBannerImgPicker: React.FC<ShopBannerImgPickerProps> = ({ style }) => {
 
   // 배너 클릭 핸들러
   const handleBannerPress = (banner: BannerItem) => {
-    if (banner.banner_link_url) {
-      Linking.openURL(banner.banner_link_url).catch(err => 
+    if(banner.banner_type === "EVENT"){
+      (navigation as any).navigate('EventApp', {
+        item: banner
+      });
+    }
+    
+    if(banner.navigation_path && banner.navigation_path.includes('https://')){
+      Linking.openURL(banner.navigation_path).catch(err => 
         console.log('배너 링크를 열 수 없습니다:', err)
       );
+    } else if(banner?.navigation_path){
+      navigation.navigate(banner.navigation_path as never);
     }
   };
 
@@ -191,7 +163,7 @@ const ShopBannerImgPicker: React.FC<ShopBannerImgPickerProps> = ({ style }) => {
         onPress={goToNextBanner}
       >
         <Text style={styles.pageIndicatorText}>
-          {currentIndex + 1} / {totalBanners} 
+          {currentIndex + 1} / {totalBanners}
         </Text>
         <Image source={IMAGES.icons.triangleRightWhite} style={styles.arrowIcon} />
       </TouchableOpacity>
@@ -222,18 +194,6 @@ const ShopBannerImgPicker: React.FC<ShopBannerImgPickerProps> = ({ style }) => {
             )}
           </TouchableOpacity>
           {renderPageIndicator(banners.length)}
-        </View>
-      ) : defaultBanners.length > 0 ? (
-        // 배너가 없을 때 기본 이미지 슬라이드를 보여줌
-        <View>
-          <TouchableOpacity>
-            <Image 
-              source={{ uri: defaultBanners[currentIndex].banner_img_url }}
-              style={styles.shopBannerImage}
-              resizeMode="cover"
-            />
-          </TouchableOpacity>
-          {renderPageIndicator(defaultBanners.length)}
         </View>
       ) : null}
     </View>
@@ -288,8 +248,7 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     width: '100%',
-    height: scale(150),
-    backgroundColor: '#333333',
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -13,25 +13,28 @@ import { scale } from '../utils/responsive';
 import IMAGES from '../utils/images';
 import CommonHeader from '../components/CommonHeader';
 import ShoppingThumbnailImg from '../components/ShoppingThumbnailImg';
-import { layoutStyle, commonStyle } from '../styles/common';
+import { layoutStyle, commonStyle } from '../assets/styles/common';
 import { TextInput } from 'react-native-gesture-handler';
 import { useAppSelector } from '../store/hooks';
-import { getTargetMemberShippingAddress, updateDeliveryRequest } from '../api/services/memberShippingAddressService';
+import { getTargetMemberShippingAddress, updateDeliveryRequest, updateSelectYn } from '../api/services/memberShippingAddressService';
 import {getCommonCodeList} from '../api/services/commonCodeService';
+import { getMemberCouponAppList } from '../api/services/memberCouponApp';
 import CommonPopup from '../components/CommonPopup';
 import { usePopup } from '../hooks/usePopup';
 import { toggleCheckbox } from '../utils/commonFunction';
 import Portone from '../components/Portone';
 import { verifyPayment } from '../api/services/portoneService';
+import { isCJRemoteArea, CJ_REMOTE_AREA_SHIPPING_FEE } from '../constants/postCodeData';
 
 type ShoppingPaymentRouteParams = {
   selectedItems: Array<any>;
+  shippingAddressId?: number;
 };
 
 const ShoppingPayment = () => {
   const route = useRoute<RouteProp<Record<string, ShoppingPaymentRouteParams>, string>>();
   const navigation = useNavigation();
-  const { selectedItems = [] } = route.params || {};
+  const { selectedItems = [], shippingAddressId } = route.params || {};
   const [isOpen, setIsOpen] = useState(true);
   const [shippingAddresses, setShippingAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
@@ -49,7 +52,30 @@ const ShoppingPayment = () => {
   const [isAgreedToPayment, setIsAgreedToPayment] = useState(false);
   const [showPortone, setShowPortone] = useState(false);
   const [pointInput, setPointInput] = useState('');
+  const [couponList, setCouponList] = useState([]);
+  const [selectedCoupon, setSelectedCoupon] = useState(null);
+  const [isOpenCoupon, setIsOpenCoupon] = useState(false);
   
+  // 뒤로가기 처리 함수
+  const handleBackPress = async () => {
+    // 선택된 배송지가 있으면 updateSelectYn 호출
+    if (selectedAddress) {
+      try {
+        await updateSelectYn({
+          mem_id: memberInfo?.mem_id,
+          shipping_address_id: selectedAddress.shipping_address_id,
+          select_yn: 'N'
+        });
+        
+      } catch (error) {
+        console.error('배송지 선택 해제 실패:', error);
+      }
+    } else {
+    }
+    navigation.goBack();
+  };
+  
+  // 배송지 조회
   const fetchShippingAddresses = async () => {
     try {
       const response = await getTargetMemberShippingAddress({
@@ -73,6 +99,7 @@ const ShoppingPayment = () => {
     }
   };
   
+  // 배송 요청 유형 조회
   const fetchDeliveryRequestTypes = async () => {
     try {
       const response = await getCommonCodeList({ group_code: 'REQUEST_SHIPPING_TYPE' });
@@ -84,18 +111,65 @@ const ShoppingPayment = () => {
     }
   };
 
+  // 쿠폰 목록 조회
+  const fetchCouponList = async () => {
+    try {
+      const response = await getMemberCouponAppList({
+        mem_id: memberInfo?.mem_id,
+        use_yn: 'N',
+        date: 'Y',
+      });
+      if (response.success && response.data) {
+        setCouponList(response.data);
+      }
+    } catch (error) {
+      console.error('쿠폰 목록 조회 실패:', error);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       fetchShippingAddresses();
       fetchDeliveryRequestTypes();
+      fetchCouponList();
     }, [])
   );
 
+  // 총 주문 금액 계산
   const getTotalAmount = () => {
     return selectedItems.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
-  // Update delivery request
+  // 최종 결제 금액 계산 (쿠폰, 포인트 할인 적용)
+  const getFinalPaymentAmount = () => {
+    let totalAmount = getTotalAmount(); // 상품금액
+    
+    // 쿠폰 할인 적용 (상품금액에만)
+    if (selectedCoupon) {
+      if (selectedCoupon.discount_type === 'PERCENT') {
+        totalAmount = totalAmount - (totalAmount * selectedCoupon.discount_amount / 100);
+      } else {
+        totalAmount = totalAmount - selectedCoupon.discount_amount;
+      }
+    }
+    
+    // 배송비 추가 (10만원 이상 무료배송)
+    const shippingFee = getTotalAmount() >= parseInt(selectedItems[0]?.free_shipping_amount?.toString().replace(/,/g, '') || '0') ? 0 : parseInt(selectedItems[0]?.delivery_fee?.toString().replace(/,/g, '') || '0');
+    totalAmount = totalAmount + shippingFee;
+    
+    // 포인트 할인 적용
+    if (pointInput) {
+      totalAmount = totalAmount - parseInt(pointInput);
+    }
+
+    if (selectedAddress?.zip_code && isCJRemoteArea(selectedAddress.zip_code)) {
+      totalAmount = totalAmount + CJ_REMOTE_AREA_SHIPPING_FEE;
+    }
+    
+    return Math.max(0, totalAmount); // 음수 방지
+  };
+
+  // 배송지 변경 함수
   const handleUpdateDeliveryRequest = async () => {
     if (!selectedAddress) {
       showWarningPopup('배송지를 먼저 선택해주세요');
@@ -103,13 +177,12 @@ const ShoppingPayment = () => {
     }
     
     try {
-      // If already saved, uncheck and send empty string (not null)
       if (saveForNextTime) {
         try {
           const response = await updateDeliveryRequest({
             shipping_address_id: selectedAddress.shipping_address_id,
             mem_id: memberInfo?.mem_id,
-            delivery_request: '' // Use empty string instead of null
+            delivery_request: ''
           });
           
           if (response.success) {
@@ -145,6 +218,7 @@ const ShoppingPayment = () => {
     }
   };
 
+  // 결제하기
   const handlePayment = () => {
     if (!isAgreedToOrder || !isAgreedToPrivacy || !isAgreedToThirdParty || !isAgreedToPayment) {
       showWarningPopup('모든 필수 약관에 동의해주세요');
@@ -159,8 +233,9 @@ const ShoppingPayment = () => {
     setShowPortone(true);
   };
 
+  // 포트원 결제
   const paymentData = {
-    amount: getTotalAmount(),
+    amount: getFinalPaymentAmount(),
     currency: 'KRW',
     merchantOrderId: `jid_${Date.now()}`,
     customerName: memberInfo?.mem_name || '',
@@ -175,7 +250,6 @@ const ShoppingPayment = () => {
         visible={showPortone}
         paymentData={paymentData}
         onPaymentSuccess={(result) => {
-          console.log('결제 성공:', result);
           
           // 서버에서 결제 검증
           verifyPayment({ imp_uid: result.imp_uid })
@@ -202,7 +276,7 @@ const ShoppingPayment = () => {
       />
     );
   }
-  
+  console.log(selectedItems);
   return (
     <>
       <CommonHeader 
@@ -210,6 +284,7 @@ const ShoppingPayment = () => {
         titleColor="#202020"
         backIcon={IMAGES.icons.arrowLeftBlack}
         backgroundColor="#FFFFFF"
+        onBackPress={handleBackPress}
       />
       <View style={styles.container}>
         <ScrollView
@@ -229,7 +304,7 @@ const ShoppingPayment = () => {
                   });
                 }}
               >
-                <Text style={styles.addressChangeBtnText}>배송지 변경</Text>
+                <Text style={styles.addressChangeBtnText}>배송지 선택</Text>
               </TouchableOpacity>
             </View>
             {selectedAddress ? (
@@ -261,13 +336,13 @@ const ShoppingPayment = () => {
                     <View style={styles.dropdownContainer}>
                       {deliveryRequestTypes.map((item, index) => (
                         <TouchableOpacity 
-                        key={item.common_code}
-                        style={[
+                          key={item.common_code}
+                          style={[
                           layoutStyle.rowStart, 
                           { 
                             padding: scale(10),
                             borderTopWidth: index > 0 ? 1 : 0,
-                            borderTopColor: '#EEEEEE',
+                            borderTopColor: '#848484',
                             width: '100%',
                             backgroundColor: selectedRequestType?.common_code === item.common_code ? '#F5F5F5' : '#FFFFFF'
                           }
@@ -370,7 +445,9 @@ const ShoppingPayment = () => {
               <TouchableOpacity
                 style={styles.addressAddBtn}
                 // @ts-ignore
-                onPress={() => navigation.navigate('ShoppingAddressAdd')}
+                onPress={() => navigation.navigate('ShoppingAddressAdd', {
+                  screen: 'ShoppingPayment'
+                })}
               >
                 <Text style={styles.addressBtnText}>배송지 추가</Text>
               </TouchableOpacity>
@@ -420,12 +497,76 @@ const ShoppingPayment = () => {
             <Text style={styles.discountTitle}>할인</Text>
             <View style={[layoutStyle.rowBetween, commonStyle.mt20]}>
               <Text style={styles.discountText}>쿠폰</Text>
-              <TouchableOpacity
-                style={styles.couponBtn}
-              >
-                <Text style={styles.optionText}>쿠폰 입력</Text>
-                <Image source={IMAGES.icons.arrowDownGray} style={styles.arrowDown} />
-              </TouchableOpacity>
+              <View style={[styles.selectContainer, {flex: 1, marginLeft: scale(30)}]}>
+                <TouchableOpacity
+                  style={[styles.requestContainer, {paddingHorizontal: scale(12)}]}
+                  onPress={() => setIsOpenCoupon(!isOpenCoupon)}
+                >
+                  <Text numberOfLines={1} style={[styles.requestText, {marginRight: scale(10)}]}>
+                    {selectedCoupon ? `${selectedCoupon.discount_amount}${selectedCoupon.discount_type === 'PERCENT' ? '%' : '원'} 할인 ${selectedCoupon.description}` : '쿠폰을 선택해주세요'}
+                  </Text>
+                  <Image source={isOpenCoupon ? IMAGES.icons.arrowUpGray : IMAGES.icons.arrowDownGray} style={{width: scale(14), height: scale(14), resizeMode: 'contain'}} />
+                </TouchableOpacity>
+                
+                {isOpenCoupon && (
+                  <View style={[styles.dropdownContainer]}>
+                    <TouchableOpacity
+                      style={[
+                        layoutStyle.rowStart, 
+                        { 
+                          padding: scale(10),
+                          width: '100%',
+                        }
+                      ]}
+                      onPress={() => {
+                        setSelectedCoupon(null);
+                        setIsOpenCoupon(false);
+                      }}
+                    >
+                      <Text style={[styles.requestText, {color: '#D9D9D9'}]}>선택안함</Text>
+                    </TouchableOpacity>
+                    {couponList.map((item, index) => {
+                      const totalAmount = getTotalAmount();
+                      const minOrderAmount = item.min_order_amount || 0;
+                      const isUsable = totalAmount >= minOrderAmount;
+                      
+                      return (
+                        <TouchableOpacity 
+                          key={index}
+                          style={[
+                          layoutStyle.rowStart, 
+                          { 
+                            padding: scale(10),
+                            borderTopWidth: 1,
+                            borderTopColor: '#848484',
+                            width: '100%',
+                            opacity: isUsable ? 1 : 0.5,
+                          }
+                        ]}
+                        onPress={() => {
+                          if (isUsable) {
+                            setSelectedCoupon(item);
+                            setIsOpenCoupon(false);
+                          }
+                        }}
+                        disabled={!isUsable}
+                        >
+                          <View>
+                            <Text numberOfLines={1} style={[styles.requestText]}>
+                              {item.discount_amount}{item.discount_type === 'PERCENT' ? '%' : '원'} 할인 {item.description}
+                            </Text>
+                            {!isUsable && (
+                              <Text style={[styles.requestText, {color: '#FF0000', fontSize: scale(10), marginTop: scale(2)}]}>
+                                {minOrderAmount.toLocaleString()}원 이상 사용 가능
+                              </Text>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
             </View>
             <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
               <Text style={styles.discountText}>포인트</Text>
@@ -436,12 +577,25 @@ const ShoppingPayment = () => {
                 keyboardType="numeric"
                 value={pointInput}
                 onChangeText={(text) => {
-                  // 숫자만 허용
                   const numericText = text.replace(/[^0-9]/g, '');
-                  setPointInput(numericText);
+                  
+                  if (numericText === '') {
+                    setPointInput('');
+                    return;
+                  }
+                  
+                  const inputValue = parseInt(numericText);
+                  const maxPoint = Number(memberInfo?.total_point?.toString().replace(/,/g, '')) || 0;
+                  
+                  if (inputValue <= maxPoint) {
+                    setPointInput(numericText);
+                  }
                 }}
               />
-              <TouchableOpacity style={styles.totalPointBtn}>
+              <TouchableOpacity style={styles.totalPointBtn} onPress={() => {
+                const totalPoint = memberInfo?.total_point || 0;
+                setPointInput(totalPoint.toString().replace(/,/g, ''));
+              }}>
                 <Text style={styles.totalPointText}>전액사용</Text>
               </TouchableOpacity>
             </View>
@@ -454,13 +608,37 @@ const ShoppingPayment = () => {
           
           <View style={styles.paymentContainer}>
             <Text style={styles.paymentTitle}>결제 금액</Text>
-            <View style={[layoutStyle.rowBetween, commonStyle.mt20]}>
-              <Text style={styles.amountLabel}>결제 금액</Text>
-              <Text style={styles.amountValue}>{getTotalAmount().toLocaleString()}원</Text>
-            </View>
+            {!!selectedItems[0]?.discount && (
+              <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
+                <Text style={styles.amountLabel}>상품 할인</Text>
+                <Text style={styles.deliveryFee}>{selectedItems[0]?.discount}%</Text>
+              </View>
+            )}
+            {selectedCoupon && (
+              <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
+                <Text style={styles.amountLabel}>쿠폰 할인</Text>
+                <Text style={styles.deliveryFee}>{selectedCoupon ? selectedCoupon.discount_amount : 0}{selectedCoupon?.discount_type === 'PERCENT' ? '%' : '원'}</Text>
+              </View>
+            )}
+            {pointInput && (
+              <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
+                <Text style={styles.amountLabel}>포인트</Text>
+                <Text style={styles.deliveryFee}>{parseInt(pointInput).toLocaleString()}P</Text>
+              </View>
+            )}
             <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
               <Text style={styles.amountLabel}>배송비</Text>
-              <Text style={styles.deliveryFee}>{getTotalAmount().toLocaleString()}원</Text>
+              <Text style={styles.deliveryFee}>{getTotalAmount() >= parseInt(selectedItems[0]?.free_shipping_amount?.toString().replace(/,/g, '') || '0') ? '무료' : `${selectedItems[0]?.delivery_fee}원`}</Text>
+            </View>
+            {selectedAddress?.zip_code && isCJRemoteArea(selectedAddress.zip_code) && (
+              <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
+                <Text style={styles.amountLabel}>도서산간 배송비</Text>
+                <Text style={styles.deliveryFee}>{CJ_REMOTE_AREA_SHIPPING_FEE.toLocaleString()}원</Text>
+              </View>
+            )}
+            <View style={[layoutStyle.rowBetween, commonStyle.mt20]}>
+              <Text style={styles.amountLabel}>총 결제 금액</Text>
+              <Text style={styles.amountValue}>{getFinalPaymentAmount().toLocaleString()}원</Text>
             </View>
           </View>
 
@@ -519,7 +697,7 @@ const ShoppingPayment = () => {
             disabled={!isAgreedToOrder || !isAgreedToPrivacy || !isAgreedToThirdParty || !isAgreedToPayment}
             onPress={handlePayment}
           >
-            <Text style={styles.paymentButtonText}>{getTotalAmount().toLocaleString()}원 결제하기</Text>
+            <Text style={styles.paymentButtonText}>{getFinalPaymentAmount().toLocaleString()}원 결제하기</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -527,6 +705,8 @@ const ShoppingPayment = () => {
       <CommonPopup
         visible={popup.visible}
         message={popup.message}
+        backgroundColor="#FFFFFF"
+        textColor="#202020"
         type={popup.type}
         onConfirm={popup.onConfirm}
         onCancel={popup.type === 'confirm' ? popup.onCancel : undefined}
@@ -684,6 +864,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#848484',
     borderRadius: scale(10),
+    overflow: 'hidden',
     padding: scale(10),
     marginLeft: scale(30)
   },
@@ -772,7 +953,7 @@ const styles = StyleSheet.create({
   },
   dropdownContainer: {
     borderTopWidth: 1,
-    borderTopColor: '#EEEEEE',
+    borderTopColor: '#848484',
     borderBottomLeftRadius: scale(10),
     borderBottomRightRadius: scale(10),
     overflow: 'hidden'

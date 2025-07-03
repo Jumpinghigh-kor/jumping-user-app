@@ -13,6 +13,8 @@ interface CommonHeaderProps {
   rightIcon?: React.ReactNode; // Add right icon support
   backgroundColor?: string; // Add background color prop
   onCleanup?: () => void; // Add cleanup function prop for file deletion
+  titleWidth?: string;
+  emptyAreaWidth?: string;
 }
 
 const CommonHeader: React.FC<CommonHeaderProps> = ({ 
@@ -23,7 +25,9 @@ const CommonHeader: React.FC<CommonHeaderProps> = ({
   titleColor = '#FFFFFF',
   rightIcon,
   backgroundColor = '#202020',
-  onCleanup
+  onCleanup,
+  titleWidth = '33.3%',
+  emptyAreaWidth = '33.3%'
 }) => {
   const navigation = useNavigation();
 
@@ -54,8 +58,8 @@ const CommonHeader: React.FC<CommonHeaderProps> = ({
           <Image source={backIcon} style={styles.backIcon} />
         </TouchableOpacity>
       )}
-      <Text style={[styles.title, { color: titleColor }]}>{title}</Text>
-      <TouchableOpacity style={styles.emptyArea} onPress={goHome}>
+      <Text style={[styles.title, { color: titleColor, width: titleWidth }]}>{title}</Text>
+      <TouchableOpacity style={[styles.emptyArea, { width: emptyAreaWidth }]} onPress={goHome}>
         {rightIcon}
       </TouchableOpacity>
     </View>
@@ -81,11 +85,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: scale(16),
     fontWeight: '500',
-    width: '33.3%',
     textAlign: 'center',
   },
   emptyArea: {
-    width: '33.3%',
     alignItems: 'flex-end',
   },
 });

@@ -91,7 +91,7 @@ const RedirectScreen = () => {
       const interaction = InteractionManager.runAfterInteractions(() => {
         setTimeout(() => {
           navigation.navigate('MainTab', { screen: 'Shopping' });
-        }, 4500);
+        }, 4000);
       });
 
       // cleanup: 화면을 벗어날 때 하단탭 다시 보이기

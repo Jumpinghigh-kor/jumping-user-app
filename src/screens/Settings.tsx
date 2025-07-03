@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Image,
   ScrollView,
 } from 'react-native';
@@ -14,12 +13,19 @@ import {scale} from '../utils/responsive';
 import IMAGES from '../utils/images';
 import CommonPopup from '../components/CommonPopup';
 import CommonHeader from '../components/CommonHeader';
+import {useAuth} from '../hooks/useAuth';
+import {updateMemberWithdrawal} from '../api/services/membersService';
+import CustomToast from '../components/CustomToast';
+
 const Settings = () => {
   const navigation = useNavigation();
+  const {logout, memberInfo} = useAuth();
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
   const [popupTitle, setPopupTitle] = useState('');
   const [currentAction, setCurrentAction] = useState<string>('');
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   const handleGoBack = () => {
     navigation.goBack();
@@ -32,30 +38,55 @@ const Settings = () => {
     setPopupVisible(true);
   };
 
+  // 모든 데이터 삭제 함수
+  const clearAllData = async () => {
+    await logout();
+    
+    await AsyncStorage.multiRemove([
+      'accessToken',
+      'refreshToken',
+      'access_token',
+      'refresh_token',
+      'center_id',
+      'mem_name',
+      'mem_email_id',
+      'autoLogin',
+      'savedEmail',
+      'savedPassword',
+      '@push_enabled',
+      'readNotices',
+      'readInquiries',
+    ]);
+    
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'Login' as never}],
+    });
+  };
+
   const handlePopupConfirm = async () => {
     setPopupVisible(false);
     
     if (currentAction === 'logout') {
       try {
-        // 모든 저장된 데이터 삭제
-        await AsyncStorage.multiRemove([
-          'accessToken',
-          'refreshToken',
-          'memberId',
-          // 필요한 경우 다른 데이터도 여기에 추가
-        ]);
-        
-        // 로그인 화면으로 이동
-        navigation.reset({
-          index: 0,
-          routes: [{name: 'Login' as never}],
-        });
+        await clearAllData();
       } catch (error) {
-        Alert.alert('오류', '로그아웃 중 문제가 발생했습니다.');
+        setToastMessage('로그아웃 중 문제가 발생했습니다.');
+        setShowToast(true);
       }
     } else if (currentAction === 'withdrawal') {
-      // 회원 탈퇴 로직 구현 (아직 구현되지 않음)
-      showPopup('알림', '회원 탈퇴 기능은 아직 개발 중입니다.', 'none');
+      try {
+        if (memberInfo?.mem_id) {
+          // 회원 탈퇴 API 호출
+          await updateMemberWithdrawal(memberInfo.mem_id.toString());
+          
+          // 로그아웃 처리
+          await clearAllData();
+        }
+      } catch (error) {
+        setToastMessage('회원 탈퇴 중 문제가 발생했습니다.');
+        setShowToast(true);
+      }
     }
   };
 
@@ -125,6 +156,13 @@ const Settings = () => {
         onCancel={currentAction === 'none' ? undefined : handlePopupCancel}
         confirmText="확인"
         cancelText="취소"
+      />
+
+      <CustomToast
+        visible={showToast}
+        message={toastMessage}
+        position="bottom"
+        onHide={() => setShowToast(false)}
       />
     </View>
   );

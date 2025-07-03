@@ -19,7 +19,7 @@ import CommonModal from '../components/CommonModal';
 import IMAGES from '../utils/images';
 import { checkNicknameDuplicate, completeSignup } from '../api/services/membersService';
 import CommonPopup from '../components/CommonPopup';
-import {privacyPolicyText, termsOfServiceText} from '../utils/termsData';
+import {privacyPolicyText, termsOfServiceText} from '../constants/termsData';
 import { useAuth } from '../hooks/useAuth';
 import { useProfileImage } from '../hooks/useProfileImage';
 

@@ -15,7 +15,7 @@ import CommonPopup from '../components/CommonPopup';
 import { getMemberCartAppList, deleteMemberCartApp, updateMemberCartApp } from '../api/services/memberCartAppService';
 import { getProductDetailAppList } from '../api/services/productAppService';
 import { useAppSelector } from '../store/hooks';
-import { layoutStyle, commonStyle } from '../styles/common';
+import { layoutStyle, commonStyle } from '../assets/styles/common';
 import ShoppingThumbnailImg from '../components/ShoppingThumbnailImg';
 import { usePopup } from '../hooks/usePopup';
 import { 
@@ -26,6 +26,7 @@ import {
   increaseQuantity,
   decreaseQuantity
 } from '../utils/commonFunction';
+import { useAuth } from '../hooks/useAuth';
 
 const ShoppingCart = () => {
   const navigation = useNavigation();
@@ -37,6 +38,7 @@ const ShoppingCart = () => {
   const [allSelected, setAllSelected] = useState(false);
   const [productDetailData, setProductDetailData] = useState({});
   const { popup, showWarningPopup, showConfirmPopup } = usePopup();
+  const { loadMemberInfo } = useAuth();
 
   const fetchCartList = async () => {
     try {
@@ -114,6 +116,9 @@ const ShoppingCart = () => {
               delete newSelectedItems[item.cart_app_id];
             });
             setSelectedItems(newSelectedItems);
+            
+            // 멤버 정보 새로고침
+            loadMemberInfo();
           }
         } catch (error) {
           
@@ -152,6 +157,9 @@ const ShoppingCart = () => {
         setSelectedItems({});
         setCartList(updatedCartList);
         setAllSelected(false);
+        
+        // 멤버 정보 새로고침
+        loadMemberInfo();
       } catch (error) {
         
         fetchCartList();
@@ -193,6 +201,9 @@ const ShoppingCart = () => {
           item.cart_app_id === cartAppId ? { ...item, quantity } : item
         );
         setCartList(updatedCartList);
+        
+        // 멤버 정보 새로고침
+        loadMemberInfo();
       } else {
         
       }
@@ -284,19 +295,7 @@ const ShoppingCart = () => {
                                 />
                               </TouchableOpacity>
                               <TouchableOpacity
-                                onPress={() => {
-                                  navigation.navigate('ShoppingDetail', {
-                                    product: {
-                                      product_app_id: cartItem.product_app_id,
-                                      title: cartItem.title,
-                                      price: cartItem.price,
-                                      original_price: cartItem.original_price,
-                                      discount: cartItem.discount,
-                                      image: cartItem.image,
-                                      rating: "0"
-                                    }
-                                  });
-                                }}
+                                onPress={() => navigation.navigate('ShoppingDetail' as never, { productParams: cartItem } as never)}
                               >
                                 <ShoppingThumbnailImg 
                                   productAppId={cartItem.product_app_id}
@@ -309,19 +308,7 @@ const ShoppingCart = () => {
                             </View>
                             <TouchableOpacity
                               style={{marginLeft: scale(10), width: '55%'}}
-                              onPress={() => {
-                                navigation.navigate('ShoppingDetail', {
-                                  product: {
-                                    product_app_id: cartItem.product_app_id,
-                                    title: cartItem.title,
-                                    price: cartItem.price,
-                                    original_price: cartItem.original_price,
-                                    discount: cartItem.discount,
-                                    image: cartItem.image,
-                                    rating: "0"
-                                  }
-                                });
-                              }}
+                              onPress={() => navigation.navigate('ShoppingDetail' as never, { productParams: cartItem } as never)}
                             >
                               <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">{cartItem.title}</Text>
                             </TouchableOpacity>
@@ -492,7 +479,7 @@ const ShoppingCart = () => {
                 <Text style={styles.totalPriceTitle}>예상 결제금액</Text>
                 <View style={[layoutStyle.rowBetween]}>
                   <Text style={styles.priceTitle}>총 상품금액</Text>
-                  <Text style={styles.priceText}>{(cartList.filter(item => selectedItems[item.cart_app_id]).reduce((acc, item) => acc + (item.price * item.quantity), 0)).toLocaleString()}원</Text>
+                  <Text style={styles.priceText}>{(cartList.filter(item => selectedItems[item.cart_app_id]).reduce((acc, item) => acc + (item.original_price * item.quantity), 0)).toLocaleString()}원</Text>
                 </View>
                 <View style={[layoutStyle.rowBetween, commonStyle.pt10]}>
                   <Text style={styles.priceTitle}>총 할인금액</Text>
@@ -530,6 +517,8 @@ const ShoppingCart = () => {
         visible={popup.visible}
         message={popup.message}
         type={popup.type}
+        backgroundColor="#FFFFFF"
+        textColor="#202020"
         onConfirm={popup.onConfirm}
         onCancel={popup.type === 'confirm' ? popup.onCancel : undefined}
         confirmText="확인"

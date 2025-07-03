@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image } from 'react-native';
 import { scale } from '../utils/responsive';
 import IMAGES from '../utils/images';
 import WaveAnimation from './WaveAnimation';
-import { commonStyle } from '../styles/common';
+import { commonStyle } from '../assets/styles/common';
 
 interface ExerciseSummaryProps {
   data: {

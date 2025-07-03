@@ -12,6 +12,10 @@ export interface Inquiry {
   // 추가 필드가 있다면 여기에 정의
 }
 
+export interface GetInquiryRequest {
+  mem_id: number;
+}
+
 export interface GetInquiryResponse {
   success: boolean;
   message?: string;
@@ -19,9 +23,9 @@ export interface GetInquiryResponse {
 }
 
 // 문의사항 목록 조회 API
-export const getInquiryList = async (): Promise<GetInquiryResponse> => {
+export const getInquiryList = async (params: GetInquiryRequest): Promise<GetInquiryResponse> => {
   try {
-    const response = await axiosInstance.post('/inquiry-app/getInquiryAppList');
+    const response = await axiosInstance.post('/inquiry-app/getInquiryAppList', params);
     return response.data;
   } catch (error: any) {
     throw error;

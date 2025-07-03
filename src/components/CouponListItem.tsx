@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import IMAGES from '../utils/images';
 import { scale } from '../utils/responsive';
-import { layoutStyle } from '../styles/common';
+import { layoutStyle } from '../assets/styles/common';
 
 interface CouponListItemProps {
   coupon: any;

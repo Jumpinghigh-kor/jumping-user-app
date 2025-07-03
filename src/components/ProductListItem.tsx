@@ -254,7 +254,7 @@ const ProductListItem: React.FC<ProductListItemProps> = ({
           onPress={handleZzimUpdate}
         >
           <Image 
-            source={zzimState === 'Y' ? IMAGES.icons.heartFillRed : IMAGES.icons.heartBorderRed} 
+            source={zzimState === 'Y' ? IMAGES.icons.heartFillRed : IMAGES.icons.heartStrokeGray} 
             style={styles.heartIcon} 
           />
         </TouchableOpacity>

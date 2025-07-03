@@ -12,6 +12,7 @@ export interface ShippingAddressItem {
   receiver_phone: string;
   default_yn: 'Y' | 'N';
   del_yn: 'Y' | 'N';
+  select_yn: 'Y' | 'N';
   address: string;
   address_detail: string;
   zip_code: string;
@@ -94,6 +95,18 @@ export interface UpdateDeliveryRequestResponse {
   data?: any;
 }
 
+export interface UpdateSelectYnRequest {
+  mem_id: string | number;
+  shipping_address_id: number;
+  select_yn: 'Y' | 'N';
+}
+
+export interface UpdateSelectYnResponse {
+  success: boolean;
+  message?: string;
+  data?: any;
+}
+
 export const getMemberShippingAddressList = async (params: GetMemberShippingAddressListRequest): Promise<GetMemberShippingAddressListResponse> => {
   try {
     const response = await axiosInstance.post('/member-shipping-address/getMemberShippingAddressList', params);
@@ -142,6 +155,15 @@ export const updateMemberShippingAddress = async (params: UpdateMemberShippingAd
 export const updateDeliveryRequest = async (params: UpdateDeliveryRequestRequest): Promise<UpdateDeliveryRequestResponse> => {
   try {
     const response = await axiosInstance.post('/member-shipping-address/updateDeliveryRequest', params);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateSelectYn = async (params: UpdateSelectYnRequest): Promise<UpdateSelectYnResponse> => {
+  try {
+    const response = await axiosInstance.post('/member-shipping-address/updateSelectYn', params);
     return response.data;
   } catch (error) {
     throw error;

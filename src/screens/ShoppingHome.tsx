@@ -7,10 +7,12 @@ import {scale} from '../utils/responsive';
 import {getProductAppList, Product as ProductType} from '../api/services/productAppService';
 import {getCommonCodeList, CommonCode} from '../api/services/commonCodeService';
 import {useAppSelector} from '../store/hooks';
+import { useAuth } from '../hooks/useAuth';
 import ShopBannerImgPicker from '../components/ShopBannerImgPicker';
 import ProductListItem from '../components/ProductListItem';
 import IMAGES from '../utils/images';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { updateSelectYn } from '../api/services/memberShippingAddressService';
 
 // Define navigation type
 type RootStackParamList = {
@@ -30,13 +32,41 @@ type ShoppingNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Sho
 
 const ShoppingHome: React.FC = () => {
   const navigation = useNavigation<ShoppingNavigationProp>();
+  const { loadMemberInfo } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('');
   const [filteredProducts, setFilteredProducts] = useState<ExtendedProductType[]>([]);
   const [loading, setLoading] = useState(true);
   const [productCategory, setProductCategory] = useState<CommonCode[]>([]);
   const memberInfo = useAppSelector(state => state.member.memberInfo);
+  const [smallCategory, setSmallCategory] = useState<CommonCode[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedSmallCategory, setSelectedSmallCategory] = useState('');
 
-  useEffect(() => {
+  // 배송지 선택 상태 초기화 함수
+  const resetShippingAddressSelection = async () => {
+    try {
+      await updateSelectYn({
+        mem_id: memberInfo.mem_id,
+        shipping_address_id: null,
+        select_yn: 'N'
+      });
+    } catch (error) {
+      console.error('배송지 선택 상태 초기화 실패:', error);
+    }
+  };
+  
+  // 화면이 포커스될 때마다 배너 새로고침
+  useFocusEffect(
+    useCallback(() => {
+      setRefreshKey(prev => prev + 1);
+      loadProducts();
+      resetShippingAddressSelection();
+      loadMemberInfo();
+    }, [])
+  );
+  
+  useFocusEffect(
+    useCallback(() => {
     const fetchProductCategory = async () => {
       try {
         const response = await getCommonCodeList({ group_code: 'PRODUCT_CATEGORY' });
@@ -50,8 +80,36 @@ const ShoppingHome: React.FC = () => {
     };
     
     fetchProductCategory();
-  }, []);
+  }, [])
+  );
 
+  useEffect(() => {
+    const fetchSmallCategory = async () => {
+      try {
+        const groupCode = selectedCategory + '_CATEGORY';
+        
+        const response = await getCommonCodeList({ group_code: groupCode });
+        
+        if (response.success && response.data && response.data.length > 0) {
+          setSmallCategory(response.data);
+          // 첫 번째 소카테고리를 기본값으로 설정
+          setSelectedSmallCategory(response.data[0].common_code);
+        } else {
+          setSmallCategory([]);
+          setSelectedSmallCategory('');
+        }
+      } catch (error) {
+        console.error('Small Category API 에러:', error);
+        setSmallCategory([]);
+        setSelectedSmallCategory('');
+      }
+    };
+    
+    if (selectedCategory) {
+      fetchSmallCategory();
+    }
+  }, [selectedCategory]);
+   
   // 상품 조회
   useFocusEffect(
     useCallback(() => {
@@ -90,7 +148,7 @@ const ShoppingHome: React.FC = () => {
   }, [loading, productCategory]);
 
   const handleProductPress = (product: ExtendedProductType) => {
-    navigation.navigate('ShoppingDetail', { product });
+    navigation.navigate('ShoppingDetail', { productParams: product } as never);
   };
 
   return (
@@ -108,20 +166,31 @@ const ShoppingHome: React.FC = () => {
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('ShoppingCart')}>
             <Image source={IMAGES.icons.cartStrokeBlack} style={styles.headerIcon} />
+            {memberInfo?.cart_cnt && memberInfo.cart_cnt > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{memberInfo.cart_cnt}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
       
-      <ScrollView style={styles.scrollContainer}>        
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={{paddingBottom: scale(100)}}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.bannerContainer}>
-          <ShopBannerImgPicker style={styles.banner} />
+          <ShopBannerImgPicker key={refreshKey} style={styles.banner} />
         </View>
 
         <View style={styles.categoryContainer}>
           <ScrollView 
-            horizontal 
+            horizontal
             showsHorizontalScrollIndicator={false} 
             contentContainerStyle={styles.categoryList}
+            alwaysBounceVertical={false}
+            bounces={false}
           >
             {productCategory.map((category) => (
               <TouchableOpacity
@@ -146,13 +215,44 @@ const ShoppingHome: React.FC = () => {
           </ScrollView>
         </View>
         
+        {/* 소규모 카테고리 버튼들 */}
+        {smallCategory.length > 0 && (
+          <View style={styles.smallCategoryContainer}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={styles.smallCategoryList}
+            >
+              {smallCategory.map((category) => (
+                <TouchableOpacity
+                  key={category.common_code}
+                  style={[
+                    styles.smallCategoryButton, 
+                    selectedSmallCategory === category.common_code && styles.selectedSmallCategory
+                  ]} 
+                  onPress={() => setSelectedSmallCategory(category.common_code)}
+                >
+                  <Text 
+                    style={[
+                      styles.smallCategoryText, 
+                      selectedSmallCategory === category.common_code && styles.selectedSmallCategoryText
+                    ]}
+                  >
+                    {category.common_code_name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+        
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#43B546" />
           </View>
         ) : filteredProducts.length > 0 ? (
           <FlatList
-            data={filteredProducts}
+            data={selectedSmallCategory === '' ? filteredProducts : filteredProducts.filter(product => product.small_category === selectedSmallCategory)}
             renderItem={({item}) => (
               <ProductListItem 
                 item={item} 
@@ -263,8 +363,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContainer: {
-    padding: scale(16),
-    paddingBottom: scale(100),
+    paddingHorizontal: scale(16),
+    paddingTop: scale(10),
   },
   productRow: {
     justifyContent: 'space-between',
@@ -289,6 +389,61 @@ const styles = StyleSheet.create({
     width: scale(20),
     height: scale(20),
     resizeMode: 'contain',
+  },
+  smallCategoryTitle: {
+    fontSize: scale(16),
+    fontWeight: '500',
+    color: '#202020',
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(10),
+    marginTop: scale(10),
+  },
+  smallCategoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  smallCategoryList: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingHorizontal: scale(16),
+    gap: scale(8),
+    marginVertical: scale(12),
+  },
+  smallCategoryButton: {
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(5),
+    borderRadius: scale(5),
+    borderWidth: 1,
+    borderColor: '#D9D9D9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedSmallCategory: {
+    backgroundColor: '#42B649',
+    borderColor: '#42B649',
+  },
+  smallCategoryText: {
+    fontSize: scale(12),
+    color: '#848484',
+  },
+  selectedSmallCategoryText: {
+    color: '#FFFFFF',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: scale(-5),
+    right: scale(-5),
+    backgroundColor: '#FF0000',
+    borderRadius: scale(15),
+    width: scale(13),
+    height: scale(13),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadgeText: {
+    fontSize: scale(8),
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
 });
 
