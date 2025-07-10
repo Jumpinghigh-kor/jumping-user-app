@@ -16,6 +16,7 @@ import CommonModal from '../components/CommonModal';
 import {getNoticesAppList} from '../api/services/noticesAppService';
 import {getInquiryList} from '../api/services/inquiryService';
 import {updatePushYn} from '../api/services/membersService';
+import { commonStyle, layoutStyle } from '../assets/styles/common';
 
 // Package.json 버전 정보 가져오기
 const appVersion = require('../../package.json').version;
@@ -30,6 +31,7 @@ const MyPage = () => {
   const [updateInfo, setUpdateInfo] = useState<UpdateLogInfo | null>(null);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const [isPushEnabled, setIsPushEnabled] = useState(false);
+  const [isCompanyInfoVisible, setIsCompanyInfoVisible] = useState(false);
 
   // 읽지 않은 알림이 있는지 체크
   const checkUnreadNotifications = async () => {
@@ -244,6 +246,24 @@ const MyPage = () => {
             </View>
           </TouchableOpacity>
         </View>
+        <TouchableOpacity
+          style={[layoutStyle.rowBetween, commonStyle.mt10]}
+          onPress={() => setIsCompanyInfoVisible(!isCompanyInfoVisible)}
+        >
+          <Text style={styles.companyInfo}>(주)점핑하이 사업자 정보</Text>
+          <Image source={isCompanyInfoVisible ? IMAGES.icons.arrowUpGray : IMAGES.icons.arrowDownGray} style={styles.companyInfoArrow} />
+        </TouchableOpacity>
+        {isCompanyInfoVisible && (
+          <View style={[commonStyle.mt5]}>
+            <Text style={styles.companyInfo}>대표 : 윤하이</Text>
+            <Text style={styles.companyInfo}>주소 : (07798)서울특별시 강서구 마곡서로 133 704동 2층</Text>
+            <Text style={styles.companyInfo}>사업자등록번호 : 894-81-00990</Text>
+            <Text style={styles.companyInfo}>이메일 : high@jumping.or.kr</Text>
+            <Text style={styles.companyInfo}>통신판매업신고 : 제 2019-서울영등포-0932호</Text>
+            <Text style={styles.companyInfo}>고객센터 : 02-1661-0042</Text>
+            <Text style={styles.companyInfo}>개인정보보호책임자 : 신주섭</Text>
+          </View>
+        )}
       </ScrollView>
 
       <CommonModal
@@ -357,6 +377,17 @@ const styles = StyleSheet.create({
   settingsMenuText: {
     color: '#ffffff',
     fontSize: scale(12),
+  },
+  companyInfo: {
+    color: '#848484',
+    fontSize: scale(10),
+    marginBottom: scale(2),
+  },
+  companyInfoArrow: {
+    width: scale(14),
+    height: scale(14),
+    resizeMode: 'contain',
+    tintColor: '#848484',
   },
 });
 

@@ -22,7 +22,7 @@ const Event = ({navigation, route}) => {
   const [contentImageUrl, setContentImageUrl] = useState('');
   const [buttonImageUrl, setButtonImageUrl] = useState('');
   const [buttonLink, setButtonLink] = useState('');
-  console.log('item',item);
+  
   useFocusEffect(
     useCallback(() => {
       const fetchEventData = async () => {
@@ -43,9 +43,9 @@ const Event = ({navigation, route}) => {
                         .from('event')
                         .getPublicUrl(imagePath);
                       if (data && data.publicUrl) {
-                        if (imageData.event_img_type === 'content') {
+                        if (imageData.event_img_type === 'CONTENT') {
                           setContentImageUrl(data.publicUrl);
-                        } else if (imageData.event_img_type === 'button') {
+                        } else if (imageData.event_img_type === 'BUTTON') {
                           setButtonImageUrl(data.publicUrl);
                           setButtonLink(imageData.navigation_path);
                         }

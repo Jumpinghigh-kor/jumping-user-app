@@ -142,132 +142,133 @@ const SignUp = () => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}>
-      <CommonHeader onBackPress={handleGoBack} />
-      <Text style={styles.title}>닉네임을{'\n'}입력해주세요</Text>
-
-      <View style={styles.profileSection}>
-        <ProfileImagePicker
-          memId={memberInfo?.mem_id}
-          currentImageUrl={profileImageUrl}
-          onImageUpdate={loadProfileImage}
-        />
-      </View>
-
-      <View style={styles.inputContainer}>
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            value={nickname}
-            onChangeText={(text) => {
-              setNickname(text);
-              setNicknameError('');
-            }}
-            placeholder="닉네임을 입력해주세요"
-            placeholderTextColor="#848484"
-            maxLength={10}
-            editable={!isSubmitting}
+      style={{flex: 1}}>
+      <CommonHeader onBackPress={handleGoBack} title="" />
+      <View style={styles.container}>
+        <Text style={styles.title}>닉네임을{'\n'}입력해주세요</Text>
+        <View style={styles.profileSection}>
+          <ProfileImagePicker
+            memId={memberInfo?.mem_id}
+            currentImageUrl={profileImageUrl}
+            onImageUpdate={loadProfileImage}
           />
-          <Text style={styles.characterCount}>{nickname.length}/10</Text>
         </View>
-        <View style={styles.underline} />
-        <View style={styles.errorContainer}>
-          {nicknameError ? <Text style={styles.errorText}>{nicknameError}</Text> : null}
-        </View>
-        <View>
-          <Text style={styles.agreementTitle}>서비스 이용을 위해 약관을 동의해주세요</Text>
-          <Text style={styles.agreementDescription}>회원님의 개인정보와 서비스 이용 권리를 지켜드릴게요</Text>
-          
-          <TouchableOpacity 
-            style={styles.checkboxRow} 
-            onPress={() => toggleAgreement('all')}
-            disabled={isSubmitting}
-          >
-            <Image 
-              source={agreements.all ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} 
-              style={styles.checkbox} 
-            />
-            <View style={styles.agreementTextContainer}>
-              <Text style={styles.allCheckboxText}>모두 동의</Text>
-              <Text style={styles.agreementDescription}>서비스 이용을 위해 아래 약관에 모두 동의합니다.</Text>
-            </View>
-          </TouchableOpacity>
-          
-          <View style={styles.areementUnderline} />
 
-          <TouchableOpacity 
-            style={styles.checkboxRow} 
-            onPress={() => toggleAgreement('age')}
-            disabled={isSubmitting}
-          >
-            <Image 
-              source={agreements.age ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} 
-              style={styles.checkbox} 
+        <View style={styles.inputContainer}>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              value={nickname}
+              onChangeText={(text) => {
+                setNickname(text);
+                setNicknameError('');
+              }}
+              placeholder="닉네임을 입력해주세요"
+              placeholderTextColor="#848484"
+              maxLength={10}
+              editable={!isSubmitting}
             />
-            <Text style={styles.checkboxText}>[필수] 만 14세 이상입니다.</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.checkboxRow} 
-            onPress={() => toggleAgreement('terms')}
-            disabled={isSubmitting}
-          >
-            <Image 
-              source={agreements.terms ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} 
-              style={styles.checkbox} 
-            />
-            <Text style={styles.checkboxText}>[필수] 서비스 이용약관</Text>
+            <Text style={styles.characterCount}>{nickname.length}/10</Text>
+          </View>
+          <View style={styles.underline} />
+          <View style={styles.errorContainer}>
+            {nicknameError ? <Text style={styles.errorText}>{nicknameError}</Text> : null}
+          </View>
+          <View>
+            <Text style={styles.agreementTitle}>서비스 이용을 위해 약관을 동의해주세요</Text>
+            <Text style={styles.agreementDescription}>회원님의 개인정보와 서비스 이용 권리를 지켜드릴게요</Text>
+            
             <TouchableOpacity 
-              onPress={() => showModal('이용약관', termsOfServiceText)}
+              style={styles.checkboxRow} 
+              onPress={() => toggleAgreement('all')}
               disabled={isSubmitting}
             >
-              <Text style={styles.viewText}>[보기]</Text>
+              <Image 
+                source={agreements.all ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} 
+                style={styles.checkbox} 
+              />
+              <View style={styles.agreementTextContainer}>
+                <Text style={styles.allCheckboxText}>모두 동의</Text>
+                <Text style={styles.agreementDescription}>서비스 이용을 위해 아래 약관에 모두 동의합니다.</Text>
+              </View>
             </TouchableOpacity>
-          </TouchableOpacity>
+            
+            <View style={styles.areementUnderline} />
 
-          <TouchableOpacity 
-            style={styles.checkboxRow} 
-            onPress={() => toggleAgreement('privacy')}
-            disabled={isSubmitting}
-          >
-            <Image 
-              source={agreements.privacy ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} 
-              style={styles.checkbox} 
-            />
-            <Text style={styles.checkboxText}>[필수] 개인정보 처리방침</Text>
             <TouchableOpacity 
-              onPress={() => showModal('개인정보 처리방침', privacyPolicyText)}
+              style={styles.checkboxRow} 
+              onPress={() => toggleAgreement('age')}
               disabled={isSubmitting}
             >
-              <Text style={styles.viewText}>[보기]</Text>
+              <Image 
+                source={agreements.age ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} 
+                style={styles.checkbox} 
+              />
+              <Text style={styles.checkboxText}>[필수] 만 14세 이상입니다.</Text>
             </TouchableOpacity>
-          </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.checkboxRow} 
-            onPress={() => toggleAgreement('marketing')}
-            disabled={isSubmitting}
-          >
-            <Image 
-              source={agreements.marketing ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} 
-              style={styles.checkbox} 
-            />
-            <Text style={styles.checkboxText}>[선택] 마케팅 정보 수신 동의</Text>
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.checkboxRow} 
+              onPress={() => toggleAgreement('terms')}
+              disabled={isSubmitting}
+            >
+              <Image 
+                source={agreements.terms ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} 
+                style={styles.checkbox} 
+              />
+              <Text style={styles.checkboxText}>[필수] 서비스 이용약관</Text>
+              <TouchableOpacity 
+                onPress={() => showModal('이용약관', termsOfServiceText)}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.viewText}>[보기]</Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.checkboxRow} 
+              onPress={() => toggleAgreement('privacy')}
+              disabled={isSubmitting}
+            >
+              <Image 
+                source={agreements.privacy ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} 
+                style={styles.checkbox} 
+              />
+              <Text style={styles.checkboxText}>[필수] 개인정보 처리방침</Text>
+              <TouchableOpacity 
+                onPress={() => showModal('개인정보 처리방침', privacyPolicyText)}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.viewText}>[보기]</Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.checkboxRow} 
+              onPress={() => toggleAgreement('marketing')}
+              disabled={isSubmitting}
+            >
+              <Image 
+                source={agreements.marketing ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} 
+                style={styles.checkbox} 
+              />
+              <Text style={styles.checkboxText}>[선택] 마케팅 정보 수신 동의</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+
+        <TouchableOpacity 
+          style={[styles.signUpButton, isSubmitting && styles.signUpButtonDisabled]} 
+          onPress={handleSignUp}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.signUpButtonText}>가입 완료</Text>
+          )}
+        </TouchableOpacity>
       </View>
-
-      <TouchableOpacity 
-        style={[styles.signUpButton, isSubmitting && styles.signUpButtonDisabled]} 
-        onPress={handleSignUp}
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
-        ) : (
-          <Text style={styles.signUpButtonText}>가입 완료</Text>
-        )}
-      </TouchableOpacity>
 
       <CommonPopup
         visible={showAgreementPopup}
@@ -302,8 +303,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#202020',
-    paddingHorizontal: scale(10),
-    paddingTop: scale(30),
+    paddingHorizontal: scale(16),
   },
   profileSection: {
     alignItems: 'center',
@@ -314,11 +314,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#FFFFFF',
     marginTop: scale(20),
-    marginLeft: scale(10),
   },
   inputContainer: {
     marginTop: scale(25),
-    paddingHorizontal: scale(20),
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -333,6 +331,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderWidth: 1,
     borderColor: '#444444',
+    marginTop: Platform.OS === 'ios' ? scale(10) : scale(0),
   },
   areementUnderline: {
     borderBottomWidth: 1,
@@ -390,13 +389,11 @@ const styles = StyleSheet.create({
   signUpButton: {
     backgroundColor: '#40B649',
     borderRadius: scale(8),
-    paddingVertical: scale(10),
-    marginHorizontal: scale(20),
+    paddingVertical: scale(14),
     marginTop: 'auto',
     marginBottom: scale(30),
     justifyContent: 'center',
     alignItems: 'center',
-    height: scale(45),
   },
   signUpButtonDisabled: {
     backgroundColor: '#2A7A30',

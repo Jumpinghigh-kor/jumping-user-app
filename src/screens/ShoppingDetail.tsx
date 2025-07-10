@@ -43,6 +43,7 @@ import CouponListItem from '../components/CouponListItem';
 import CommonPopup from '../components/CommonPopup';
 import CustomToast from '../components/CustomToast';
 import { useAuth } from '../hooks/useAuth';
+import { getReturnExchangePolicyList } from '../api/services/returnExchangePolicyService';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -140,7 +141,7 @@ const ShoppingDetail = ({route, navigation}) => {
   const [customToastMessage, setCustomToastMessage] = useState('');
   const [showInquiryPopup, setShowInquiryPopup] = useState(false);
   const [productDetailData, setProductDetailData] = useState([]);
-  
+  const [returnExchangePolicy, setReturnExchangePolicy] = useState([]);
   const memberInfo = useAppSelector(state => state.member.memberInfo);
   const scrollViewRef = useRef(null);
   const sortModalPan = useRef(new Animated.ValueXY()).current;
@@ -247,6 +248,23 @@ const ShoppingDetail = ({route, navigation}) => {
       setLoading(false);
     }
   };
+
+  // 반품 교환 정책 로드
+  const fetchReturnExchangePolicy = async () => {
+    try {
+      const response = await getReturnExchangePolicyList({
+        product_app_id: productParams.product_app_id
+      });
+      
+      if (response.success) {        
+        setReturnExchangePolicy(response.data);
+      }
+    } catch (error) {
+      setReturnExchangePolicy([]);
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // 리뷰 데이터 로드
   const loadReviews = async () => {
@@ -341,6 +359,7 @@ const ShoppingDetail = ({route, navigation}) => {
     loadReviews();
     loadCouponData(); 
     fetchTargetProductDetailData();
+    fetchReturnExchangePolicy();
   }, [productParams.product_app_id]);
 
   // 멤버 정보가 로드된 후 멤버 쿠폰 리스트 로드
@@ -497,53 +516,22 @@ const ShoppingDetail = ({route, navigation}) => {
               </View>
             )}
 
-            <View style={styles.guideContainer}>
-              <Text style={styles.guideTitle}>반품 / 교환 안내</Text>
-              <View style={styles.guideHeader}>
-                <Text style={styles.guideHeaderTitle}>신청기준일</Text>
-                <Text style={styles.guideHeaderDesc}>상품 수령 후 7일 이내(단, 제품이 표시광고 내용과 다르거나 불량 등 계약과 다르게 이행된 경우는 제품수령일로부터 3개월이내나 그 사실을 안 날 또는 알 수 있었던 날부터 30일 이내 교환/반품이 가능)</Text>
-              </View>
-              <View style={styles.guideBody}>
-                <View style={styles.guideBodyItem}>
-                  <View style={[styles.guideBodyItemTitleCont, {height: scale(30)}]}>
-                    <Text style={[styles.guideBodyItemTitle]}>받는 이</Text>
+            <View style={styles.returnContainer}>
+              <Text style={styles.returnTitle}>반품 / 교환 안내</Text>
+              {returnExchangePolicy?.length > 0 && (
+                returnExchangePolicy.map((item, index) => (
+                  <View key={index}>
+                    <View style={item?.direction === 'COLUMN' ? commonStyle.mb10 : styles.returnRowItem}>
+                      <View style={item?.direction === 'COLUMN' ? '' : styles.returnRowItemTitleCont}>
+                      <Text style={item?.direction === 'COLUMN' ? styles.returnColumnTitle : styles.returnRowItemTitle}>{item.title}</Text>
+                      </View>
+                      <View style={item?.direction === 'COLUMN' ? '' : styles.returnRowItemDescCont}>
+                      <Text style={item?.direction === 'COLUMN' ? styles.returnColumnDesc : styles.returnRowItemDesc}>{item.content}</Text>
+                      </View>
+                    </View>
                   </View>
-                  <View style={[styles.guideBodyItemDescCont, {height: scale(30)}]}>
-                    <Text style={[styles.guideBodyItemDesc]}>(주)점핑하이</Text>
-                  </View>
-                </View>
-                <View style={styles.guideBodyItem}>
-                  <View style={[styles.guideBodyItemTitleCont, {height: scale(50)}]}>
-                    <Text style={[styles.guideBodyItemTitle]}>주소</Text>
-                  </View>
-                  <View style={[styles.guideBodyItemDescCont, {height: scale(50)}]}>
-                    <Text style={[styles.guideBodyItemDesc]}>(07798) 서울특별시 강서구 마곡서로 133{'\n'}704동 2층</Text>
-                  </View>
-                </View>
-                <View style={styles.guideBodyItem}>
-                  <View style={[styles.guideBodyItemTitleCont, {height: scale(50)}]}>
-                    <Text style={[styles.guideBodyItemTitle]}>반품 교환처</Text>
-                  </View>
-                  <View style={[styles.guideBodyItemDescCont, {height: scale(50)}]}>
-                    <Text style={[styles.guideBodyItemDesc]}>주소 및 전화번호 확인{'\n'}교환비 체크/상품하자, 오배송의 경우 무료 표기</Text>
-                  </View>
-                </View>
-                <View style={styles.guideBodyItem}>
-                  <View style={[styles.guideBodyItemTitleCont, {height: scale(275)}]}>
-                    <Text style={styles.guideBodyItemTitle}>반품 교환처</Text>
-                  </View>
-                  <View style={[styles.guideBodyItemDescCont, {height: scale(275)}]}>
-                    <Text style={[styles.guideBodyItemDesc, {paddingVertical: scale(10)}]}>
-                      <Text style={{fontWeight: '600'}}>다음과 같은 경우 교환 및 반품 처리가 불가합니다.{'\n'}{'\n'}</Text>
-                      <Text>- 상품을 이미 사용한 경우{'\n'}{'\n'}</Text>
-                      <Text>- 상품 수령일로부터 7일이 경과한 경우{'\n'}{'\n'}</Text>
-                      <Text>- 상품과 상품 액세서리를 분실 또는 훼손한 경우{'\n'}{'\n'}</Text>
-                      <Text>- 이벤트 등으로 제공된 사은품을 사용하였거나 분실 또는 훼손한 경우{'\n'}{'\n'}</Text>
-                      <Text>- 기타'전자상거래 등에서의 소비자 {'\n'}보호에 관한 법률'이 정하는 소비자 청약철회 제한에 해당하는 경우</Text>
-                    </Text>
-                  </View>
-                </View>
-              </View>
+                ))
+              )}
             </View>
           </View>
         );
@@ -1521,7 +1509,7 @@ const styles = StyleSheet.create({
   reviewImageContainer: {
     marginTop: scale(10),
   },
-  guideContainer: {
+  returnContainer: {
     borderTopWidth: 1,
     borderColor: '#E0E0E0',
     paddingTop: scale(20),
@@ -1529,10 +1517,11 @@ const styles = StyleSheet.create({
     marginHorizontal: -scale(16),
     paddingHorizontal: scale(16),
   },
-  guideTitle: {
+  returnTitle: {
     fontSize: scale(18),
     fontWeight: '600',
     color: '#202020',
+    marginBottom: scale(10),
   },
   moreButtonContainer: {
     position: 'absolute',
@@ -1549,10 +1538,7 @@ const styles = StyleSheet.create({
     marginRight: scale(5),
     textAlign: 'center',
   },
-  guideHeader: {
-    marginTop: scale(20),
-  },
-  guideHeaderTitle: {
+  returnColumnTitle: {
     backgroundColor: '#EEEEEE',
     fontSize: scale(12),
     fontWeight: '500',
@@ -1562,7 +1548,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D9D9D9',
   },
-  guideHeaderDesc: {
+  returnColumnDesc: {
     fontSize: scale(12),
     color: '#202020',
     borderWidth: 1,
@@ -1570,39 +1556,36 @@ const styles = StyleSheet.create({
     padding: scale(16),
     marginTop: scale(4),
   },
-  guideBody: {
-    marginTop: scale(10),
-  },
-  guideBodyItem: {
+  returnRowItem: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: scale(4),
+    justifyContent: 'space-between',
+    marginBottom: '2%',
   },
-  guideBodyItemTitleCont: {
+  returnRowItemTitleCont: {
     backgroundColor: '#EEEEEE',
-    paddingHorizontal: scale(7),
+    width: '24%',
     borderWidth: 1,
     borderColor: '#D9D9D9',
-    width: '24%',
-    alignItems: 'center',
+    paddingVertical: scale(5),
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  guideBodyItemTitle: {
+  returnRowItemTitle: {
     fontSize: scale(12),
     fontWeight: '500',
     color: '#202020',
+    textAlign: 'center',
   },
-  guideBodyItemDescCont: {
-    paddingHorizontal: scale(7),
-    borderWidth: 1,
-    borderColor: '#D9D9D9',
+  returnRowItemDescCont: {
     width: '74%',
-    marginLeft: '1%',
     justifyContent: 'center',
     alignItems: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#D9D9D9',
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(5),
   },
-  guideBodyItemDesc: {
+  returnRowItemDesc: {
     fontSize: scale(12),
     color: '#202020',
   },

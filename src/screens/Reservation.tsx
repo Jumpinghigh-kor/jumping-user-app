@@ -70,6 +70,7 @@ const Reservation: React.FC = () => {
         Number(memberInfo?.mem_id),
         formattedDate
       );
+
       if (response.success && response.data) {
         setState(prev => ({
           ...prev, 
@@ -83,14 +84,10 @@ const Reservation: React.FC = () => {
   }, [memberInfo?.center_id, memberInfo?.mem_id]);
 
   // 회원 스케줄 목록 조회
-  const fetchMemberSchedules = useCallback(async () => {
-    if (!memberInfo?.mem_id) {
-      return null;
-    }
-    
+  const fetchMemberSchedules = useCallback(async () => {    
     try {
       const response = await getMemberScheduleList(Number(memberInfo.mem_id));
-
+      console.log('response', response);
       if (response.success && response.data) {
         if (response.data.length === 0) {
           setState(prev => ({...prev, scheduledDates: [], memberSchedules: []}));
@@ -294,10 +291,8 @@ const Reservation: React.FC = () => {
       if (response.success) {
         // 예약 성공 후 예약 목록 새로고침
         fetchMemberSchedules();
-        
         // 선택 초기화
         setState(prev => ({...prev, selectedTime: '', selectedDate: '', selectedSchAppId: null}));
-        
         // 강제 리렌더링
         setState(prev => ({...prev, forceUpdateCounter: prev.forceUpdateCounter + 1}));
       }
