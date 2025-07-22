@@ -21,6 +21,9 @@ import CommonPopup from './src/components/CommonPopup';
 import pushNotificationService, { PushNotificationData, PushNotificationService } from './src/api/services/pushNotificationService';
 
 const App = () => {
+  console.log('🚀 앱이 시작되었습니다!');
+  console.log('📱 현재 시간:', new Date().toLocaleString());
+  
   const navigationRef = useRef<NavigationContainerRef<any>>(null);
   // 세션 만료 팝업 상태
   const [sessionPopup, setSessionPopup] = useState({

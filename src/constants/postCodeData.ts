@@ -83,6 +83,3 @@ export const isCJRemoteArea = (postcode: string | number): boolean => {
   const cleanPostcode = postcode.toString().replace(/\D/g, '');
   return CJ_REMOTE_AREA_POSTCODES.includes(cleanPostcode);
 };
-
-// CJ 도서산간 배송비 추가 금액 (원)
-export const CJ_REMOTE_AREA_SHIPPING_FEE = 6000;

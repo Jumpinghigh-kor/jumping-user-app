@@ -37,7 +37,7 @@ import { commonStyle } from '../assets/styles/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {getNoticesAppList} from '../api/services/noticesAppService';
 import {getInquiryList} from '../api/services/inquiryService';
-import { updatePushToken } from '../api/services/membersService';
+import { updatePushToken, updateRecentDt } from '../api/services/membersService';
 import pushNotificationService from '../api/services/pushNotificationService';
 import CustomToast from '../components/CustomToast';
 
@@ -115,6 +115,16 @@ const Home = () => {
     }
   };
 
+  const updateRecentDtFn = async () => {
+    try {
+
+      const response = await updateRecentDt(Number(memberInfo.mem_id));
+      console.log(response);
+    } catch (error) {
+      console.error('최근 접속일 업데이트 중 문제가 발생했습니다.', error);
+    }
+  };
+
   // 읽지 않은 알림이 있는지 체크
   const checkUnreadNotifications = async () => {
     try {
@@ -156,6 +166,7 @@ const Home = () => {
       loadProfileImage();
       checkUnreadNotifications();
       setBannerKey(prev => prev + 1);  // HomeBannerImgPicker 재렌더링 강제
+      updateRecentDtFn();
     }, [memberInfo?.mem_id]),
   );
 

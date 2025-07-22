@@ -839,7 +839,7 @@ const ShoppingDetail = ({route, navigation}) => {
                   {(productDetailData[0]?.free_shipping_amount && productDetailData[0]?.free_shipping_amount !== "0") && <Text>({productDetailData[0]?.free_shipping_amount}원 이상 구매 시 무료배송)</Text>}
                 </View>
                 <View>
-                  <Text style={{fontSize: scale(12), color: '#848484'}}>제주 및 도서지역 추가 6,000원</Text>
+                  <Text style={{fontSize: scale(12), color: '#848484'}}>제주 및 도서지역 추가 {parseInt(productDetailData[0]?.remote_delivery_fee?.toString().replace(/,/g, '') || '0').toLocaleString()}원</Text>
                 </View>
                 <Text style={styles.deliveryDate}>
                   {productDetailData[0]?.today_send_yn === 'Y' ? (

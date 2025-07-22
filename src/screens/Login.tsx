@@ -252,7 +252,7 @@ const Login = () => {
         {/* 회원가입 안내 팝업 */}
         <CommonPopup
           visible={signupPopup}
-          message={'회원가입은 매장에서 도와드리고 있어요:)\n현재 다니고 있는 매장에 문의해주세요!'}
+          message={'회원가입은 매장에서\n도와드리고 있어요:)\n현재 다니고 있는 매장에\n문의해주세요!'}
           onConfirm={handleCloseSignupPopup}
           confirmText="확인"
         />

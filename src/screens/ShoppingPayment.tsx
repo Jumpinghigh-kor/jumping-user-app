@@ -163,7 +163,7 @@ const ShoppingPayment = () => {
     }
 
     if (selectedAddress?.zip_code && isCJRemoteArea(selectedAddress.zip_code)) {
-      totalAmount = totalAmount + CJ_REMOTE_AREA_SHIPPING_FEE;
+      totalAmount = totalAmount + parseInt(selectedItems[0]?.remote_delivery_fee?.toString().replace(/,/g, '') || '0');
     }
     
     return Math.max(0, totalAmount); // 음수 방지
@@ -633,7 +633,7 @@ const ShoppingPayment = () => {
             {selectedAddress?.zip_code && isCJRemoteArea(selectedAddress.zip_code) && (
               <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
                 <Text style={styles.amountLabel}>도서산간 배송비</Text>
-                <Text style={styles.deliveryFee}>{CJ_REMOTE_AREA_SHIPPING_FEE.toLocaleString()}원</Text>
+                <Text style={styles.deliveryFee}>{parseInt(selectedItems[0]?.remote_delivery_fee?.toString().replace(/,/g, '') || '0').toLocaleString()}원</Text>
               </View>
             )}
             <View style={[layoutStyle.rowBetween, commonStyle.mt20]}>

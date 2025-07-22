@@ -412,7 +412,8 @@ const CustomPurchaseModal = ({ visible, onClose, product }) => {
                     option_unit: option.option_unit,
                     discount: product.discount,
                     delivery_fee: product.delivery_fee,
-                    free_shipping_amount: product.free_shipping_amount
+                    free_shipping_amount: product.free_shipping_amount,
+                    remote_delivery_fee: product.remote_delivery_fee
                   }));
                   
                   onClose();

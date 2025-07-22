@@ -5,13 +5,18 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Dimensions,
+  Image,
 } from 'react-native';
 import {createMaterialTopTabNavigator} from '@react-navigation/material-top-tabs';
 import CommonHeader from '../components/CommonHeader';
+import CommonPopup from '../components/CommonPopup';
 import { scale } from '../utils/responsive';
+import { findId, findPassword } from '../api/services/membersService';
+import Clipboard from '@react-native-clipboard/clipboard';
+import CustomToast from '../components/CustomToast';
+import IMAGES from '../utils/images';
 
 const Tab = createMaterialTopTabNavigator();
 const screenWidth = Dimensions.get('window').width;
@@ -20,22 +25,41 @@ const screenWidth = Dimensions.get('window').width;
 const FindIDScreen = () => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [idInfo, setIdInfo] = useState<any>(null);
+  const [popup, setPopup] = useState({
+    visible: false,
+    message: '',
+    type: 'default' as 'default' | 'warning' | 'confirm',
+  });
+  const [customToastMessage, setCustomToastMessage] = useState('');
+  const [showCustomToast, setShowCustomToast] = useState(false);
+  const showPopup = (message: string, type: 'default' | 'warning' | 'confirm' = 'default') => {
+    setPopup({
+      visible: true,
+      message,
+      type,
+    });
+  };
 
   const handleFindID = async () => {
-    if (!name || !phone) {
-      Alert.alert('알림', '이름과 전화번호를 모두 입력해주세요.');
-      return;
-    }
-
     try {
-      setLoading(true);
-      // TODO: API 호출 구현
-      Alert.alert('알림', '입력하신 정보로 아이디를 찾을 수 없습니다.');
+
+      if (!name || !phone) {
+        showPopup('이름과 전화번호를 모두 입력해주세요.', 'warning');
+        return;
+      }
+
+      const response = await findId(name, phone);
+      
+      if (response.success) {
+        setIdInfo(response.data);
+      } else {
+        setIdInfo(null);
+        showPopup('입력하신 정보로 아이디를 찾을 수 없습니다.', 'warning');
+      }
+
     } catch (error) {
-      Alert.alert('오류', '아이디 찾기 중 문제가 발생했습니다.');
-    } finally {
-      setLoading(false);
+      showPopup('아이디 찾기 중 문제가 발생했습니다.', 'warning');
     }
   };
 
@@ -49,7 +73,6 @@ const FindIDScreen = () => {
             placeholderTextColor="#848484"
             value={name}
             onChangeText={setName}
-            editable={!loading}
           />
         </View>
         
@@ -64,78 +87,179 @@ const FindIDScreen = () => {
               setPhone(onlyNumber);
             }}
             keyboardType="numeric"
-            editable={!loading}
+            maxLength={11}
           />
         </View>
+
+        {idInfo && (
+          <View style={styles.idContainer}>
+            <View />
+            <View style={{width: '50%'}}>
+              <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
+                <Text style={[styles.idText]}>아이디 : {idInfo.mem_email_id}</Text>
+                <TouchableOpacity onPress={() => {
+                  Clipboard.setString(idInfo.mem_email_id);
+                  setCustomToastMessage(idInfo.mem_email_id + '가 복사되었습니다');
+                  setShowCustomToast(true);
+                }}>
+                  <Image source={IMAGES.icons.copyWhite} style={[styles.copyIcon, {marginLeft: scale(10)}]} />
+                </TouchableOpacity>
+              </View>
+              <Text style={[styles.idText, {marginTop: scale(10)}]}>가입일 : {idInfo.app_reg_dt}</Text>
+            </View>
+            <View />
+          </View>
+        )}
       </View>
-      
+
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleFindID}
-          disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.buttonText}>아이디 찾기</Text>
-          )}
+          style={[styles.button]}
+          onPress={() => handleFindID()}
+          >
+          <Text style={styles.buttonText}>확인</Text>
         </TouchableOpacity>
       </View>
+
+      <CommonPopup
+        visible={popup.visible}
+        message={popup.message}
+        type={popup.type}
+        onConfirm={() => setPopup({ ...popup, visible: false })}
+      />
+
+      {/* 커스텀 토스트 */}
+      <CustomToast
+        visible={showCustomToast}
+        message={customToastMessage}
+        onHide={() => setShowCustomToast(false)}
+        position="bottom"
+      />
     </View>
   );
 };
 
 // 비밀번호 찾기 탭
 const FindPasswordScreen = () => {
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [id, setId] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [customToastMessage, setCustomToastMessage] = useState('');
+  const [showCustomToast, setShowCustomToast] = useState(false);
+  const [passwordInfo, setPasswordInfo] = useState<any>(null);
+  const [popup, setPopup] = useState({
+    visible: false,
+    message: '',
+    type: 'default' as 'default' | 'warning' | 'confirm',
+  });
 
-  const handleFindPassword = async () => {
-    if (!email) {
-      Alert.alert('알림', '이메일을 입력해주세요.');
-      return;
-    }
+  const showPopup = (message: string, type: 'default' | 'warning' | 'confirm' = 'default') => {
+    setPopup({
+      visible: true,
+      message,
+      type,
+    });
+  };
 
+  const handleFindID = async () => {
     try {
-      setLoading(true);
-      // TODO: API 호출 구현
-      Alert.alert(
-        '알림',
-        '입력하신 이메일로 비밀번호 재설정 링크를 발송했습니다.',
-      );
+
+      if ( !id || !name || !phone) {
+        showPopup('아이디, 이름, 전화번호를 모두 입력해주세요.', 'warning');
+        return;
+      }
+
+      const response = await findPassword(id, name, phone);
+      console.log(response);
+      if (response.success) {
+        setPasswordInfo(response.data);
+
+      } else {
+        setPasswordInfo(null);
+        showPopup('입력하신 정보로 비밀번호를 찾을 수 없습니다.', 'warning');
+      }
+
     } catch (error) {
-      Alert.alert('오류', '비밀번호 찾기 중 문제가 발생했습니다.');
-    } finally {
-      setLoading(false);
+      showPopup('비밀번호 찾기 중 문제가 발생했습니다.', 'warning');
     }
   };
+
 
   return (
     <View style={styles.container}>
       <View style={styles.contentContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="이메일"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          editable={!loading}
-        />
+        <View style={styles.inputField}>
+          <TextInput
+            style={styles.underlineInput}
+            placeholder="아이디"
+            placeholderTextColor="#848484"
+            value={id}
+            onChangeText={setId}
+            autoCapitalize="none"
+          />
+        </View>
+        
+        <View style={styles.inputField}>
+          <TextInput
+            style={styles.underlineInput}
+            placeholder="이름"
+            placeholderTextColor="#848484"
+            value={name}
+            onChangeText={setName}
+          />
+        </View>
+        
+        <View style={styles.inputField}>
+          <TextInput
+            style={styles.underlineInput}
+            placeholder="휴대폰 번호 (-제외)"
+            placeholderTextColor="#848484"
+            value={phone}
+            onChangeText={(text) => {
+              const onlyNumber = text.replace(/[^0-9]/g, '');
+              setPhone(onlyNumber);
+            }}
+            keyboardType="numeric"
+          />
+        </View>
+
+        {passwordInfo && (
+          <View style={[styles.pwdContainer]}>
+            <Text style={[styles.pwdText]}>비밀번호 : {passwordInfo.temporary_password}</Text>
+            <TouchableOpacity onPress={() => {
+              Clipboard.setString(passwordInfo.temporary_password);
+              setCustomToastMessage(passwordInfo.temporary_password + '가 복사되었습니다');
+              setShowCustomToast(true);
+            }}>
+              <Image source={IMAGES.icons.copyWhite} style={styles.copyIcon} />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
       
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleFindPassword}
-          disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.buttonText}>비밀번호 재설정</Text>
-          )}
+          style={[styles.button]}
+          onPress={() => handleFindID()}
+          >
+          <Text style={styles.buttonText}>확인</Text>
         </TouchableOpacity>
       </View>
+
+      <CommonPopup
+        visible={popup.visible}
+        message={popup.message}
+        type={popup.type}
+        onConfirm={() => setPopup({ ...popup, visible: false })}
+      />
+
+      {/* 커스텀 토스트 */}
+      <CustomToast
+        visible={showCustomToast}
+        message={customToastMessage}
+        onHide={() => setShowCustomToast(false)}
+        position="bottom"
+      />
     </View>
   );
 };
@@ -147,8 +271,9 @@ const ForgotCredentials = ({ route }) => {
 
   return (
     <>
-      <CommonHeader />
+      <CommonHeader title={''} />
       <Tab.Navigator
+        id={undefined}
         initialRouteName={initialTab}
         screenOptions={{
           tabBarActiveTintColor: '#FFFFFF',
@@ -236,6 +361,43 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#D9D9D9',
     height: scale(40),
+  },
+  idContainer: {
+    width: '100%',
+    marginTop: scale(20),
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#D9D9D9',
+    paddingVertical: scale(30),
+    borderRadius: scale(10),
+  },
+  idText: {
+    color: '#FFFFFF',
+    fontSize: scale(14),
+  },
+  pwdContainer: {
+    width: '100%',
+    marginTop: scale(20),
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D9D9D9',
+    paddingVertical: scale(30),
+    borderRadius: scale(10),
+  },
+  pwdText: {
+    color: '#FFFFFF',
+    fontSize: scale(14),
+    marginRight: scale(10),
+  },
+  copyIcon: {
+    width: scale(20),
+    height: scale(20),
+    resizeMode: 'contain',
   },
 });
 

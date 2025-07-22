@@ -147,4 +147,43 @@ export const updatePushYn = async (
   } catch (error: any) {
     throw error;
   }
-}; 
+};
+
+export const updateRecentDt = async (mem_id: number) => {
+  try {
+    const response = await axiosInstance.post('/members/updateRecentDt', {
+      mem_id: mem_id,
+    });
+    return response.data;
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+// 아이디 찾기 API
+export const findId = async (name: string, phone: string) => {
+  try {
+    const response = await axiosInstance.post('/members/findId', {
+      mem_name: name,
+      mem_phone: phone,
+    });
+    return response.data;
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+// 비밀번호 찾기 API
+export const findPassword = async (id: string, name: string, phone: string) => {
+  console.log(id, name, phone);
+  try {
+    const response = await axiosInstance.post('/members/findPassword', {
+      mem_email_id: id,
+      mem_name: name,
+      mem_phone: phone,
+    });
+    return response.data;
+  } catch (error: any) {
+    throw error;
+  }
+};

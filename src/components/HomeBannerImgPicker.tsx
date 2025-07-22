@@ -158,7 +158,13 @@ const HomeBannerImgPicker: React.FC<HomeBannerImgPickerProps> = ({ style }) => {
         console.log('배너 링크를 열 수 없습니다:', err)
       );
     } else if(banner?.navigation_path){
-      navigation.navigate(banner.navigation_path as never);
+      if(banner.navigation_path === 'RedirectScreen'){
+        (navigation as any).navigate('RedirectScreen');
+      } else if(banner.navigation_path === 'NoticesAppList'){
+        (navigation as any).navigate('NoticesAppList');
+      } else {
+        (navigation as any).navigate('MainTab', { screen: banner.navigation_path });
+      }
     }
   };
 
