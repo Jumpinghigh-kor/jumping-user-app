@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity, Image }
 import LinearGradient from 'react-native-linear-gradient';
 import { scale } from '../utils/responsive';
 import IMAGES from '../utils/images';
-import { getMemberExerciseList } from '../api/services/memberExerciseService';
+import { getMemberExerciseAppList } from '../api/services/memberExerciseAppService';
 import ExerciseInfoPopup from './ExerciseInfoPopup';
 
 type Period = '일' | '주' | '월' | '연';
@@ -260,7 +260,7 @@ const ExerciseGraph: React.FC<ExerciseGraphProps> = ({
       }
       
       // 운동 정보 API 호출 (기간에 따른 파라미터 전달)
-      const response = await getMemberExerciseList(memId, apiParam, periodValue);
+      const response = await getMemberExerciseAppList(memId, apiParam, periodValue);
 
       if (response.success) {
         const newData = Array.isArray(response.data) ? response.data || [] : [response.data || {}];
@@ -983,150 +983,156 @@ const ExerciseGraph: React.FC<ExerciseGraphProps> = ({
     }
 
     return (
-      <View style={[styles.graphContent, { justifyContent: 'space-evenly', width: '100%', flex: 1, flexDirection: 'row' }]}>
-        {graphData.map((item, index, array) => {
-          const value = getCategoryData()[index] || 0;
-          const height = calculateBarHeight(value, index);
-          const itemKey = 'id' in item ? item.id : item.date.toString();
-          
-          // 날짜 형식 생성
-          const dateStr = generateDateString(item);
-          
-          // 해당 날짜의 운동 데이터 찾기
-          // 월별과 연별은 API로 새로 받아온 전체 데이터 사용, 일별과 주별은 props 데이터 사용
-          const dataToUse = (selectedPeriod === '월' || selectedPeriod === '연') ? internalExerciseData : exerciseData;
-          
-          let exerciseInfo;
-          if (selectedPeriod === '주') {
-            exerciseInfo = findWeeklyExerciseData(item);
-          } else if (selectedPeriod === '월') {
-            exerciseInfo = findMonthlyExerciseData(item);
-          } else if (selectedPeriod === '연') {
-            exerciseInfo = findYearlyExerciseData(item);
-          } else {
-            exerciseInfo = dataToUse.find(data => data.exercise_dt === dateStr);
-          }
-          
-          // 주간 데이터의 경우 계산된 값 사용, 다른 기간은 getCategoryData 사용
-          let actualValue = value;
-          if (selectedPeriod === '주' && exerciseInfo) {
-            actualValue = activeCategory === '심박수' ? exerciseInfo.average_heart_rate : exerciseInfo.jumping_calory;
-          } else if (selectedPeriod === '월' && exerciseInfo) {
-            actualValue = activeCategory === '심박수' ? exerciseInfo.average_heart_rate : exerciseInfo.jumping_calory;
-          } else if (selectedPeriod === '연' && exerciseInfo) {
-            actualValue = activeCategory === '심박수' ? exerciseInfo.average_heart_rate : exerciseInfo.jumping_calory;
-          } else if (selectedPeriod === '일' && exerciseInfo && activeCategory === '칼로리') {
-            // 일별 데이터에서 점핑 운동 칼로리만 계산
-            if (exerciseInfo.jumping_exercise_time && exerciseInfo.jumping_intensity_level) {
-              let baseCalories = 0;
-              switch (exerciseInfo.jumping_intensity_level) {
-                case 'LOW':
-                  baseCalories = 300;
-                  break;
-                case 'MODERATE':
-                  baseCalories = 400;
-                  break;
-                case 'HIGH':
-                  baseCalories = 500;
-                  break;
-              }
-              const hours = parseInt(exerciseInfo.jumping_exercise_time.substring(0, 2), 10);
-              const minutes = parseInt(exerciseInfo.jumping_exercise_time.substring(2, 4), 10);
-              const totalMinutes = hours * 60 + minutes;
-              const timeRatio = totalMinutes / 60;
-              actualValue = Math.round(baseCalories * timeRatio);
+      <ScrollView 
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.graphScrollContent}
+      >
+        <View style={[styles.graphContent, { justifyContent: 'space-evenly', width: '100%', flex: 1, flexDirection: 'row' }]}>
+          {graphData.map((item, index, array) => {
+            const value = getCategoryData()[index] || 0;
+            const height = calculateBarHeight(value, index);
+            const itemKey = 'id' in item ? item.id : item.date.toString();
+            
+            // 날짜 형식 생성
+            const dateStr = generateDateString(item);
+            
+            // 해당 날짜의 운동 데이터 찾기
+            // 월별과 연별은 API로 새로 받아온 전체 데이터 사용, 일별과 주별은 props 데이터 사용
+            const dataToUse = (selectedPeriod === '월' || selectedPeriod === '연') ? internalExerciseData : exerciseData;
+            
+            let exerciseInfo;
+            if (selectedPeriod === '주') {
+              exerciseInfo = findWeeklyExerciseData(item);
+            } else if (selectedPeriod === '월') {
+              exerciseInfo = findMonthlyExerciseData(item);
+            } else if (selectedPeriod === '연') {
+              exerciseInfo = findYearlyExerciseData(item);
             } else {
-              actualValue = 0;
+              exerciseInfo = dataToUse.find(data => data.exercise_dt === dateStr);
             }
-          }
-          const actualHeight = calculateBarHeight(actualValue, index);
-          
-          // other_exercise_calory 값 확인 (칼로리 카테고리일 때만)
-          const otherExerciseCalory = (activeCategory === '칼로리' && exerciseInfo?.other_exercise_calory) ? Number(exerciseInfo.other_exercise_calory) : 0;
-          const otherHeight = calculateBarHeight(otherExerciseCalory, index);
-
-          // 단독으로 표시되는지 여부 확인
-          const isGreenBarAlone = actualValue > 0 && otherExerciseCalory === 0;
-          const isOrangeBarAlone = actualValue === 0 && otherExerciseCalory > 0;
-          const areBothBarsPresent = actualValue > 0 && otherExerciseCalory > 0;
-
-          return (
-            <View 
-              key={itemKey} 
-              style={[
-                styles.graphItem, 
-                { 
-                  width: selectedPeriod === '주' ? scale(55) : selectedPeriod === '연' ? scale(45) : scale(35),
+            
+            // 주간 데이터의 경우 계산된 값 사용, 다른 기간은 getCategoryData 사용
+            let actualValue = value;
+            if (selectedPeriod === '주' && exerciseInfo) {
+              actualValue = activeCategory === '심박수' ? exerciseInfo.average_heart_rate : exerciseInfo.jumping_calory;
+            } else if (selectedPeriod === '월' && exerciseInfo) {
+              actualValue = activeCategory === '심박수' ? exerciseInfo.average_heart_rate : exerciseInfo.jumping_calory;
+            } else if (selectedPeriod === '연' && exerciseInfo) {
+              actualValue = activeCategory === '심박수' ? exerciseInfo.average_heart_rate : exerciseInfo.jumping_calory;
+            } else if (selectedPeriod === '일' && exerciseInfo && activeCategory === '칼로리') {
+              // 일별 데이터에서 점핑 운동 칼로리만 계산
+              if (exerciseInfo.jumping_exercise_time && exerciseInfo.jumping_intensity_level) {
+                let baseCalories = 0;
+                switch (exerciseInfo.jumping_intensity_level) {
+                  case 'LOW':
+                    baseCalories = 300;
+                    break;
+                  case 'MODERATE':
+                    baseCalories = 400;
+                    break;
+                  case 'HIGH':
+                    baseCalories = 500;
+                    break;
                 }
-              ]}
-            >
-              <View style={styles.barContainer}>
-                {actualValue > 0 && (
-                  <View style={[
-                    styles.graphBarContainer, 
-                    { height: scale(actualHeight) },
-                    isGreenBarAlone && {
-                      borderRadius: scale(10)
-                    },
-                    areBothBarsPresent && {
-                      borderTopLeftRadius: 0,
-                      borderTopRightRadius: 0,
-                      borderBottomLeftRadius: scale(10),
-                      borderBottomRightRadius: scale(10)
-                    }
-                  ]}>
-                    <LinearGradient 
-                      colors={['#43B546', '#43B546']}
-                      style={[
-                        styles.graphBarGradient,
-                        isGreenBarAlone && {
-                          borderRadius: scale(10)
-                        },
-                        areBothBarsPresent && {
-                          borderTopLeftRadius: 0,
-                          borderTopRightRadius: 0,
-                          borderBottomLeftRadius: scale(10),
-                          borderBottomRightRadius: scale(10)
-                        }
-                      ]}
-                      start={{x: 0, y: 0}}
-                      end={{x: 0, y: 1}}
-                    />
-                  </View>
-                )}
-                
-                {otherExerciseCalory > 0 && (
-                  <View 
-                    style={[
+                const hours = parseInt(exerciseInfo.jumping_exercise_time.substring(0, 2), 10);
+                const minutes = parseInt(exerciseInfo.jumping_exercise_time.substring(2, 4), 10);
+                const totalMinutes = hours * 60 + minutes;
+                const timeRatio = totalMinutes / 60;
+                actualValue = Math.round(baseCalories * timeRatio);
+              } else {
+                actualValue = 0;
+              }
+            }
+            const actualHeight = calculateBarHeight(actualValue, index);
+            
+            // other_exercise_calory 값 확인 (칼로리 카테고리일 때만)
+            const otherExerciseCalory = (activeCategory === '칼로리' && exerciseInfo?.other_exercise_calory) ? Number(exerciseInfo.other_exercise_calory) : 0;
+            const otherHeight = calculateBarHeight(otherExerciseCalory, index);
+
+            // 단독으로 표시되는지 여부 확인
+            const isGreenBarAlone = actualValue > 0 && otherExerciseCalory === 0;
+            const isOrangeBarAlone = actualValue === 0 && otherExerciseCalory > 0;
+            const areBothBarsPresent = actualValue > 0 && otherExerciseCalory > 0;
+
+            return (
+              <View 
+                key={itemKey} 
+                style={[
+                  styles.graphItem, 
+                  { 
+                    width: selectedPeriod === '주' ? scale(55) : selectedPeriod === '연' ? scale(45) : scale(35),
+                  }
+                ]}
+              >
+                <View style={styles.barContainer}>
+                  {actualValue > 0 && (
+                    <View style={[
                       styles.graphBarContainer, 
-                      { 
-                        height: scale(otherHeight), 
-                        backgroundColor: '#FFA95E',
-                        position: 'absolute',
-                        bottom: actualValue > 0 ? scale(actualHeight) : 0,
-                        zIndex: 1,
-                      },
-                      isOrangeBarAlone && {
+                      { height: scale(actualHeight) },
+                      isGreenBarAlone && {
                         borderRadius: scale(10)
                       },
                       areBothBarsPresent && {
-                        borderTopLeftRadius: scale(10),
-                        borderTopRightRadius: scale(10),
-                        borderBottomLeftRadius: 0,
-                        borderBottomRightRadius: 0
+                        borderTopLeftRadius: 0,
+                        borderTopRightRadius: 0,
+                        borderBottomLeftRadius: scale(10),
+                        borderBottomRightRadius: scale(10)
                       }
-                    ]}
-                  />
-                )}
+                    ]}>
+                      <LinearGradient 
+                        colors={['#43B546', '#43B546']}
+                        style={[
+                          styles.graphBarGradient,
+                          isGreenBarAlone && {
+                            borderRadius: scale(10)
+                          },
+                          areBothBarsPresent && {
+                            borderTopLeftRadius: 0,
+                            borderTopRightRadius: 0,
+                            borderBottomLeftRadius: scale(10),
+                            borderBottomRightRadius: scale(10)
+                          }
+                        ]}
+                        start={{x: 0, y: 0}}
+                        end={{x: 0, y: 1}}
+                      />
+                    </View>
+                  )}
+                  
+                  {otherExerciseCalory > 0 && (
+                    <View 
+                      style={[
+                        styles.graphBarContainer, 
+                        { 
+                          height: scale(otherHeight), 
+                          backgroundColor: '#FFA95E',
+                          position: 'absolute',
+                          bottom: actualValue > 0 ? scale(actualHeight) : 0,
+                          zIndex: 1,
+                        },
+                        isOrangeBarAlone && {
+                          borderRadius: scale(10)
+                        },
+                        areBothBarsPresent && {
+                          borderTopLeftRadius: scale(10),
+                          borderTopRightRadius: scale(10),
+                          borderBottomLeftRadius: 0,
+                          borderBottomRightRadius: 0
+                        }
+                      ]}
+                    />
+                  )}
+                </View>
+                <Text style={styles.graphDateLabel}>{item.date}</Text>
+                <Text style={styles.graphXLabel}>
+                  {item.day || ''}
+                </Text>
               </View>
-              <Text style={styles.graphDateLabel}>{item.date}</Text>
-              <Text style={styles.graphXLabel}>
-                {item.day || ''}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
+            );
+          })}
+        </View>
+      </ScrollView>
     );
   };
 

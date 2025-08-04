@@ -1,7 +1,7 @@
 import axios from 'axios';
 import {axiosInstance} from '../config/axiosConfig';
 
-interface InsertMemberExerciseRequest {
+interface InsertMemberExerciseAppRequest {
   mem_id: number;
   exercise_dt: string;
   jumping_exercise_time: string;
@@ -9,22 +9,22 @@ interface InsertMemberExerciseRequest {
   jumping_heart_rate: string | null;
   other_exercise_time: string;
   other_exercise_type: string;
-  other_exercise_calory: string;
+  other_exercise_calory: number;
   reg_dt: string;
   reg_id: number;
   mod_dt: string;
   mod_id: number;
 }
 
-interface InsertMemberExerciseResponse {
+interface InsertMemberExerciseAppResponse {
   success: boolean;
   message?: string;
 }
 
-interface MemberExerciseInfoResponse {
+interface MemberExerciseAppInfoResponse {
   success: boolean;
   data: Array<{
-    exercise_id: number;
+    exercise_app_id: number;
     mem_id: number;
     exercise_dt: string;
     jumping_exercise_time: string;
@@ -32,12 +32,12 @@ interface MemberExerciseInfoResponse {
     jumping_heart_rate: string | null;
     other_exercise_time: string;
     other_exercise_type: string;
-    other_exercise_calory: string;
+    other_exercise_calory: number;
   }>;
 }
 
-interface UpdateMemberExerciseRequest {
-  exercise_id: number;
+interface UpdateMemberExerciseAppRequest {
+  exercise_app_id: number;
   mem_id: number;
   exercise_dt: string;
   jumping_exercise_time: string;
@@ -45,20 +45,20 @@ interface UpdateMemberExerciseRequest {
   jumping_heart_rate: string | null;
   other_exercise_time: string;
   other_exercise_type: string;
-  other_exercise_calory: string;
+  other_exercise_calory: number;
   mod_dt: string;
   mod_id: number;
 }
 
-interface UpdateMemberExerciseResponse {
+interface UpdateMemberExerciseAppResponse {
   success: boolean;
   message?: string;
 }
 
-interface MemberExerciseListResponse {
+interface MemberExerciseAppListResponse {
   success: boolean;
   data: Array<{
-    exercise_id: number;
+    exercise_app_id: number;
     mem_id: number;
     exercise_dt: string;
     jumping_exercise_time: string;
@@ -66,23 +66,23 @@ interface MemberExerciseListResponse {
     jumping_heart_rate: string | null;
     other_exercise_time: string;
     other_exercise_type: string;
-    other_exercise_calory: string;
+    other_exercise_calory: number;
   }>;
   message?: string;
 }
 
-export const insertMemberExercise = async (params: InsertMemberExerciseRequest): Promise<InsertMemberExerciseResponse> => {
+export const insertMemberExerciseApp = async (params: InsertMemberExerciseAppRequest): Promise<InsertMemberExerciseAppResponse> => {
   try {
-    const response = await axiosInstance.post('/member-exercise/insertMemberExercise', params);
+    const response = await axiosInstance.post('/member-exercise-app/insertMemberExerciseApp', params);
     return response.data;
   } catch (error: any) {
     throw error;
   }
 };
 
-export const getMemberExerciseInfo = async (mem_id: number, exercise_dt: string): Promise<MemberExerciseInfoResponse> => {
+export const getMemberExerciseAppInfo = async (mem_id: number, exercise_dt: string): Promise<MemberExerciseAppInfoResponse> => {
   try {
-    const response = await axiosInstance.post('/member-exercise/getMemberExerciseInfo', {
+    const response = await axiosInstance.post('/member-exercise-app/getMemberExerciseAppInfo', {
       mem_id,
       exercise_dt,
     });
@@ -92,9 +92,9 @@ export const getMemberExerciseInfo = async (mem_id: number, exercise_dt: string)
   }
 };
 
-export const updateMemberExercise = async (params: UpdateMemberExerciseRequest): Promise<UpdateMemberExerciseResponse> => {
+export const updateMemberExerciseApp = async (params: UpdateMemberExerciseAppRequest): Promise<UpdateMemberExerciseAppResponse> => {
   try {
-    const response = await axiosInstance.post('/member-exercise/updateMemberExercise', params);
+    const response = await axiosInstance.post('/member-exercise-app/updateMemberExerciseApp', params);
     return response.data;
   } catch (error: any) {
     throw error;
@@ -108,13 +108,13 @@ export const updateMemberExercise = async (params: UpdateMemberExerciseRequest):
  * @param period 기간 (day, week, month, year)
  * @returns 
  */
-export const getMemberExerciseList = async (
+export const getMemberExerciseAppList = async (
   memId: number,
   yearMonth: string,
   period: string = 'day',
-): Promise<MemberExerciseListResponse> => {
+): Promise<MemberExerciseAppListResponse> => {
   try {
-    const response = await axiosInstance.post('/member-exercise/getMemberExerciseList', {
+    const response = await axiosInstance.post('/member-exercise-app/getMemberExerciseAppList', {
       mem_id: memId,
       year_month: yearMonth,
       period: period,

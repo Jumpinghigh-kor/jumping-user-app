@@ -24,7 +24,10 @@ import { usePopup } from '../hooks/usePopup';
 import { toggleCheckbox } from '../utils/commonFunction';
 import Portone from '../components/Portone';
 import { verifyPayment } from '../api/services/portoneService';
-import { isCJRemoteArea, CJ_REMOTE_AREA_SHIPPING_FEE } from '../constants/postCodeData';
+import { insertMemberPaymentApp } from '../api/services/memberPaymentAppService';
+import { insertMemberOrderAddress } from '../api/services/memberOrderAddressService';
+import { insertMemberOrderApp } from '../api/services/memberOrderAppService';
+import { isCJRemoteArea } from '../constants/postCodeData';
 
 type ShoppingPaymentRouteParams = {
   selectedItems: Array<any>;
@@ -255,12 +258,66 @@ const ShoppingPayment = () => {
           verifyPayment({ imp_uid: result.imp_uid })
             .then((verificationResult) => {
               console.log('결제 검증 성공:', verificationResult);
+              
+              // 결제 정보를 member_payment_app 테이블에 저장
+              return insertMemberPaymentApp({
+                mem_id: Number(memberInfo?.mem_id),
+                payment_method: result.pay_method || 'PORTONE',
+                payment_amount: getFinalPaymentAmount(),
+                portone_imp_uid: result.imp_uid,
+                portone_merchant_uid: paymentData.merchantOrderId,
+                portone_status: result.status || 'SUCCESS',
+                card_name: result.card_name || 'PORTONE'
+              });
+            })
+            .then((paymentResult) => {
+              console.log('결제 정보 저장 성공:', paymentResult);
+              
+              // 주문 배송지 정보를 member_order_address 테이블에 저장
+              const deliveryRequest = showCustomInput 
+                ? customRequestText 
+                : (selectedRequestType ? selectedRequestType.common_code_name : '');
+              
+              return insertMemberOrderAddress({
+                mem_id: Number(memberInfo?.mem_id),
+                receiver_name: selectedAddress.receiver_name,
+                receiver_phone: selectedAddress.receiver_phone.replace(/-/g, ''),
+                address: selectedAddress.address,
+                address_detail: selectedAddress.address_detail,
+                zip_code: selectedAddress.zip_code,
+                enter_way: selectedAddress.enter_way,
+                enter_memo: selectedAddress.enter_memo,
+                delivery_request: deliveryRequest
+              }).then(orderAddressResult => {
+                return {
+                  paymentResult,
+                  orderAddressResult
+                };
+              });
+            })
+            .then(({ paymentResult, orderAddressResult }) => {
+              console.log('주문 배송지 저장 성공:', orderAddressResult);
+              
+              // 각 상품별로 주문 정보를 member_order_app 테이블에 저장
+              const orderPromises = selectedItems.map(item => {
+                return insertMemberOrderApp({
+                  payment_app_id: paymentResult.data?.payment_app_id,
+                  product_detail_app_id: item.product_detail_app_id,
+                  mem_id: Number(memberInfo?.mem_id),
+                  order_address_id: orderAddressResult.data?.order_address_id,
+                  order_quantity: item.quantity
+                });
+              });
+              
+              return Promise.all(orderPromises);
+            })
+            .then((orderResults) => {
+              console.log('주문 정보 저장 성공:', orderResults);
               setShowPortone(false);
               showWarningPopup('결제가 완료되었습니다');
-              // TODO: 주문 생성 API 호출
             })
             .catch((error) => {
-              console.error('결제 검증 실패:', error);
+              console.error('결제 검증 또는 저장 실패:', error);
               setShowPortone(false);
               showWarningPopup('결제 검증에 실패했습니다.\n고객센터에 문의해주세요');
             });

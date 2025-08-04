@@ -21,7 +21,7 @@ import {scale} from '../utils/responsive';
 import IMAGES from '../utils/images';
 import CommonHeader from '../components/CommonHeader';
 import ExerciseSummary from '../components/ExerciseSummary';
-import {getMemberExerciseList} from '../api/services/memberExerciseService';
+import {getMemberExerciseAppList} from '../api/services/memberExerciseAppService';
 import {useAuth} from '../hooks/useAuth';
 import ExerciseInfoPopup from '../components/ExerciseInfoPopup';
 import CustomToast from '../components/CustomToast';
@@ -117,7 +117,7 @@ const AttendanceRecord = () => {
       const yearMonth = `${year}${month < 10 ? '0' + month : month}`;
       
       // 운동 정보 API 호출
-      const response = await getMemberExerciseList(Number(memberInfo.mem_id), yearMonth, '');
+      const response = await getMemberExerciseAppList(Number(memberInfo.mem_id), yearMonth, '');
       
       if (response.success) {
         const exerciseData = Array.isArray(response.data) ? response.data || [] : [response.data || {}];
@@ -162,7 +162,7 @@ const AttendanceRecord = () => {
           // 기타 운동 칼로리 추가
           let otherCalories = 0;
           if (data.other_exercise_calory) {
-            otherCalories = parseInt(data.other_exercise_calory, 10) || 0;
+            otherCalories = data.other_exercise_calory || 0;
           }
           
           // 그 날의 총 칼로리

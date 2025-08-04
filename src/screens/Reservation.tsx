@@ -383,8 +383,19 @@ const Reservation: React.FC = () => {
               ref={scrollViewRef}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{paddingBottom: scale(110)}}>
-              <Text style={styles.memberSchInfo}>'{memberInfo?.mem_nickname}'님의 기본 시간표는 <Text style={{color: '#42B649'}}>{formatTimeToKorean(memberInfo?.sch_time || '')}</Text>입니다.{'\n'}예약이 되어 있지 않으면 <Text style={{color: '#42B649'}}>기본 시간표로 자동 예약</Text>됩니다.</Text>
-              
+              <Text style={styles.sectionTitle}>안내</Text>
+              <Text style={styles.memberSchInfo}>
+                '{memberInfo?.mem_nickname}'님의 기본 시간표는
+                <Text style={{color: '#42B649'}}> {formatTimeToKorean(memberInfo?.sch_time || '')}</Text>
+                입니다.{'\n'}예약이 되어 있지 않으면
+                <Text style={{color: '#42B649'}}> 기본 시간표로 자동 예약
+                </Text>됩니다.
+                <Text>{'\n'}{'\n'}- 예약을 신청 할 경우 가맹점에서 예약을 수락 또는 거부를 하게 됩니다.</Text>
+                <Text>{'\n'}- 예약 내역에서 예약 상태를 확인할 수 있습니다.</Text>
+                <Text>{'\n'}- 응답이 없을 경우, 해당 가맹점에 문의해 주세요.</Text>
+                <Text>{'\n'}- 예약이 수락되면 방문해주세요:)</Text>
+              </Text>
+
               <View style={styles.sectionContainer}>
                 <Text style={styles.sectionTitle}>날짜 선택</Text>
                 <Calendar
@@ -489,7 +500,7 @@ const Reservation: React.FC = () => {
               <View style={styles.buttonContainer}>
                 <TouchableOpacity style={styles.reserveButton} onPress={handleReservation}>
                   <Text style={styles.reserveButtonText}>
-                    {state.scheduledDates.includes(state.selectedDate) ? '예약변경' : '예약하기'}
+                    {state.scheduledDates.includes(state.selectedDate) ? '예약 신청 변경' : '예약 신청'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -569,12 +580,17 @@ const Reservation: React.FC = () => {
                         
                         <View style={styles.scheduleContent}>
                           <Text style={styles.centerName}>
-                            {memberInfo?.center_name || '점핑 센터'}
+                            {memberInfo?.center_name}
                           </Text>
                           <View style={{flexDirection: 'row', alignItems: 'center'}}>
                             <Text style={styles.scheduleDateTime}>일시</Text>
                             <Text style={[styles.scheduleDateTime, {color: '#FFFFFF', marginLeft: scale(14)}]}>{formattedDate} {weekday} {formattedTime}</Text>
                           </View>
+                          {!isPast && (
+                            <View style={[{backgroundColor: schedule.agree_yn === 'Y' ? '#43B546' : schedule.agree_yn === 'N' ? '#F04D4D' : '#F9CB42', borderRadius: scale(5), alignSelf: 'flex-end', paddingHorizontal: scale(12), paddingVertical: scale(4), marginTop: scale(8)}]}>
+                              <Text style={[{color: '#FFFFFF', fontSize: scale(12)}]}>{schedule.agree_yn === 'Y' ? '예약 수락' : schedule.agree_yn === 'N' ? '예약 거부' : '확인 중'}</Text>
+                            </View>
+                          )}
                         </View>
                       </TouchableOpacity>
                     </View>
@@ -630,7 +646,7 @@ const Reservation: React.FC = () => {
             
             <View style={styles.modalBody}>
               <Text style={styles.modalText}>예약 내용을 다시 한 번 확인해 주세요.</Text>
-              <Text style={styles.modalWarningText}>예약 당일에는 취소 및 변경이 불가능합니다.</Text>
+              <Text style={styles.modalWarningText}>예약 당일 또는 확정일에는 취소 및 변경이 불가능합니다.</Text>
               
               <View style={styles.reservationDetailContainer}>
                 <View style={styles.detailItem}>
@@ -650,9 +666,9 @@ const Reservation: React.FC = () => {
                 </View>
               </View>
             
-              <View>
+              {/* <View>
                 <Text style={styles.lateText}>늦지 않게 출석해 주세요:)</Text>
-              </View>
+              </View> */}
             
               <View style={styles.modalFooter}>
                 <View style={styles.modalButtonsContainer}>
@@ -741,7 +757,7 @@ const styles = StyleSheet.create({
   memberSchInfo: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    marginTop: scale(20),
+    // marginTop: scale(20),
     borderWidth: 1,
     borderColor: '#D9D9D9',
     borderRadius: scale(12),

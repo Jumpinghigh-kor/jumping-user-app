@@ -37,7 +37,7 @@ const Event = ({navigation, route}) => {
                 response.data.forEach((imageData: any) => {
                   if (imageData.file_path && imageData.file_name) {
                     const imagePath = `${imageData.file_division}/${imageData.file_name}`.replace(/^\//, '');
-                    
+
                     try {
                       const { data } = supabase.storage
                         .from('event')
@@ -74,7 +74,7 @@ const Event = ({navigation, route}) => {
         backgroundColor={'#ffffff'}
         titleColor={'#202020'}
         backIcon={IMAGES.icons.arrowLeftBlack}
-        />
+      />
       <WebView
         source={{
           html: `

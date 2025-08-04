@@ -5,6 +5,7 @@ export interface Inquiry {
   inquiry_app_id: number;
   title: string;
   content: string;
+  inquiry_type?: string;
   answer?: string;
   answer_dt?: string;
   reg_dt: string;
@@ -33,18 +34,19 @@ export const getInquiryList = async (params: GetInquiryRequest): Promise<GetInqu
 };
 
 // 문의사항 작성 API
-export interface CreateInquiryRequest {
+export interface InsertInquiryRequest {
   title: string;
   content: string;
+  inquiry_type: string;
   mem_id: number;
 }
 
-export interface CreateInquiryResponse {
+export interface InsertInquiryResponse {
   success: boolean;
   message?: string;
 }
 
-export const createInquiry = async (params: CreateInquiryRequest): Promise<CreateInquiryResponse> => {
+export const insertInquiry = async (params: InsertInquiryRequest): Promise<InsertInquiryResponse> => {
   try {
     const response = await axiosInstance.post('/inquiry-app/insertInquiryApp', params);
     return response.data;
@@ -57,6 +59,7 @@ export const createInquiry = async (params: CreateInquiryRequest): Promise<Creat
 export interface UpdateInquiryRequest {
   title: string;
   content: string;
+  inquiry_type: string;
   mem_id: number;
   inquiry_app_id: number;
 }

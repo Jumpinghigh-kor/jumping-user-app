@@ -89,7 +89,7 @@ const ShoppingShipping = (props: any) => {
         return '100%'; // 완료 상태
     }
   };
-  console.log('orderData', orderData);
+  
   return (
     <>
       <CommonHeader 

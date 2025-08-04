@@ -218,7 +218,7 @@ const MyPage = () => {
           </TouchableOpacity>
 
           <View style={styles.menuItem}>
-            <Text style={styles.menuText}>푸시 알람 받기</Text>
+            <Text style={styles.menuText}>푸시 알림 받기</Text>
             <Switch
               trackColor={{ false: '#767577', true: '#43B546' }}
               thumbColor={isPushEnabled ? '#FFFFFF' : '#f4f3f4'}

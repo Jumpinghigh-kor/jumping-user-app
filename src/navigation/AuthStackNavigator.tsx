@@ -31,6 +31,8 @@ import ShoppingCoupon from '../screens/ShoppingCoupon';
 import ShoppingReturn from '../screens/ShoppingReturn';
 import ShoppingHome from '../screens/ShoppingHome';
 import EventApp from '../screens/EventApp';
+import InquiryShoppingApp from '../screens/ShoppingInquiry';
+import InquiryShoppingAppDetail from '../screens/ShoppingInquiryDetail';
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -68,8 +70,10 @@ export type AuthStackParamList = {
   ShoppingShipping: undefined;
   ShoppingReturn: undefined;
   RedirectScreen: undefined;
-  Event: {
-    eventId: number;
+  Event: { eventId: number; };
+  InquiryShoppingApp: undefined;
+  InquiryShoppingAppDetail: {
+    inquiryShoppingApp: any;
   };
 };
 
@@ -238,6 +242,16 @@ const AuthStackNavigator = () => {
       <Stack.Screen
         name="EventApp"
         component={EventApp}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingInquiry"
+        component={InquiryShoppingApp}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="InquiryShoppingAppDetail"
+        component={InquiryShoppingAppDetail}
         options={{headerShown: false}}
       />
     </Stack.Navigator>

@@ -20,18 +20,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import CommonPopup from '../components/CommonPopup';
 import { formatDateYYYYMMDD, formatDateYYYYMMDDHHII } from '../utils/commonFunction';
 import type { AuthStackParamList } from '../navigation/AuthStackNavigator';
+import { deleteInquiryShoppingApp, InquiryShoppingApp, updateInquiryShoppingApp } from '../api/services/inquiryShoppingAppService';
+import CommonHeader from '../components/CommonHeader';
 import { useAppSelector } from '../store/hooks';
+import { getCommonCodeList } from '../api/services/commonCodeService';
 
 const MAX_TITLE_LENGTH = 20;
 const MAX_CONTENT_LENGTH = 3000;
 
-type InquiryAppDetailRouteProp = RouteProp<AuthStackParamList, 'InquiryAppDetail'>;
+type InquiryShoppingAppDetailRouteProp = RouteProp<AuthStackParamList, 'InquiryShoppingAppDetail'>;
 
-const InquiryAppDetail = () => {
+const InquiryShoppingAppDetail = () => {
   const navigation = useNavigation();
-  const route = useRoute<InquiryAppDetailRouteProp>();
-  const inquiry = route.params.inquiry as Inquiry;
-  const memberInfo = useAppSelector(state => state.member.memberInfo);
+  const route = useRoute<InquiryShoppingAppDetailRouteProp>();
+  const inquiryShoppingApp = route.params.inquiryShoppingApp as InquiryShoppingApp;
+  const memberInfo = useAppSelector(state => state.member.memberInfo); 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [inquiryType, setInquiryType] = useState('선택');
@@ -42,40 +45,53 @@ const InquiryAppDetail = () => {
   const [popupMessage, setPopupMessage] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  // 문의 유형 목록 (표시 텍스트와 실제 값 매핑)
-  const inquiryTypes = [
-    { label: '어플 문의', value: 'APPLICATION' },
-    { label: '가맹점 문의', value: 'FRANCHISE' }
-  ];
+  const [inquiryShoppingAppType, setInquiryShoppingAppType] = useState<Array<{label: string, value: string}>>([]);
 
   // 표시 텍스트를 가져오는 함수
   const getTypeLabel = (value: string) => {
-    const type = inquiryTypes.find(t => t.value === value);
-    return type ? type.label : '선택';
+    const type = inquiryShoppingAppType.find(t => t.value === value);
+    return type ? type.label : '쇼핑몰 문의';
+  };
+
+  // 문의 타입 목록 가져오기
+  const loadInquiryTypes = async () => {
+    try {
+      const response = await getCommonCodeList({ group_code: 'SHOPPING_INQUIRY_TYPE' });
+      if (response.success && response.data) {
+        const types = response.data.map((item: any) => ({
+          label: item.common_code_name,
+          value: item.common_code
+        }));
+        setInquiryShoppingAppType(types);
+      }
+    } catch (error) {
+      console.error('문의 타입 목록 조회 실패:', error);
+    }
   };
 
   useEffect(() => {
-    if (inquiry) {
-      setTitle(inquiry.title);
-      setContent(inquiry.content);
-      setInquiryType(inquiry.inquiry_type);
+    if (inquiryShoppingApp) {
+      setTitle(inquiryShoppingApp.title);
+      setContent(inquiryShoppingApp.content);
+      // inquiry_type이 있으면 설정, 없으면 기본값 'APPLICATION'
+      setInquiryType(inquiryShoppingApp.inquiry_type || 'APPLICATION');
       
       // 답변이 있는 문의를 읽음으로 표시
-      if (inquiry.answer) {
-        markInquiryAsRead(inquiry.inquiry_app_id);
+      if (inquiryShoppingApp.answer) {
+        markInquiryShoppingAppAsRead(inquiryShoppingApp.inquiry_shopping_app_id);
       }
     }
-  }, [inquiry]);
+    loadInquiryTypes();
+  }, [inquiryShoppingApp]);
 
-  const markInquiryAsRead = async (inquiryId: number) => {
+  const markInquiryShoppingAppAsRead = async (inquiryId: number) => {
     try {
-      const readInquiriesStr = await AsyncStorage.getItem('readInquiries');
-      let readInquiries: number[] = readInquiriesStr ? JSON.parse(readInquiriesStr) : [];
+      const readInquiriesShoppingAppStr = await AsyncStorage.getItem('readInquiriesShoppingApp');
+      let readInquiriesShoppingApp: number[] = readInquiriesShoppingAppStr ? JSON.parse(readInquiriesShoppingAppStr) : [];
       
-      if (!readInquiries.includes(inquiryId)) {
-        readInquiries.push(inquiryId);
-        await AsyncStorage.setItem('readInquiries', JSON.stringify(readInquiries));
+      if (!readInquiriesShoppingApp.includes(inquiryId)) {
+        readInquiriesShoppingApp.push(inquiryId);
+        await AsyncStorage.setItem('readInquiriesShoppingApp', JSON.stringify(readInquiriesShoppingApp));
       }
     } catch (error) {
     }
@@ -101,12 +117,6 @@ const InquiryAppDetail = () => {
     if (isSubmitting) {
       return; // 중복 클릭 방지
     }
-
-    if (inquiryType === '선택') {
-      setPopupMessage('문의 유형을 선택해주세요.');
-      setPopupVisible(true);
-      return false;
-    }
     
     if (!validateForm()) return;
     
@@ -114,12 +124,12 @@ const InquiryAppDetail = () => {
       setIsSubmitting(true);
       setLoading(true);
       
-      const response = await updateInquiry({
+      const response = await updateInquiryShoppingApp({
         title: title.trim(),
         content: content.trim(),
         inquiry_type: inquiryType,
         mem_id: parseInt(memberInfo?.mem_id, 10),
-        inquiry_app_id: inquiry.inquiry_app_id,
+        inquiry_shopping_app_id: inquiryShoppingApp.inquiry_shopping_app_id,
       });
       
       if (response.success) {
@@ -129,7 +139,8 @@ const InquiryAppDetail = () => {
         setPopupMessage(response.message || '문의 수정에 실패했습니다.');
         setPopupVisible(true);
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error(error.response.data.message);
       setPopupMessage('문의 수정 중 오류가 발생했습니다.');
       setPopupVisible(true);
     } finally {
@@ -147,8 +158,8 @@ const InquiryAppDetail = () => {
       setIsSubmitting(true);
       setLoading(true);
       
-      const response = await deleteInquiry({
-        inquiry_app_id: inquiry.inquiry_app_id,
+      const response = await deleteInquiryShoppingApp({
+        inquiry_shopping_app_id: inquiryShoppingApp.inquiry_shopping_app_id,
         mem_id: parseInt(memberInfo?.mem_id, 10),
       });
       
@@ -176,6 +187,8 @@ const InquiryAppDetail = () => {
       <CommonPopup
         visible={popupVisible}
         message={popupMessage}
+        backgroundColor="#FFFFFF"
+        textColor="#202020"
         onConfirm={() => {
           setPopupVisible(false);
           if (popupMessage === '문의가 삭제되었습니다.') {
@@ -188,6 +201,8 @@ const InquiryAppDetail = () => {
         visible={showDeleteConfirm}
         message="삭제하시겠습니까?"
         type="warning"
+        backgroundColor="#FFFFFF"
+        textColor="#202020"
         onConfirm={() => {
           setShowDeleteConfirm(false);
           handleDelete();
@@ -197,16 +212,12 @@ const InquiryAppDetail = () => {
         cancelText="취소"
       />
 
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Image source={IMAGES.icons.arrowLeftWhite} style={styles.backIcon} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>문의 상세</Text>
-        <View style={styles.headerRight} />
-      </View>
+      <CommonHeader 
+        title="문의 상세"
+        titleColor="#202020"
+        backIcon={IMAGES.icons.arrowLeftBlack}
+        backgroundColor="#FFFFFF"
+      />
 
       <ScrollView
         style={styles.formContainer}
@@ -228,13 +239,13 @@ const InquiryAppDetail = () => {
           
           {showTypeSelector && (
             <View style={styles.typeDropdown}>
-              {inquiryTypes.map((type, index) => (
+              {inquiryShoppingAppType.map((type, index) => (
                 <TouchableOpacity
                   key={index}
                   style={[
                     styles.typeDropdownItem,
                     index === 0 && styles.typeDropdownItemFirst,
-                    index === inquiryTypes.length - 1 && styles.typeDropdownItemLast
+                    index === inquiryShoppingAppType.length - 1 && styles.typeDropdownItemLast
                   ]}
                   onPress={() => {
                     setInquiryType(type.value);
@@ -256,7 +267,7 @@ const InquiryAppDetail = () => {
         <View style={styles.inputContainer}>
           <View style={styles.titleRow}>
             <Text style={styles.label}>문의 제목<Text style={{color: '#FF0000'}}> *</Text></Text>
-            <Text style={styles.dateText}>{formatDateYYYYMMDDHHII(inquiry.reg_dt)}</Text>
+            <Text style={styles.dateText}>{formatDateYYYYMMDDHHII(inquiryShoppingApp.reg_dt)}</Text>
           </View>
           <View style={styles.titleInputContainer}>
             <TextInput
@@ -294,13 +305,13 @@ const InquiryAppDetail = () => {
           </Text>
         </View>
 
-        {inquiry.answer && (
+        {inquiryShoppingApp.answer && (
           <View style={styles.answerContainer}>
             <Text style={styles.answerLabel}>답변</Text>
             <View style={styles.answerContent}>
-              <Text style={styles.answerText}>{inquiry.answer}</Text>
+              <Text style={styles.answerText}>{inquiryShoppingApp.answer}</Text>
               <Text style={styles.answerDate}>
-                {formatDateYYYYMMDDHHII(inquiry.answer_dt)}
+                {formatDateYYYYMMDDHHII(inquiryShoppingApp.answer_dt)}
               </Text>
             </View>
           </View>
@@ -308,7 +319,6 @@ const InquiryAppDetail = () => {
       </ScrollView>
 
       <View style={styles.bottomButtonContainer}>
-
         <TouchableOpacity 
           style={[styles.deleteButton]}
           onPress={() => setShowDeleteConfirm(true)}
@@ -316,11 +326,10 @@ const InquiryAppDetail = () => {
         >
           <Text style={styles.deleteButtonText}>삭제</Text>
         </TouchableOpacity>
-        
         <TouchableOpacity 
-          style={[styles.submitButton, (loading || isSubmitting || inquiry.answer !== null) && styles.disabledButton]}
+          style={[styles.submitButton, (loading || isSubmitting || inquiryShoppingApp.answer !== null) && styles.disabledButton]}
           onPress={handleUpdate}
-          disabled={loading || isSubmitting || inquiry.answer !== null}
+          disabled={loading || isSubmitting || inquiryShoppingApp.answer !== null}
         >
           <Text style={styles.submitButtonText}>수정</Text>
         </TouchableOpacity>
@@ -332,7 +341,7 @@ const InquiryAppDetail = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#202020',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
@@ -342,7 +351,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(16),
     borderBottomWidth: 0,
     borderBottomColor: '#333333',
-    backgroundColor: '#202020',
+    backgroundColor: '#FFFFFF',
     marginTop: scale(5),
   },
   backButton: {
@@ -355,7 +364,7 @@ const styles = StyleSheet.create({
     height: scale(20),
   },
   headerTitle: {
-    color: '#FFFFFF',
+    color: '#202020',
     fontSize: scale(14),
     fontWeight: 'bold',
   },
@@ -390,13 +399,13 @@ const styles = StyleSheet.create({
     marginLeft: scale(5),
   },
   inquiryTitle: {
-    color: '#FFFFFF',
+    color: '#202020',
     fontSize: scale(14),
     fontWeight: 'bold',
     marginBottom: scale(5),
   },
   inquiryDate: {
-    color: '#999999',
+    color: '#202020',
     fontSize: scale(10),
   },
   statusContainer: {
@@ -416,7 +425,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: '#999999',
+    color: '#202020',
     fontSize: scale(14),
   },
   createButton: {
@@ -461,7 +470,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   activeTabButtonText: {
-    color: '#FFFFFF',
+    color: '#202020',
     fontWeight: 'bold',
   },
   tabUnderline: {
@@ -473,7 +482,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#373737',
   },
   activeTabUnderline: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#202020',
   },
   createInquiryContainer: {
     flex: 1,
@@ -490,7 +499,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   createInquiryButtonText: {
-    color: '#FFFFFF',
+    color: '#202020',
     fontSize: scale(16),
     fontWeight: 'bold',
   },
@@ -505,7 +514,7 @@ const styles = StyleSheet.create({
     marginBottom: scale(20),
   },
   label: {
-    color: '#FFFFFF',
+    color: '#202020',
     fontSize: scale(12),
     marginBottom: scale(8),
     fontWeight: 'bold',
@@ -513,7 +522,7 @@ const styles = StyleSheet.create({
   titleInputContainer: {
     flexDirection: 'row',
     width: '100%',
-    backgroundColor: '#373737',
+    backgroundColor: 'transparent',
     borderRadius: scale(8),
     alignItems: 'center',
     borderWidth: 1,
@@ -522,7 +531,7 @@ const styles = StyleSheet.create({
   titleInput: {
     flex: 1,
     padding: scale(12),
-    color: '#FFFFFF',
+    color: '#202020',
     fontSize: scale(12),
   },
   titleCounter: {
@@ -531,10 +540,10 @@ const styles = StyleSheet.create({
     fontSize: scale(11),
   },
   contentInput: {
-    backgroundColor: '#373737',
+    backgroundColor: 'transparent',
     borderRadius: scale(8),
     padding: scale(12),
-    color: '#FFFFFF',
+    color: '#202020',
     fontSize: scale(12),
     minHeight: scale(200),
     borderWidth: 1,
@@ -626,7 +635,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#373737',
+    backgroundColor: 'transparent',
     borderTopLeftRadius: scale(8),
     borderTopRightRadius: scale(8),
     paddingHorizontal: scale(12),
@@ -637,7 +646,7 @@ const styles = StyleSheet.create({
     borderColor: '#D9D9D9',
   },
   typeSelectorText: {
-    color: '#FFFFFF',
+    color: '#202020',
     fontSize: scale(12),
     fontWeight: '500',
   },
@@ -651,18 +660,17 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '180deg' }],
   },
   typeDropdown: {
-    backgroundColor: '#373737',
+    backgroundColor: 'transparent',
     borderBottomLeftRadius: scale(8),
     borderBottomRightRadius: scale(8),
     borderWidth: 1,
     borderColor: '#D9D9D9',
-    maxHeight: scale(200),
   },
   typeDropdownItem: {
     paddingVertical: scale(12),
     paddingHorizontal: scale(16),
     borderBottomWidth: 1,
-    borderBottomColor: '#444444',
+    borderBottomColor: '#D9D9D9',
   },
   typeDropdownItemFirst: {
     borderTopLeftRadius: scale(8),
@@ -674,13 +682,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   typeDropdownText: {
-    color: '#FFFFFF',
+    color: '#202020',
     fontSize: scale(12),
   },
   typeDropdownTextSelected: {
     fontWeight: 'bold',
-    color: '#43B546',
+    color: '#202020',
   },
 });
 
-export default InquiryAppDetail; 
+export default InquiryShoppingAppDetail; 

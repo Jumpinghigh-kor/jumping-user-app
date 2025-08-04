@@ -1,9 +1,9 @@
 import { apiRequest } from '../apiRequest';
 
 // Delivery Tracker API 설정
-const DELIVERY_TRACKER_CLIENT_ID = 'AAmmCnQ09G5PBr2z0nx8Klp'; // 발급받은 클라이언트 ID
-const DELIVERY_TRACKER_CLIENT_SECRET = 'qkOJHT3VUU9gsecKH6L09fI187tNHBQAffWKVY4BhtM'; // 발급받은 클라이언트 시크릿
-const DELIVERY_TRACKER_BASE_URL = 'https://apis.tracker.delivery/graphql';
+const DELIVERY_TRACKER_CLIENT_ID = process.env.DELIVERY_TRACKER_CLIENT_ID; // 발급받은 클라이언트 ID
+const DELIVERY_TRACKER_CLIENT_SECRET = process.env.DELIVERY_TRACKER_CLIENT_SECRET; // 발급받은 클라이언트 시크릿
+const DELIVERY_TRACKER_BASE_URL = process.env.DELIVERY_TRACKER_BASE_URL;
 
 // 캐시 및 레이트 리미팅을 위한 변수들
 let lastRequestTime = 0;

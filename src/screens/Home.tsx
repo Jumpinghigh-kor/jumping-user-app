@@ -24,7 +24,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {AuthStackParamList} from '../navigation/AuthStackNavigator';
 import CommonPopup from '../components/CommonPopup';
 import LinearGradient from 'react-native-linear-gradient';
-import {getMemberExerciseInfo, getMemberExerciseList} from '../api/services/memberExerciseService';
+import {getMemberExerciseAppInfo, getMemberExerciseAppList} from '../api/services/memberExerciseAppService';
 import {insertMemberExerciseGoal, updateMemberExerciseGoal, getMemberExerciseGoal} from '../api/services/memberExerciseGoalService';
 import IMAGES from '../utils/images';
 import { useProfileImage } from '../hooks/useProfileImage';
@@ -96,6 +96,9 @@ const Home = () => {
         return false;
       }
 
+      // 토큰을 AsyncStorage에 저장
+      await AsyncStorage.setItem('fcm_token', token);
+
       // updatePushToken API 호출
       const response = await updatePushToken({
         mem_id: memberInfo.mem_id,
@@ -117,6 +120,11 @@ const Home = () => {
 
   const updateRecentDtFn = async () => {
     try {
+      // memberInfo.mem_id가 유효한지 확인
+      if (!memberInfo?.mem_id) {
+        console.log('회원 정보가 없어 최근 접속일 업데이트를 건너뜁니다.');
+        return;
+      }
 
       const response = await updateRecentDt(Number(memberInfo.mem_id));
       console.log(response);
@@ -128,6 +136,12 @@ const Home = () => {
   // 읽지 않은 알림이 있는지 체크
   const checkUnreadNotifications = async () => {
     try {
+      // memberInfo.mem_id가 유효한지 확인
+      if (!memberInfo?.mem_id) {
+        console.log('회원 정보가 없어 알림 체크를 건너뜁니다.');
+        return;
+      }
+
       // 읽은 공지사항 가져오기
       const readNoticesStr = await AsyncStorage.getItem('readNotices');
       const readNotices = readNoticesStr ? JSON.parse(readNoticesStr) : [];
@@ -163,10 +177,13 @@ const Home = () => {
 
   useFocusEffect(
     React.useCallback(() => {
-      loadProfileImage();
-      checkUnreadNotifications();
-      setBannerKey(prev => prev + 1);  // HomeBannerImgPicker 재렌더링 강제
-      updateRecentDtFn();
+      // memberInfo.mem_id가 유효할 때만 실행
+      if (memberInfo?.mem_id) {
+        loadProfileImage();
+        checkUnreadNotifications();
+        setBannerKey(prev => prev + 1);  // HomeBannerImgPicker 재렌더링 강제
+        updateRecentDtFn();
+      }
     }, [memberInfo?.mem_id]),
   );
 
@@ -175,10 +192,22 @@ const Home = () => {
     loadMemberInfo();
   }, []);
 
-  // 푸시 알림 초기화 (회원 정보 로드 후 실행)
+  // 푸시 알림 초기화 (회원 정보 로드 후 한 번만 실행)
   useEffect(() => {
     if (memberInfo?.mem_id) {
-      initializePushToken();
+      // FCM 토큰이 이미 있는지 확인
+      const checkAndInitializePushToken = async () => {
+        try {
+          const existingToken = await AsyncStorage.getItem('fcm_token');
+          if (!existingToken) {
+            initializePushToken();
+          }
+        } catch (error) {
+          console.log('FCM 토큰 확인 중 오류:', error);
+        }
+      };
+      
+      checkAndInitializePushToken();
     }
   }, [memberInfo?.mem_id]);
 
@@ -276,7 +305,7 @@ const Home = () => {
       const day = today.getDate();
       const yearMonthDay = `${year}${month < 10 ? '0' + month : month}${day < 10 ? '0' + day : day}`;
       
-      const response = await getMemberExerciseInfo(Number(memberInfo.mem_id), yearMonthDay);
+      const response = await getMemberExerciseAppInfo(Number(memberInfo.mem_id), yearMonthDay);
 
       if (response.success && response.data) {
         const dataArray = Array.isArray(response.data) ? response.data : [response.data];
@@ -290,7 +319,7 @@ const Home = () => {
           
           // 실제 운동 데이터가 있는지 확인
           const hasJumpingExercise = data.jumping_exercise_time && data.jumping_exercise_time !== '0000';
-          const hasOtherExercise = data.other_exercise_calory && parseInt(data.other_exercise_calory, 10) > 0;
+          const hasOtherExercise = data.other_exercise_calory && data.other_exercise_calory > 0;
           
           // 오늘 점핑 칼로리 계산 - 실제 운동 시간이 있을 때만
           if (hasJumpingExercise) {
@@ -318,7 +347,7 @@ const Home = () => {
           
           // 오늘 기타 운동 칼로리 계산 - 기타 운동 칼로리가 있을 때만
           if (hasOtherExercise) {
-            todayOtherCalories = parseInt(data.other_exercise_calory, 10) || 0;
+            todayOtherCalories = data.other_exercise_calory || 0;
           }
           
           // 오늘 심박수 계산 - 실제 운동한 경우에만
@@ -372,14 +401,14 @@ const Home = () => {
         const month = today.getMonth() + 1;
         const yearMonth = `${year}${month < 10 ? '0' + month : month}`;
         
-        const response = await getMemberExerciseList(Number(memberInfo.mem_id), yearMonth, 'day');
+        const response = await getMemberExerciseAppList(Number(memberInfo.mem_id), yearMonth, 'day');
 
         if (response.success) {
           setExerciseData(Array.isArray(response.data) ? response.data || [] : [response.data || {}]);
         }
 
         // 누적 운동량 데이터 가져오기
-        const allDataResponse = await getMemberExerciseList(Number(memberInfo.mem_id), 'all_date');
+        const allDataResponse = await getMemberExerciseAppList(Number(memberInfo.mem_id), 'all_date');
         
         if (allDataResponse.success) {
           const allExerciseData = Array.isArray(allDataResponse.data) ? allDataResponse.data || [] : [allDataResponse.data || {}];
@@ -527,12 +556,12 @@ const Home = () => {
         keyboardShouldPersistTaps="handled">
         {/* 헤더 부분 */}
 
-        <View style={styles.gradientGreenContainer}>
+        {/* <View style={styles.gradientGreenContainer}>
           <Image 
             source={IMAGES.gradient.circleGreen}
             style={styles.gradientGreen}
             />
-        </View>
+        </View> */}
 
         <View
           style={[

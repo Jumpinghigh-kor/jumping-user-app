@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import {scale} from '../utils/responsive';
 import {useAuth} from '../hooks/useAuth';
-import {insertMemberExercise, getMemberExerciseInfo, updateMemberExercise} from '../api/services/memberExerciseService';
+import {insertMemberExerciseApp, getMemberExerciseAppInfo, updateMemberExerciseApp } from '../api/services/memberExerciseAppService';
 import {getCommonCodeList, CommonCode} from '../api/services/commonCodeService';
 import CommonPopup from './CommonPopup';
 
@@ -364,14 +364,14 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
         intensityLevel: '',
         exerciseHours: '00',
         exerciseMinutes: '00',
-        heartRate: '0',
+        heartRate: '',
         isHeartRateSkipped: false
       },
       other: {
         exerciseType: '',
         exerciseHours: '00',
         exerciseMinutes: '00',
-        exerciseCalory: '0'
+        exerciseCalory: ''
       }
     });
     setExerciseId(null);
@@ -384,7 +384,7 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
     try {
       const formattedDate = formatDate(date);
       const memId = typeof memberInfo.mem_id === 'string' ? parseInt(memberInfo.mem_id, 10) : memberInfo.mem_id;
-      const response = await getMemberExerciseInfo(memId, formattedDate);
+      const response = await getMemberExerciseAppInfo(memId, formattedDate);
 
       if (response.success && response.data && (Array.isArray(response.data) ? response.data.length > 0 : true)) {
         const exerciseData = Array.isArray(response.data) 
@@ -392,8 +392,8 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
           : response.data;
         
         if (exerciseData) {
-          if (exerciseData.exercise_id) {
-            setExerciseId(exerciseData.exercise_id);
+          if (exerciseData.exercise_app_id) {
+            setExerciseId(exerciseData.exercise_app_id);
           }
           
           const intensityMap: { [key: string]: string } = {
@@ -516,20 +516,20 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
         jumping_heart_rate: jumping.intensityLevel ? heartRateValue : null,
         other_exercise_type: other.exerciseType ? getOtherExerciseTypeValue(other.exerciseType) : null,
         other_exercise_time: otherExerciseTime,
-        other_exercise_calory: other.exerciseType ? other.exerciseCalory : null,
+        other_exercise_calory: other.exerciseType ? Number(other.exerciseCalory) : null,
       };
       
       let response;
 
       if (exerciseId) {
-        response = await updateMemberExercise({
-          exercise_id: exerciseId,
+        response = await updateMemberExerciseApp({
+          exercise_app_id: exerciseId,
           ...commonExerciseData,
           mod_dt: formattedDate,
           mod_id: Number(memberInfo.mem_id),
         });
       } else {
-        response = await insertMemberExercise({
+        response = await insertMemberExerciseApp({
           ...commonExerciseData,
           reg_dt: formattedDate.substring(0, 6),
           reg_id: Number(memberInfo.mem_id),
