@@ -124,7 +124,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
               if (!isFocused && !event.defaultPrevented) {
                 // Shopping 탭인 경우 RedirectScreen으로 이동
                 if (route.name === 'Shopping') {
-                  navigation.navigate('RedirectScreen');
+                  navigation.navigate('RedirectScreen', { type: 'shopping' });
                 } else {
                   navigation.navigate(route.name);
                 }

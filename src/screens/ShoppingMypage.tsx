@@ -16,17 +16,45 @@ import CommonHeader from '../components/CommonHeader';
 import CommonPopup from '../components/CommonPopup';
 import { useAppSelector } from '../store/hooks';
 import { useAuth } from '../hooks/useAuth';
+import { getPostAppList } from '../api/services/postAppService';
 
 const ShoppingMypage: React.FC = () => {
   const navigation = useNavigation();
   const memberInfo = useAppSelector(state => state.member.memberInfo);
   const { loadMemberInfo } = useAuth();
   const [showExitPopup, setShowExitPopup] = useState(false);
+  const [hasUnreadShoppingPost, setHasUnreadShoppingPost] = useState(false);
+  const [unreadShoppingPostCount, setUnreadShoppingPostCount] = useState(0);
 
   // 화면이 포커스될 때마다 회원 정보 새로고침
   useFocusEffect(
     React.useCallback(() => {
       loadMemberInfo();
+      const checkUnread = async () => {
+        try {
+          if (!memberInfo?.mem_id) return;
+          const res = await getPostAppList(parseInt(memberInfo.mem_id, 10), 'SHOPPING');
+          if (res?.success && res?.data) {
+            const unreadItems = res.data.filter((item: any) => {
+              const allSendYn = item.all_send_yn;
+              const readYn = item.read_yn;
+              return (
+                (allSendYn === 'N' && readYn === 'N') ||
+                (allSendYn === 'Y' && (!readYn || readYn === ''))
+              );
+            });
+            setHasUnreadShoppingPost(unreadItems.length > 0);
+            setUnreadShoppingPostCount(unreadItems.length);
+          } else {
+            setHasUnreadShoppingPost(false);
+            setUnreadShoppingPostCount(0);
+          }
+        } catch (e) {
+          setHasUnreadShoppingPost(false);
+          setUnreadShoppingPostCount(0);
+        }
+      };
+      checkUnread();
     }, [])
   );
 
@@ -37,6 +65,20 @@ const ShoppingMypage: React.FC = () => {
         titleColor="#FFFFFF"
         backIcon={IMAGES.icons.arrowLeftWhite}
         backgroundColor="#42B649"
+        rightIcon={
+          <TouchableOpacity onPress={() => navigation.navigate('ShoppingPostList' as never)}>
+            <View style={styles.mailWrapper}>
+              <Image source={IMAGES.icons.mailStrokeWhite} style={styles.homeIcon} />
+              {hasUnreadShoppingPost && (
+                <View style={styles.notificationDot}>
+                  <Text style={styles.notificationDotText}>
+                    {unreadShoppingPostCount > 9 ? '9+' : unreadShoppingPostCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+        }
         onBackPress={() => navigation.navigate('MainTab', { screen: 'Shopping' })}
       />
       <View style={styles.container}>
@@ -106,6 +148,10 @@ const ShoppingMypage: React.FC = () => {
               <Text style={styles.menuText}>배송지 관리</Text>
               <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
             </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ShoppingSettings')}>
+              <Text style={styles.menuText}>취소•반품•교환 내역</Text>
+              <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
+            </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ShoppingZZim')}>
               <Text style={styles.menuText}>찜한 상품 보기</Text>
               <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
@@ -118,10 +164,6 @@ const ShoppingMypage: React.FC = () => {
               <Text style={styles.menuText}>문의 하기</Text>
               <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
             </TouchableOpacity>
-            {/* <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ShoppingSettings')}>
-              <Text style={styles.menuText}>환경설정</Text>
-              <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
-            </TouchableOpacity> */}
             <TouchableOpacity style={styles.menuItem} onPress={() => {
               setShowExitPopup(true);
             }}>
@@ -263,7 +305,27 @@ const styles = StyleSheet.create({
     width: scale(18),
     height: scale(18),
     resizeMode: 'contain',
-  }
+  },
+  mailWrapper: {
+    position: 'relative',
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: -scale(6),
+    right: -scale(6),
+    minWidth: scale(14),
+    height: scale(14),
+    borderRadius: scale(7),
+    backgroundColor: '#F04D4D',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: scale(3),
+  },
+  notificationDotText: {
+    color: '#FFFFFF',
+    fontSize: scale(9),
+    fontWeight: 'bold',
+  },
 });
 
 export default ShoppingMypage; 

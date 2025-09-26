@@ -116,6 +116,8 @@ const IMAGES = {
     homeStrokeBlack002: require('../assets/images/icon/icon_home_stroke_black_002.png'),
     deliveryHandStrokeBlack: require('../assets/images/icon/icon_delivery_hand_stroke_black.png'),
     copyWhite: require('../assets/images/icon/icon_copy_white.png'),
+    infoBlack: require('../assets/images/icon/icon_info_black.png'),
+    mailStrokeWhite: require('../assets/images/icon/icon_mail_stroke_white.png'),
   },
   logo: {
     jumpingBlack: require('../assets/images/logo/logo_jumping_black.png'),

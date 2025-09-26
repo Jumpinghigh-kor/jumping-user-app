@@ -170,7 +170,7 @@ const FindPasswordScreen = () => {
       }
 
       const response = await findPassword(id, name, phone);
-      console.log(response);
+      
       if (response.success) {
         setPasswordInfo(response.data);
 

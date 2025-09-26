@@ -108,8 +108,6 @@ const ShoppingAddress = ({ navigation, route }) => {
           {addressesList.length > 0 ? (
             <View>
               {addressesList.map((address) => {
-                console.log('address', address);
-                console.log('selectedAddressId', selectedAddressId);
                 return (
                 <View key={address.shipping_address_id} style={{borderBottomWidth: 5, borderColor: '#EEEEEE', paddingVertical: scale(16), paddingHorizontal: scale(16)}}>
                   <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: scale(5)}}>

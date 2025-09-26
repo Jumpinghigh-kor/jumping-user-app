@@ -133,8 +133,9 @@ const ShoppingReturn = ({route}: any) => {
   // getMemberReturnApp API 통신
   const fetchMemberReturnApp = async () => {
     try {
+      console.log('fetchMemberReturnApp');
       const response = await getMemberReturnAppList({ mem_id: Number(memberInfo?.mem_id) });
-
+      console.log('response', response);
       if (response.success) {
         setReturnData(response.data);
       }
@@ -315,6 +316,14 @@ const ShoppingReturn = ({route}: any) => {
                 </TouchableOpacity>
               </View>
 
+              <View style={[commonStyle.mt15]}>
+                <View style={[layoutStyle.rowStart, commonStyle.mb5]}>
+                  <Image source={IMAGES.icons.infoBlack} style={{width: scale(13), height: scale(13), resizeMode: 'contain'}} />
+                  <Text style={[styles.infoText, commonStyle.ml5]}>선결제 안내</Text>
+                </View>
+                <Text style={styles.infoText}>반품/교환 배송비는 신청 시 선결제 됩니다. 단, 상품 불량/오배송 등 판매자 귀책사유일 경우, 결제된 배송비는 환불 처리됩니다.</Text>
+              </View>
+
               {selectedType === 'exchange' && (
                 <View style={styles.exchangeProductContainer}>
                   <Text style={styles.exchangeProductTitle}>교환 상품</Text>
@@ -329,7 +338,7 @@ const ShoppingReturn = ({route}: any) => {
                       <Text style={styles.brandName}>{item?.brand_name}</Text>
                       <Text style={styles.productName}>{item?.product_name}</Text>
                       <View style={[layoutStyle.rowStart, {marginTop: scale(10)}]}>
-                        <Text style={[styles.productPrice]}>{item?.payment_amount.toLocaleString()}원</Text>
+                        <Text style={[styles.productPrice]}>{Number(item?.payment_amount ?? 0).toLocaleString()}원</Text>
                         <Text style={[styles.productPrice, commonStyle.ml5]}>/ {item?.option_unit} {item?.order_quantity}개</Text>
                       </View>
                     </View>
@@ -402,7 +411,7 @@ const ShoppingReturn = ({route}: any) => {
                 )}
               </View>
 
-              {selectedType === 'return' && (
+              {/* {selectedType === 'return' && (
                 <View style={styles.uploadContainer}>
                   <Text style={styles.uploadTitle}>사진 업로드</Text>
                   <ReturnImgPicker 
@@ -414,7 +423,7 @@ const ShoppingReturn = ({route}: any) => {
                   />
                   <Text style={styles.uploadDescription}>첨부파일은 최대 3장, 한 장당 최대 10MB까지 업로드 가능합니다</Text>
                 </View>
-              )}
+              )} */}
 
               <View style={styles.shippingContainer}>
                 <View style={styles.shippingTitleContainer}>
@@ -443,12 +452,12 @@ const ShoppingReturn = ({route}: any) => {
                 <Text style={[styles.refundText, commonStyle.mt5, commonStyle.mb10]}>귀책에 따라 반품 배송비가 정해지며, 배송비는 <Text style={{color: '#202020'}}>착불</Text>로만 결제 가능합니다</Text>
                 <View style={[layoutStyle.rowBetween, {marginBottom: scale(10)}]}>
                   <Text style={styles.refundText}>배송비</Text>
-                  <Text style={styles.refundText}>{getShippingFee().toLocaleString()}원</Text>
+                  <Text style={styles.refundText}>{Number(getShippingFee() ?? 0).toLocaleString()}원</Text>
                 </View>
                 {shippingAddress?.zip_code && isCJRemoteArea(shippingAddress.zip_code) && (
                   <View style={[layoutStyle.rowBetween, {marginBottom: scale(10)}]}>
                     <Text style={styles.refundText}>도서산간 배송비</Text>
-                    <Text style={styles.refundText}>{(CJ_REMOTE_AREA_SHIPPING_FEE * (selectedType === 'return' ? 1 : 2)).toLocaleString()}원</Text>
+                    <Text style={styles.refundText}>{Number(CJ_REMOTE_AREA_SHIPPING_FEE * (selectedType === 'return' ? 1 : 2)).toLocaleString()}원</Text>
                   </View>
                 )}
               </View>
@@ -461,7 +470,7 @@ const ShoppingReturn = ({route}: any) => {
                     <>
                       <View style={[layoutStyle.rowBetween, {marginVertical: scale(5)}]}>
                         <Text style={styles.refundTotalTitle}>최종 환불 금액</Text>
-                        <Text style={styles.refundTotalAmount}>{item?.payment_amount.toLocaleString()}원</Text>
+                        <Text style={styles.refundTotalAmount}>{Number(item?.payment_amount ?? 0).toLocaleString()}원</Text>
                       </View>
                     </>
                 </View>
@@ -526,7 +535,7 @@ const ShoppingReturn = ({route}: any) => {
                             <Text style={styles.brandName}>{item.brand_name}</Text>
                             <Text style={styles.productName}>{item.product_name}</Text>
                             <View style={[layoutStyle.rowStart, {marginTop: scale(10)}]}>
-                              <Text style={[styles.productPrice]}>{item?.payment_amount.toLocaleString()}원</Text>
+                              <Text style={[styles.productPrice]}>{Number(item?.payment_amount ?? 0).toLocaleString()}원</Text>
                               <Text style={[commonStyle.ml5, styles?.productPrice]}>/ {item?.option_unit} {item?.order_quantity}개</Text>
                             </View>
                           </View>
@@ -669,6 +678,11 @@ const styles = StyleSheet.create({
     marginLeft: scale(5),
     fontSize: scale(14),
     color: '#D9D9D9',
+  },
+  infoText: {
+    fontSize: scale(12),
+    color: '#202020',
+    fontWeight: '400',
   },
   returnContainer: {
     marginTop: scale(20),

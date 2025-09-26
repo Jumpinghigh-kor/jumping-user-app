@@ -2,8 +2,8 @@ import {axiosInstance} from '../config/axiosConfig';
 
 // 포인트 정보 타입 정의
 export interface MemberPointApp {
-  point_add: number;
-  point_minus: number;
+  point_status: string;
+  point_amount: number;
   product_name: string;
   brand_name: string;
   option_unit: string;

@@ -274,7 +274,7 @@ const ShoppingDetail = ({route, navigation}) => {
         filter: selectedSort,
         review_img_yn: showPhotoReviewOnly ? 'Y' : 'N'
       });
-      console.log('response',response);
+
       if (response.success && response.data) {
         // 평균 별점 계산
         const starPoints = response.data.map(review => review.star_point).filter(Boolean);
@@ -384,6 +384,38 @@ const ShoppingDetail = ({route, navigation}) => {
   const handleCartPress = () => {
     navigation.navigate('ShoppingCart');
   };
+
+  // 현재 날짜 기준 유효 쿠폰 존재 여부
+  const hasActiveCoupon = useMemo(() => {
+    if (!couponData || couponData.length === 0) return false;
+    const toYmdNum = (dateObj: Date) => {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      return Number(`${y}${m}${d}`);
+    };
+    const normalizeDateField = (val: any): number | null => {
+      if (!val) return null;
+      const digits = String(val).replace(/\D/g, '');
+      if (digits.length < 8) return null;
+      return Number(digits.slice(0, 8));
+    };
+    const now = toYmdNum(new Date());
+    const isInRange = (c: any) => {
+      const start = normalizeDateField(
+        c.start_dt ?? c.start_date ?? c.issue_start_dt ?? c.valid_from ?? c.available_from
+      );
+      const end = normalizeDateField(
+        c.end_dt ?? c.end_date ?? c.issue_end_dt ?? c.valid_to ?? c.available_to
+      );
+      // 기간 정보가 하나도 없으면 노출하지 않음
+      if (!(start || end)) return false;
+      if (start && now < start) return false;
+      if (end && now > end) return false;
+      return true;
+    };
+    return couponData.some(isInRange);
+  }, [couponData]);
 
   // 인디케이터 점 렌더링
   const renderDots = () => (
@@ -728,7 +760,7 @@ const ShoppingDetail = ({route, navigation}) => {
       setShowCustomToast(true);
     }
   };
-  
+
   return (
     <>
       <CommonHeader 
@@ -783,7 +815,7 @@ const ShoppingDetail = ({route, navigation}) => {
           
           {/* 상품 정보 */}
           <View style={styles.productInfo}>
-            <Text style={styles.productName}>{productParams.title}</Text>
+            <Text style={styles.productName}>{productDetailData[0]?.product_name}</Text>
             
             {/* 리뷰 정보 */}
             {reviewData?.length > 0 ? (
@@ -817,13 +849,15 @@ const ShoppingDetail = ({route, navigation}) => {
               <View style={[layoutStyle.rowBetween]}>
                 <Text style={styles.price}>{productDetailData[0]?.price.toLocaleString()}원</Text>
                 <View>
-                  <TouchableOpacity
-                    style={[commonStyle.pv10, layoutStyle.rowStart, {borderWidth: 1, borderColor: '#5588FF', borderRadius: scale(8), paddingHorizontal: scale(5), paddingVertical: scale(5)}]}
-                    onPress={() => setShowCouponModal(true)}
-                  >
-                    <Text style={{fontSize: scale(12), color: '#5588FF'}}>쿠폰 받기</Text>
-                    <Image source={IMAGES.icons.downloadBlue} style={{width: scale(12), height: scale(12), resizeMode: 'contain', marginLeft: scale(5)}} />
-                  </TouchableOpacity>
+                  {hasActiveCoupon && (
+                    <TouchableOpacity
+                      style={[commonStyle.pv10, layoutStyle.rowStart, {borderWidth: 1, borderColor: '#5588FF', borderRadius: scale(8), paddingHorizontal: scale(5), paddingVertical: scale(5)}]}
+                      onPress={() => setShowCouponModal(true)}
+                    >
+                      <Text style={{fontSize: scale(12), color: '#5588FF'}}>쿠폰 받기</Text>
+                      <Image source={IMAGES.icons.downloadBlue} style={{width: scale(12), height: scale(12), resizeMode: 'contain', marginLeft: scale(5)}} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             </View>

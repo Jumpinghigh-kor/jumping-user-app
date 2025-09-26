@@ -405,6 +405,7 @@ const CustomPurchaseModal = ({ visible, onClose, product }) => {
                     product_app_id: product.product_app_id,
                     brand_name: product.brand_name,
                     product_name: product.product_name,
+                    original_price: product.original_price,
                     price: option.price,
                     quantity: option.selectedQuantity,
                     option_gender: option.option_gender,

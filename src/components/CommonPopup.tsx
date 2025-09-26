@@ -8,6 +8,7 @@ type PopupType = 'default' | 'warning' | 'confirm';
 interface CommonPopupProps {
   visible: boolean;
   title?: string;
+  titleWeight?: 'bold' | 'normal';
   message: string;
   type?: PopupType;
   onConfirm: () => void;
@@ -22,6 +23,7 @@ interface CommonPopupProps {
 const CommonPopup = ({
   visible,
   title,
+  titleWeight = 'normal',
   message,
   type = 'default',
   onConfirm,
@@ -50,7 +52,7 @@ const CommonPopup = ({
               />
             </View>
           )}
-          <Text style={[styles.message, textColor ? { color: textColor } : null]}>{message}</Text>
+          <Text style={[styles.message, textColor ? { color: textColor } : null, titleWeight === 'bold' ? { fontWeight: 'bold' } : null]}>{message}</Text>
           </View>
           {children}
           <View style={styles.buttonContainer}>

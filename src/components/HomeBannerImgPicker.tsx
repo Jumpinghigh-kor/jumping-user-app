@@ -146,7 +146,6 @@ const HomeBannerImgPicker: React.FC<HomeBannerImgPickerProps> = ({ style }) => {
 
   // 배너 클릭 핸들러
   const handleBannerPress = (banner: BannerItem) => {
-    console.log('banner',banner);
     if(banner.banner_type === "EVENT"){
       (navigation as any).navigate('EventApp', {
         item: banner

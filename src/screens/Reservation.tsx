@@ -6,6 +6,7 @@ import images from '../utils/images';
 import { getCenterScheduleList, CenterScheduleInfo, getMemberScheduleList, deleteMemberScheduleApp, updateMemberScheduleApp, insertMemberScheduleApp } from '../api/services/memberScheduleAppService';
 import {useAppSelector} from '../store/hooks';
 import CommonModal from '../components/CommonModal';
+import CommonPopup from '../components/CommonPopup';
 import { useFocusEffect } from '@react-navigation/native';
 import {getMemberOrdersList, GetMemberOrderResponse} from '../api/services/memberOrdersService';
 import Calendar from '../components/Calendar';
@@ -47,6 +48,7 @@ const Reservation: React.FC = () => {
   const pan = useRef(new Animated.ValueXY()).current;
   const [showCustomToast, setShowCustomToast] = useState(false);
   const [customToastMessage, setCustomToastMessage] = useState('');
+  const [cancelPopupVisible, setCancelPopupVisible] = useState(false);
   
   // 메모이제이션된 panResponder
   const panResponder = useMemo(() => 
@@ -378,19 +380,21 @@ const Reservation: React.FC = () => {
         </View>
         
         {state.activeTab === 'reservation' ? (
-          <View style={styles.reservationContainer} key={state.forceUpdateCounter}>
+          <View style={styles.reservationContainer}>
             <ScrollView
               ref={scrollViewRef}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{paddingBottom: scale(110)}}>
+              contentContainerStyle={{paddingBottom: scale(110)}}
+              keyboardShouldPersistTaps="handled"
+              onStartShouldSetResponderCapture={() => true}
+              onMoveShouldSetResponderCapture={() => true}
+              >
               <Text style={styles.sectionTitle}>안내</Text>
               <Text style={styles.memberSchInfo}>
                 '{memberInfo?.mem_nickname}'님의 기본 시간표는
                 <Text style={{color: '#42B649'}}> {formatTimeToKorean(memberInfo?.sch_time || '')}</Text>
-                입니다.{'\n'}예약이 되어 있지 않으면
-                <Text style={{color: '#42B649'}}> 기본 시간표로 자동 예약
-                </Text>됩니다.
-                <Text>{'\n'}{'\n'}- 예약을 신청 할 경우 가맹점에서 예약을 수락 또는 거부를 하게 됩니다.</Text>
+                입니다.{'\n'}예약이 되어 있지 않으면 기본 시간표로 자동 예약 됩니다.
+                <Text>{'\n'}{'\n'}- 예약이 접수되면, 가맹점은 해당 예약을 수락 또는 거부합니다.</Text>
                 <Text>{'\n'}- 예약 내역에서 예약 상태를 확인할 수 있습니다.</Text>
                 <Text>{'\n'}- 응답이 없을 경우, 해당 가맹점에 문의해 주세요.</Text>
                 <Text>{'\n'}- 예약이 수락되면 방문해주세요:)</Text>
@@ -531,6 +535,19 @@ const Reservation: React.FC = () => {
                   // 요일 구하기
                   const weekday = getWeekday(`${String(schedule.sch_dt).substring(0, 4)}-${String(schedule.sch_dt).substring(4, 6)}-${String(schedule.sch_dt).substring(6, 8)}`);
 
+                  // 상태 배지 텍스트/색상 정리
+                  const isRejected = schedule.agree_yn === 'N' || (!schedule.agree_yn && isPast);
+                  const statusText = schedule.agree_yn === 'Y'
+                    ? '예약 수락'
+                    : isRejected
+                    ? '예약 거부'
+                    : '확인 중';
+                  const statusBg = schedule.agree_yn === 'Y'
+                    ? '#43B546'
+                    : isRejected
+                    ? '#F04D4D'
+                    : '#F9CB42';
+
                   return (
                     <View key={schedule.sch_app_id} style={styles.scheduleItem}>
                       <TouchableOpacity 
@@ -586,11 +603,9 @@ const Reservation: React.FC = () => {
                             <Text style={styles.scheduleDateTime}>일시</Text>
                             <Text style={[styles.scheduleDateTime, {color: '#FFFFFF', marginLeft: scale(14)}]}>{formattedDate} {weekday} {formattedTime}</Text>
                           </View>
-                          {!isPast && (
-                            <View style={[{backgroundColor: schedule.agree_yn === 'Y' ? '#43B546' : schedule.agree_yn === 'N' ? '#F04D4D' : '#F9CB42', borderRadius: scale(5), alignSelf: 'flex-end', paddingHorizontal: scale(12), paddingVertical: scale(4), marginTop: scale(8)}]}>
-                              <Text style={[{color: '#FFFFFF', fontSize: scale(12)}]}>{schedule.agree_yn === 'Y' ? '예약 수락' : schedule.agree_yn === 'N' ? '예약 거부' : '확인 중'}</Text>
-                            </View>
-                          )}
+                          <View style={[{backgroundColor: statusBg, borderRadius: scale(5), alignSelf: 'flex-end', paddingHorizontal: scale(12), paddingVertical: scale(4), marginTop: scale(8)}]}>
+                            <Text style={[{color: '#FFFFFF', fontSize: scale(12)}]}>{statusText}</Text>
+                          </View>
                         </View>
                       </TouchableOpacity>
                     </View>
@@ -602,7 +617,7 @@ const Reservation: React.FC = () => {
                       style={styles.reserveButton} 
                       onPress={() => {
                         if (state.selectedSchedules.length > 0) {
-                          handleCancelReservation();
+                          setCancelPopupVisible(true);
                         }
                       }}
                     >
@@ -616,6 +631,17 @@ const Reservation: React.FC = () => {
         )}
       </View>
       
+      <CommonPopup
+        visible={cancelPopupVisible}
+        type="warning"
+        message="정말 예약을 취소하시겠습니까?"
+        onConfirm={() => {
+          setCancelPopupVisible(false);
+          handleCancelReservation();
+        }}
+        onCancel={() => setCancelPopupVisible(false)}
+      />
+
       <Modal
         animationType="slide"
         transparent={true}
@@ -756,7 +782,7 @@ const styles = StyleSheet.create({
   },
   memberSchInfo: {
     color: '#FFFFFF',
-    fontSize: scale(14),
+    fontSize: scale(12),
     // marginTop: scale(20),
     borderWidth: 1,
     borderColor: '#D9D9D9',
@@ -946,7 +972,8 @@ const styles = StyleSheet.create({
   detailIcon: {
     width: scale(20),
     height: scale(20),
-    marginRight: scale(10),
+    resizeMode: 'contain',
+    marginBottom: scale(10),
     tintColor: '#FFFFFF',
   },
   detailValue: {

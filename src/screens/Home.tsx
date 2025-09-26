@@ -40,6 +40,7 @@ import {getInquiryList} from '../api/services/inquiryService';
 import { updatePushToken, updateRecentDt } from '../api/services/membersService';
 import pushNotificationService from '../api/services/pushNotificationService';
 import CustomToast from '../components/CustomToast';
+import { getPostAppList } from '../api/services/postAppService';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -78,6 +79,7 @@ const Home = () => {
   const [goalErrorMessage, setGoalErrorMessage] = useState('');
   const [currentGoalCalories, setCurrentGoalCalories] = useState<number>(0);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+  const [hasUnreadShoppingPost, setHasUnreadShoppingPost] = useState(false);
   const ref = useRef<ScrollView>(null);
   const [showCustomToast, setShowCustomToast] = useState(false);
   const [customToastMessage, setCustomToastMessage] = useState('');
@@ -168,8 +170,33 @@ const Home = () => {
         );
       }
       
-      // 하나라도 읽지 않은 알림이 있으면 true로 설정
-      setHasUnreadNotifications(hasUnreadNotice || hasUnreadInquiry);
+      // 우편함(일반) 미읽음 확인
+      let postUnread = false;
+      try {
+        const respJump = await getPostAppList(parseInt(memberInfo.mem_id, 10), 'JUMPING');
+        if (respJump?.success && respJump?.data) {
+          postUnread = respJump.data.some((item: any) => {
+            return (item.post_type === 'JUMPING' && item.read_yn === 'N') || 
+                   (item.post_type === 'ALL' && !item.read_yn);
+          });
+        }
+      } catch (e) {}
+
+      // 쇼핑우편함 미읽음 확인
+      let shoppingPostUnread = false;
+      try {
+        const respShop = await getPostAppList(parseInt(memberInfo.mem_id, 10), 'SHOPPING');
+        if (respShop?.success && respShop?.data) {
+          shoppingPostUnread = respShop.data.some((item: any) => {
+            return (item.post_type === 'SHOPPING' && item.read_yn === 'N') || 
+                   (item.post_type === 'ALL' && !item.read_yn);
+          });
+        }
+      } catch (e) {}
+
+      // 하나라도 읽지 않은 알림이 있으면 true로 설정 (쇼핑우편함 제외)
+      setHasUnreadNotifications(hasUnreadNotice || hasUnreadInquiry || postUnread);
+      setHasUnreadShoppingPost(shoppingPostUnread);
     } catch (error) {
       console.error('알림 체크 실패:', error);
     }
@@ -581,13 +608,22 @@ const Home = () => {
           </View>
           <TouchableOpacity 
             style={styles.notificationButton}
-            onPress={() => navigation.navigate('NoticesAppList')}
+            onPress={() => {
+              if (hasUnreadNotifications) {
+                navigation.navigate('MyPage');
+              } else if (hasUnreadShoppingPost) {
+                navigation.navigate('RedirectScreen', { type: 'shoppingMessage' })
+              } else {
+                setCustomToastMessage('알림이 없습니다');
+                setShowCustomToast(true);
+              }
+            }}
           >
             <Image 
               source={IMAGES.icons.bellWhite}
               style={styles.bellIcon}
             />
-            {hasUnreadNotifications && (
+            {(hasUnreadNotifications || hasUnreadShoppingPost) && (
               <Image 
                 source={IMAGES.icons.exclamationMarkRed}
                 style={styles.notificationDot}
@@ -973,7 +1009,7 @@ const Home = () => {
         visible={showCustomToast}
         message={customToastMessage}
         onHide={() => setShowCustomToast(false)}
-        position="center"
+        position={customToastMessage === '알림이 없습니다' ? 'top' : 'center'}
       />
     </>
   );

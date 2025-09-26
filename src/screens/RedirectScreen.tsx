@@ -20,9 +20,10 @@ import { scale } from '../utils/responsive';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList>;
 
-const RedirectScreen = () => {
+const RedirectScreen = (params: { type: string }) => {
   const navigation = useNavigation<NavigationProp>();
   const memberInfo = useAppSelector(state => state.member.memberInfo);
+  const navigationType = params?.route.params.type;
 
   // 애니메이션 값들
   const fadeAnim1 = React.useRef(new Animated.Value(0)).current;
@@ -90,7 +91,12 @@ const RedirectScreen = () => {
       // 렌더링 완료 후 쇼핑 화면으로 이동
       const interaction = InteractionManager.runAfterInteractions(() => {
         setTimeout(() => {
-          navigation.navigate('MainTab', { screen: 'Shopping' });
+          if(navigationType === 'shoppingMessage') {
+            navigation.navigate('ShoppingPostList');
+          } else {
+            navigation.navigate('MainTab', { screen: 'Shopping' });
+          }
+          
         }, 4000);
       });
 

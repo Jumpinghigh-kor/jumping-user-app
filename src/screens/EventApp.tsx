@@ -7,6 +7,7 @@ import {
     View,
     Platform,
     Image,
+    Linking,
   } from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
 import React, {useEffect, useState, useCallback} from 'react';
@@ -137,9 +138,16 @@ const Event = ({navigation, route}) => {
             </html>
           `,
         }}
-        onMessage={event => {
+        onMessage={async event => {
           if (event.nativeEvent.data === 'buttonClicked') {
-            navigation.navigate('MainTab', {screen: buttonLink});
+            const link = (buttonLink || '').toString();
+            if (/^https?:\/\//.test(link)) {
+              try {
+                await Linking.openURL(link);
+              } catch (e) {}
+            } else {
+              navigation.navigate('MainTab', {screen: link});
+            }
           }
         }}
         style={{flex: 1}}

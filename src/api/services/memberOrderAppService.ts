@@ -60,3 +60,27 @@ export const insertMemberOrderApp = async (params: InsertMemberOrderAppRequest):
     throw error;
   }
 };
+
+export interface UpdateOrderStatusRequest {
+  order_detail_app_ids: number[];
+  mem_id: number;
+  order_status: string;
+}
+
+export interface UpdateOrderStatusResponse {
+  success: boolean;
+  message?: string;
+  data?: any;
+}
+
+
+export const updateOrderStatus = async (params: UpdateOrderStatusRequest): Promise<UpdateOrderStatusResponse> => {
+  try {
+    const response = await axiosInstance.post('/member-order-app/updateOrderStatus', params);
+    return response.data;
+  } catch (error: any) {
+    console.error('주문 상태 업데이트 실패:', error.response.data.message);
+    throw error;
+  }
+};
+

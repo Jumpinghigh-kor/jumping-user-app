@@ -33,6 +33,10 @@ import ShoppingHome from '../screens/ShoppingHome';
 import EventApp from '../screens/EventApp';
 import InquiryShoppingApp from '../screens/ShoppingInquiry';
 import InquiryShoppingAppDetail from '../screens/ShoppingInquiryDetail';
+import PostList from '../screens/PostList';
+import PostDetail from '../screens/PostDetail';
+import ShoppingPostList from '../screens/ShoppingPostList';
+import ShoppingPostDetail from '../screens/ShoppingPostDetail';
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -74,6 +78,14 @@ export type AuthStackParamList = {
   InquiryShoppingApp: undefined;
   InquiryShoppingAppDetail: {
     inquiryShoppingApp: any;
+  };
+  PostList: undefined;
+  PostDetail: {
+    post: any;
+  };
+  ShoppingPostList: undefined;
+  ShoppingPostDetail: {
+    post: any;
   };
 };
 
@@ -252,6 +264,26 @@ const AuthStackNavigator = () => {
       <Stack.Screen
         name="InquiryShoppingAppDetail"
         component={InquiryShoppingAppDetail}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="PostList"
+        component={PostList}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="PostDetail"
+        component={PostDetail}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingPostList"
+        component={ShoppingPostList}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingPostDetail"
+        component={ShoppingPostDetail}
         options={{headerShown: false}}
       />
     </Stack.Navigator>

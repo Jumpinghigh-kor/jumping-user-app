@@ -61,7 +61,7 @@ const ShoppingShipping = (props: any) => {
     } finally {
     }
   };
-  console.log('trackingData', trackingData);
+  
   useFocusEffect(() => {
     fetchTrackingInfo();
   });

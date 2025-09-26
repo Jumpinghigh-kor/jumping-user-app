@@ -15,6 +15,7 @@ import { useProfileImage } from '../hooks/useProfileImage';
 import CommonModal from '../components/CommonModal';
 import {getNoticesAppList} from '../api/services/noticesAppService';
 import {getInquiryList} from '../api/services/inquiryService';
+import { getPostAppList } from '../api/services/postAppService';
 import {updatePushYn} from '../api/services/membersService';
 import { commonStyle, layoutStyle } from '../assets/styles/common';
 
@@ -30,6 +31,9 @@ const MyPage = () => {
   const [modalContent, setModalContent] = useState('');
   const [updateInfo, setUpdateInfo] = useState<UpdateLogInfo | null>(null);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+  const [hasUnreadNotice, setHasUnreadNotice] = useState(false);
+  const [hasUnreadInquiry, setHasUnreadInquiry] = useState(false);
+  const [hasUnreadPost, setHasUnreadPost] = useState(false);
   const [isPushEnabled, setIsPushEnabled] = useState(false);
   const [isCompanyInfoVisible, setIsCompanyInfoVisible] = useState(false);
 
@@ -46,24 +50,43 @@ const MyPage = () => {
       
       // 공지사항 목록 가져오기
       const noticesResponse = await getNoticesAppList();
-      let hasUnreadNotice = false;
+      let noticeUnread = false;
       if (noticesResponse.success && noticesResponse.data) {
-        hasUnreadNotice = noticesResponse.data.some(notice => 
+        noticeUnread = noticesResponse.data.some(notice => 
           !readNotices.includes(notice.notices_app_id)
         );
       }
       
       // 문의 목록 가져오기
       const inquiriesResponse = await getInquiryList({mem_id: parseInt(memberInfo.mem_id, 10)});
-      let hasUnreadInquiry = false;
+      let inquiryUnread = false;
       if (inquiriesResponse.success && inquiriesResponse.data) {
-        hasUnreadInquiry = inquiriesResponse.data.some(inquiry => 
+        inquiryUnread = inquiriesResponse.data.some(inquiry => 
           inquiry.answer && !readInquiries.includes(inquiry.inquiry_app_id)
         );
       }
       
+      // 우편함 목록 가져오기 및 미읽음 체크
+      let postUnread = false;
+      try {
+        const postsResponse = await getPostAppList(parseInt(memberInfo.mem_id, 10), 'JUMPING');
+        if (postsResponse.success && postsResponse.data) {
+          postUnread = postsResponse.data.some((item: any) => {
+            const allSendYn = item.all_send_yn;
+            const readYn = item.read_yn;
+            return (
+              (allSendYn === 'N' && readYn === 'N') ||
+              (allSendYn === 'Y' && (!readYn || readYn === ''))
+            );
+          });
+        }
+      } catch (e) {}
+
       // 하나라도 읽지 않은 알림이 있으면 true로 설정
-      setHasUnreadNotifications(hasUnreadNotice || hasUnreadInquiry);
+      setHasUnreadNotice(noticeUnread);
+      setHasUnreadInquiry(inquiryUnread);
+      setHasUnreadPost(postUnread);
+      setHasUnreadNotifications(noticeUnread || inquiryUnread || postUnread);
     } catch (error) {
       console.error('알림 체크 실패:', error);
     }
@@ -154,7 +177,7 @@ const MyPage = () => {
           >
             <View style={styles.menuTextContainer}>
               <Text style={styles.menuText}>공지사항</Text>
-              {hasUnreadNotifications && (
+              {hasUnreadNotice && (
                 <Image 
                   source={IMAGES.icons.exclamationMarkRed}
                   style={styles.notificationDot}
@@ -171,10 +194,37 @@ const MyPage = () => {
             style={styles.menuItem}
             onPress={() => navigation.navigate('InquiryList' as never)}
           >
-            <Text style={styles.menuText}>문의</Text>
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuText}>문의</Text>
+              {hasUnreadInquiry && (
+                <Image 
+                  source={IMAGES.icons.exclamationMarkRed}
+                  style={styles.notificationDot}
+                />
+              )}
+            </View>
             <Image 
               source={IMAGES.icons.arrowRightWhite} 
               style={styles.menuArrow} 
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('PostList' as never)}
+          >
+            <View style={styles.menuTextContainer}>
+              <Text style={styles.menuText}>우편함</Text>
+              {hasUnreadPost && (
+                <Image 
+                  source={IMAGES.icons.exclamationMarkRed}
+                  style={styles.notificationDot}
+                />
+              )}
+            </View>
+            <Image 
+              source={IMAGES.icons.arrowRightWhite} 
+              style={styles.menuArrow}
             />
           </TouchableOpacity>
         </View>

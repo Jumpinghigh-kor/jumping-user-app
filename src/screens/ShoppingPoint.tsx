@@ -63,7 +63,6 @@ const ShoppingPoint = () => {
           if (response.success) {
             setPointList(response.data);
           }
-          console.log(response.data);
         } catch (error) {
           console.error('포인트 목록 조회 실패:', error);
         } finally {
@@ -81,7 +80,7 @@ const ShoppingPoint = () => {
       loadMemberInfo();
     }, [])
   );
-
+  
   return (
     <>
       <CommonHeader 
@@ -118,10 +117,10 @@ const ShoppingPoint = () => {
                   <Text style={styles.regDtText}>{item.reg_dt}</Text>
                 </View>
                 <View style={[layoutStyle.alignEnd]}>
-                  <Text style={[styles.pointItemValue, {color: item.point_add > 0 ? '#F04D4D' : '#5588FF'}]}>
-                    {item.point_add > 0 ? `+${item.point_add}P` : `-${item.point_minus}P`}
+                  <Text style={[styles.pointItemValue, {color: item.point_status === 'POINT_ADD' ? '#F04D4D' : '#5588FF'}]}>
+                    {item.point_status === 'POINT_ADD' ? `+${item.point_amount}P` : `-${item.point_amount}P`}
                   </Text>
-                  <Text style={[styles.regDtText, commonStyle.mt3]}>{item.point_add > 0 ? '적립' : '차감'}</Text>
+                  <Text style={[styles.regDtText, commonStyle.mt3]}>{item.point_status === 'POINT_ADD'  ? '적립' : '차감'}</Text>
                 </View>
               </View>
             ))

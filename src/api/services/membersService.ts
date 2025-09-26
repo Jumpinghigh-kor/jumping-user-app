@@ -175,7 +175,6 @@ export const findId = async (name: string, phone: string) => {
 
 // 비밀번호 찾기 API
 export const findPassword = async (id: string, name: string, phone: string) => {
-  console.log(id, name, phone);
   try {
     const response = await axiosInstance.post('/members/findPassword', {
       mem_email_id: id,

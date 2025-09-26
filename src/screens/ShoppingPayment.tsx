@@ -220,7 +220,7 @@ const ShoppingPayment = () => {
       setSaveForNextTime(false);
     }
   };
-
+  
   // 결제하기
   const handlePayment = () => {
     if (!isAgreedToOrder || !isAgreedToPrivacy || !isAgreedToThirdParty || !isAgreedToPayment) {
@@ -333,7 +333,7 @@ const ShoppingPayment = () => {
       />
     );
   }
-  console.log(selectedItems);
+  
   return (
     <>
       <CommonHeader 
@@ -552,8 +552,8 @@ const ShoppingPayment = () => {
 
           <View style={styles.discountContainer}>
             <Text style={styles.discountTitle}>할인</Text>
-            <View style={[layoutStyle.rowBetween, commonStyle.mt20]}>
-              <Text style={styles.discountText}>쿠폰</Text>
+            <View style={[layoutStyle.rowBetween, commonStyle.mt20, {alignItems: 'flex-start'}]}>
+              <Text style={[styles.discountText, {marginTop: scale(20)}]}>쿠폰</Text>
               <View style={[styles.selectContainer, {flex: 1, marginLeft: scale(30)}]}>
                 <TouchableOpacity
                   style={[styles.requestContainer, {paddingHorizontal: scale(12)}]}
@@ -580,7 +580,7 @@ const ShoppingPayment = () => {
                         setIsOpenCoupon(false);
                       }}
                     >
-                      <Text style={[styles.requestText, {color: '#D9D9D9'}]}>선택안함</Text>
+                      <Text style={[styles.requestText]}>선택안함</Text>
                     </TouchableOpacity>
                     {couponList.map((item, index) => {
                       const totalAmount = getTotalAmount();
@@ -626,7 +626,7 @@ const ShoppingPayment = () => {
               </View>
             </View>
             <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
-              <Text style={styles.discountText}>포인트</Text>
+              <Text style={[styles.discountText]}>포인트</Text>
               <TextInput
                 style={styles.pointInput}
                 placeholder="0"
@@ -665,27 +665,39 @@ const ShoppingPayment = () => {
           
           <View style={styles.paymentContainer}>
             <Text style={styles.paymentTitle}>결제 금액</Text>
+              <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
+                <Text style={styles.amountLabel}>상품 금액</Text>
+                <Text style={styles.deliveryFee}>{selectedItems[0]?.original_price?.toLocaleString()} 원</Text>
+              </View>
             {!!selectedItems[0]?.discount && (
               <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
-                <Text style={styles.amountLabel}>상품 할인</Text>
-                <Text style={styles.deliveryFee}>{selectedItems[0]?.discount}%</Text>
+                <Text style={styles.amountLabel}>상품 할인
+                  <Text style={{fontSize: scale(10), color: '#F04D4D'}}> (선할인)</Text></Text>
+                <Text style={styles.deliveryFee}>
+                  -{
+                    Math.floor(
+                      (parseInt((selectedItems[0]?.original_price || '0').toString().replace(/,/g, ''), 10) || 0)
+                      * ((Number(selectedItems[0]?.discount) || 0) / 100)
+                    ).toLocaleString()
+                  } 원
+                </Text>
               </View>
             )}
             {selectedCoupon && (
               <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
                 <Text style={styles.amountLabel}>쿠폰 할인</Text>
-                <Text style={styles.deliveryFee}>{selectedCoupon ? selectedCoupon.discount_amount : 0}{selectedCoupon?.discount_type === 'PERCENT' ? '%' : '원'}</Text>
+                <Text style={styles.deliveryFee}>{selectedCoupon?.discount_type === 'PERCENT' ? '-' + ((selectedItems[0]?.price) * (selectedCoupon.discount_amount / 100)).toLocaleString() : '-' + selectedCoupon.discount_amount.toLocaleString()} 원</Text>
               </View>
             )}
             {pointInput && (
               <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
                 <Text style={styles.amountLabel}>포인트</Text>
-                <Text style={styles.deliveryFee}>{parseInt(pointInput).toLocaleString()}P</Text>
+                <Text style={styles.deliveryFee}>-{parseInt(pointInput).toLocaleString()} 원</Text>
               </View>
             )}
             <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
               <Text style={styles.amountLabel}>배송비</Text>
-              <Text style={styles.deliveryFee}>{getTotalAmount() >= parseInt(selectedItems[0]?.free_shipping_amount?.toString().replace(/,/g, '') || '0') ? '무료' : `${selectedItems[0]?.delivery_fee}원`}</Text>
+              <Text style={styles.deliveryFee}>{getTotalAmount() >= parseInt(selectedItems[0]?.free_shipping_amount?.toString().replace(/,/g, '') || '0') ? '무료' : `${selectedItems[0]?.delivery_fee} 원`}</Text>
             </View>
             {selectedAddress?.zip_code && isCJRemoteArea(selectedAddress.zip_code) && (
               <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>

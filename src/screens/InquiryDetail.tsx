@@ -45,8 +45,8 @@ const InquiryAppDetail = () => {
 
   // 문의 유형 목록 (표시 텍스트와 실제 값 매핑)
   const inquiryTypes = [
-    { label: '어플 문의', value: 'APPLICATION' },
-    { label: '가맹점 문의', value: 'FRANCHISE' }
+    { label: '어플 관련 문의', value: 'APPLICATION' },
+    { label: '센터 관련 문의', value: 'FRANCHISE' }
   ];
 
   // 표시 텍스트를 가져오는 함수
