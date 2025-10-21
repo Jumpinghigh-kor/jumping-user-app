@@ -37,6 +37,8 @@ import PostList from '../screens/PostList';
 import PostDetail from '../screens/PostDetail';
 import ShoppingPostList from '../screens/ShoppingPostList';
 import ShoppingPostDetail from '../screens/ShoppingPostDetail';
+import ShoppingReturnHistory from '../screens/ShoppingReturnHistory';
+import ShoppingReturnHistoryDetail from '../screens/ShoppingReturnHistoryDetail';
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -73,6 +75,8 @@ export type AuthStackParamList = {
   ShoppingCoupon: undefined;
   ShoppingShipping: undefined;
   ShoppingReturn: undefined;
+  ShoppingReturnHistory: undefined;
+  ShoppingReturnHistoryDetail: undefined;
   RedirectScreen: undefined;
   Event: { eventId: number; };
   InquiryShoppingApp: undefined;
@@ -249,6 +253,16 @@ const AuthStackNavigator = () => {
       <Stack.Screen
         name="ShoppingReturn"
         component={ShoppingReturn}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingReturnHistory"
+        component={ShoppingReturnHistory}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingReturnHistoryDetail"
+        component={ShoppingReturnHistoryDetail}
         options={{headerShown: false}}
       />
       <Stack.Screen

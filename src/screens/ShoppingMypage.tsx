@@ -148,7 +148,7 @@ const ShoppingMypage: React.FC = () => {
               <Text style={styles.menuText}>배송지 관리</Text>
               <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ShoppingSettings')}>
+            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ShoppingReturnHistory')}>
               <Text style={styles.menuText}>취소•반품•교환 내역</Text>
               <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
             </TouchableOpacity>
@@ -280,13 +280,13 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: scale(20),
     marginTop: scale(30),
     paddingHorizontal: scale(20),
-    paddingTop: scale(24),
+    paddingTop: scale(10),
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: scale(15),
+    paddingVertical: scale(14),
   },
   arrowIcon: {
     width: scale(12),

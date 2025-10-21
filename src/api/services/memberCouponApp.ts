@@ -38,3 +38,19 @@ export const getCouponAppList = async (product_app_id: number) => {
     throw error;
   }
 }; 
+
+// 회원 쿠폰 수정 API
+export const updateMemberCouponApp = async (member_coupon_app_id: number, order_app_id: number, mem_id: number, use_yn: string) => {
+  try {
+    const response = await axiosInstance.post('/member-coupon-app/updateMemberCouponApp', {
+      member_coupon_app_id: member_coupon_app_id,
+      order_app_id: order_app_id,
+      mem_id: mem_id,
+      use_yn: use_yn
+    });
+    return response.data;
+  } catch (error) {
+    console.error('쿠폰 수정 실패:', error);
+    throw error;
+  }
+}; 

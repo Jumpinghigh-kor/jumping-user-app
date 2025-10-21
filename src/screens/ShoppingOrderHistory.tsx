@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   ScrollView,
   TouchableOpacity,
+  Modal,
 } from 'react-native';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import IMAGES from '../utils/images';
@@ -15,15 +16,64 @@ import CommonHeader from '../components/CommonHeader';
 import { useAppSelector } from '../store/hooks';
 import { scale } from '../utils/responsive';
 import { commonStyle, layoutStyle } from '../assets/styles/common';
-import { getMemberOrderAppList, updateOrderStatus } from '../api/services/memberOrderAppService';
+import { getMemberOrderAppList, updateOrderStatus, insertMemberOrderDetailApp, updateOrderQuantity } from '../api/services/memberOrderAppService';
+import { updateMemberOrderAddressUseYn, deleteMemberOrderAddress } from '../api/services/memberOrderAddressService';
 import ShoppingThumbnailImg from '../components/ShoppingThumbnailImg';
 import CommonPopup from '../components/CommonPopup';
 import { usePopup } from '../hooks/usePopup';
 import { cancelPayment } from '../api/services/portoneService';
-import { insertMemberReturnApp, cancelMemberReturnApp, updateMemberReturnApp } from '../api/services/memberReturnAppService';
+import { insertMemberReturnApp, updateMemberReturnAppCancelYn, updateMemberReturnApp, updateMemberReturnAppOrderAddressId } from '../api/services/memberReturnAppService';
+import { getTargetMemberOrderAddress } from '../api/services/memberOrderAddressService';
 import { getCommonCodeList } from '../api/services/commonCodeService';
+import { insertMemberPointApp } from '../api/services/memberPointAppService';
+import { getMemberOrderAddressList, insertMemberOrderAddress, updateMemberOrderAddressType } from '../api/services/memberOrderAddressService';
+import { getTargetMemberShippingAddress, ShippingAddressItem } from '../api/services/memberShippingAddressService';
 import Clipboard from '@react-native-clipboard/clipboard';
+import Portone from '../components/Portone';
 
+export const ORDER_STATUS_BADGE_COLOR: Record<string, string> = {
+  CANCEL_APPLY: '#BDBDBD',
+  CANCEL_COMPLETE: '#F04D4D',
+  HOLD: '#BDBDBD',
+  PAYMENT_COMPLETE: '#BDBDBD',
+  SHIPPINGING: '#202020',
+  SHIPPING_COMPLETE: '#42B649',
+  PURCHASE_CONFIRM: '#42B649',
+  RETURN_APPLY: '#BDBDBD',
+  RETURN_GET: '#202020',
+  RETURN_COMPLETE: '#F04D4D',
+  EXCHANGE_APPLY: '#BDBDBD',
+  EXCHANGE_GET: '#202020',
+  EXCHANGE_PAYMENT_COMPLETE: '#BDBDBD',
+  EXCHANGE_SHIPPINGING: '#202020',
+  EXCHANGE_SHIPPING_COMPLETE: '#42B649',
+  EXCHANGE_COMPLETE: '#42B649',
+};
+
+// YYYYMMDD 또는 YYYYMMDDHHIISS 형태를 Date로 변환
+const parseCompactDateTime = (raw: any): Date | null => {
+  try {
+    const s = (raw ?? '').toString().trim();
+    if (!/^\d{8}(\d{6})?$/.test(s)) return null;
+    const y = parseInt(s.slice(0, 4), 10);
+    const m = parseInt(s.slice(4, 6), 10) - 1;
+    const d = parseInt(s.slice(6, 8), 10);
+    const hh = s.length >= 10 ? parseInt(s.slice(8, 10), 10) : 0;
+    const mm = s.length >= 12 ? parseInt(s.slice(10, 12), 10) : 0;
+    const ss = s.length >= 14 ? parseInt(s.slice(12, 14), 10) : 0;
+    const dt = new Date(y, m, d, hh, mm, ss);
+    return isNaN(dt.getTime()) ? null : dt;
+  } catch {
+    return null;
+  }
+};
+
+const isWithinDaysFrom = (raw: any, days: number): boolean => {
+  const dt = parseCompactDateTime(raw);
+  if (!dt) return false;
+  const limit = dt.getTime() + days * 24 * 60 * 60 * 1000;
+  return Date.now() <= limit;
+};
 
 const ShoppingOrderHistory = () => {
   const navigation = useNavigation();
@@ -42,7 +92,12 @@ const ShoppingOrderHistory = () => {
   const [returnReasonDetail, setReturnReasonDetail] = useState<string>('');
   const [pendingOrderItem, setPendingOrderItem] = useState<any | null>(null);
   const [cancelQuantity, setCancelQuantity] = useState<string>('');
-
+  const [pointPopupVisible, setPointPopupVisible] = useState(false);
+  const [givePoint, setGivePoint] = useState(0);
+  const [orderAddressData, setOrderAddressData] = useState<null>(null);
+  const [portoneVisible, setPortoneVisible] = useState(false);
+  const [portonePaymentData, setPortonePaymentData] = useState<any | null>(null);
+  const [confirmingMap, setConfirmingMap] = useState<Record<number, boolean>>({});
   // ORDER_STATUS_TYPE 라벨 매핑
   const getOrderStatusLabel = (value: string) => {
     const found = orderStatusTypes.find(t => t.value === value);
@@ -67,6 +122,62 @@ const ShoppingOrderHistory = () => {
     };
     loadOrderStatusTypes();
   }, []);
+
+  const fetchShippingOrderAddress = async () => {
+    try {
+      let addressIds: number[] = [];
+
+      if (Array.isArray(orderAppList) && orderAppList.length > 0) {
+        addressIds = Array.from(new Set(
+          orderAppList
+            .map((it: any) => Number(it?.order_address_id))
+            .filter((n: number) => Number.isFinite(n) && n > 0)
+        ));
+      } else if (Number(memberInfo?.mem_id)) {
+        try {
+          const listRes = await getMemberOrderAppList({
+            mem_id: Number(memberInfo?.mem_id),
+            screen_type: 'ORDER_HISTORY',
+          } as any);
+          if (listRes?.success && Array.isArray(listRes.data)) {
+            addressIds = Array.from(new Set(
+              listRes.data
+                .map((it: any) => Number(it?.order_address_id))
+                .filter((n: number) => Number.isFinite(n) && n > 0)
+            ));
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      if (!addressIds.length) {
+        setOrderAddressData(null);
+        return;
+      }
+
+      const results = await Promise.all(
+        addressIds.map(async (id: number) => {
+          try {
+            const res = await getTargetMemberOrderAddress({ order_address_id: id });
+            return [id, res?.success ? res.data : null] as const;
+          } catch {
+            return [id, null] as const;
+          }
+        })
+      );
+
+      const addressMap: Record<number, any> = {};
+      for (const [id, data] of results) {
+        addressMap[id] = data;
+      }
+
+      setOrderAddressData(addressMap);
+
+    } catch (error) {
+      console.error('배송지 정보 API 에러:', error);
+    }
+  };
 
   // 공통코드: 반품/취소 사유 목록 (팝업 표시 시 로드)
   useEffect(() => {
@@ -129,9 +240,53 @@ const ShoppingOrderHistory = () => {
     }
   };
 
+  // 부분 취소 시 무료배송 기준 하락 여부에 따른 추가 배송비 계산
+  const computeExtraShippingFeeForCancel = (targetOrderItem: any, qtyToCancel: number): number => {
+    try {
+      if (!targetOrderItem || !qtyToCancel) return 0;
+      const paymentId = targetOrderItem.payment_app_id;
+      const groupItems = (Array.isArray(orderAppList) ? orderAppList : []).filter((it: any) => {
+        if (String(it?.payment_app_id) !== String(paymentId)) return false;
+        const st = String(it?.order_status || '');
+        // 잔여 합계 계산에서 완료/신청 상태는 제외
+        return ![
+          'CANCEL_COMPLETE', 'RETURN_COMPLETE', 'EXCHANGE_COMPLETE',
+          'CANCEL_APPLY', 'RETURN_APPLY', 'EXCHANGE_APPLY'
+        ].includes(st);
+      });
+
+      const sumLine = (it: any) => {
+        const price = Number(String(it?.price ?? 0).replace(/,/g, '')) || 0;
+        const qty = Number(it?.order_quantity ?? 0) || 0;
+        return price * qty;
+      };
+
+      const beforeTotal = groupItems.reduce((acc: number, it: any) => acc + sumLine(it), 0);
+      const cancelValue = sumLine({ price: targetOrderItem?.price, order_quantity: qtyToCancel });
+      const afterTotal = Math.max(0, beforeTotal - cancelValue);
+
+      // 전체 취소(잔여 합계 0)이면 추가 배송비 없음
+      if (afterTotal === 0) return 0;
+
+      const threshold = Number(String(targetOrderItem?.free_shipping_amount ?? 0).replace(/,/g, '')) || 0;
+      if (!threshold) return 0;
+
+      if (beforeTotal >= threshold && afterTotal < threshold) {
+        const baseFee = Number(String(targetOrderItem?.delivery_fee ?? 0).replace(/,/g, '')) || 0;
+        const isRemote = Number(targetOrderItem?.extra_shipping_area_cnt ?? 0) > 0;
+        const remoteFee = isRemote ? (Number(String(targetOrderItem?.remote_delivery_fee ?? 0).replace(/,/g, '')) || 0) : 0;
+        return Math.max(0, baseFee + remoteFee);
+      }
+      return 0;
+    } catch {
+      return 0;
+    }
+  };
+
   useFocusEffect(
     React.useCallback(() => {
       setLoading(true);
+      fetchShippingOrderAddress();
       fetchOrderList();
     }, [memberInfo?.mem_id, selectedYear, searchQuery])
   );
@@ -140,6 +295,7 @@ const ShoppingOrderHistory = () => {
   const insertCancelApply = async (targetOrderItem: any) => {
     if (!targetOrderItem) return;
     let statusUpdated = false;
+    let newOrderAddressId: number | undefined;
 
     try {
       const paymentAppId = Number(targetOrderItem.payment_app_id);
@@ -147,38 +303,137 @@ const ShoppingOrderHistory = () => {
         showWarningPopup('결제번호를 확인할 수 없습니다.');
         return;
       }
+      const originalQty = Number(targetOrderItem?.order_quantity ?? 0);
+      const cancelQty = Number(cancelQuantity);
+
+      if (!cancelQty || cancelQty < 1 || cancelQty > originalQty) {
+        showWarningPopup(`유효한 취소 수량(1~${originalQty})을 입력하세요.`);
+        return;
+      }
+
+      // 1) 취소 수량 만큼 새 주문상세 생성 (분할)
+      let newOrderDetailId: number | undefined;
+      try {
+        const remainderQty = Math.max(0, originalQty - cancelQty);
+        if (remainderQty > 0) {
+          const newOrderRes = await insertMemberOrderDetailApp({
+            order_detail_app_id: Number(targetOrderItem.order_detail_app_id),
+            order_app_id: Number(targetOrderItem.order_app_id),
+            product_detail_app_id: Number(targetOrderItem.product_detail_app_id),
+            order_status: 'PAYMENT_COMPLETE',
+            order_quantity: remainderQty,
+            order_group: 1,
+            mem_id: Number(memberInfo?.mem_id),
+          } as any);
+          newOrderDetailId = newOrderRes?.order_detail_app_id;
+        }
+      } catch (e) {
+        // 새 주문상세 생성 실패 시에도 기존 건만 처리
+      }
+      
+      // 신규 상세 ID를 못받았을 경우 목록 재조회로 보완 탐색
+      if (!newOrderDetailId) {
+        try {
+          const params: any = {
+            mem_id: Number(memberInfo?.mem_id),
+            screen_type: 'ORDER_HISTORY'
+          };
+          if (selectedYear) params.year = selectedYear;
+          if (searchQuery) params.search_title = searchQuery;
+          const listRes = await getMemberOrderAppList(params);
+          if (listRes?.success && Array.isArray(listRes.data)) {
+            const candidate = listRes.data.find((it: any) =>
+              Number(it.order_app_id) === Number(targetOrderItem.order_app_id) &&
+              Number(it.product_detail_app_id) === Number(targetOrderItem.product_detail_app_id) &&
+              String(it.order_status) === 'PAYMENT_COMPLETE' &&
+              Number(it.order_quantity) === Math.max(0, originalQty - cancelQty)
+            );
+            if (candidate?.order_detail_app_id) {
+              newOrderDetailId = Number(candidate.order_detail_app_id);
+            }
+          }
+        } catch (e) {
+          // ignore fallback errors
+        }
+      }
+
+      // 2) 기존 상세 수량을 취소수량으로 업데이트 (원 상세는 접수 대상)
+      try {
+        await updateOrderQuantity({
+          order_detail_app_id: Number(targetOrderItem.order_detail_app_id),
+          mem_id: Number(memberInfo?.mem_id),
+          order_quantity: cancelQty,
+        } as any);
+      } catch (e) {
+        // 수량 업데이트 실패시 이후 단계는 진행 (상태 업데이트로 가시적 피드백 보장)
+      }
+      
+      // 3) 새 주문상세의 주문 배송지 인서트 (회원 주문배송지 목록에서 가져오기)
+      try {
+        const newIdNum = parseInt(String(newOrderDetailId ?? ''), 10);
+        console.log('newIdNum', newIdNum);
+        if (Number.isFinite(newIdNum) && newIdNum > 0) {
+          // 기존 주소를 새로 생성된 주문 상세로 매핑 로직 제거 (요청에 따라 삭제)
+
+          const addrListRes = await getMemberOrderAddressList({ mem_id: Number(memberInfo?.mem_id) });
+          const list = Array.isArray(addrListRes?.data) ? addrListRes.data : (addrListRes?.data ? [addrListRes.data] : []);
+          const addr = list && list.length > 0 ? list[0] : undefined;
+
+          if (addr) {
+            const insertRes = await insertMemberOrderAddress({
+              order_detail_app_id: newIdNum,
+              order_address_type: 'ORDER',
+              mem_id: Number(memberInfo?.mem_id),
+              receiver_name: addr.receiver_name,
+              receiver_phone: addr.receiver_phone,
+              address: addr.address,
+              address_detail: addr.address_detail,
+              zip_code: addr.zip_code,
+              enter_way: addr.enter_way,
+              enter_memo: addr.enter_memo,
+              delivery_request: addr.delivery_request,
+            } as any);
+            newOrderAddressId = Number((insertRes && (insertRes.data?.order_address_id ?? insertRes.order_address_id)) || 0) || undefined;
+          }
+        }
+      } catch (e) {
+        // 주소 저장 실패는 치명적이지 않음
+      }
+
+      // 4) 상태 업데이트: 기존 상세만 CANCEL_APPLY (신규 분할건은 PAYMENT_COMPLETE 유지)
       await updateOrderStatus({
         order_detail_app_ids: [Number(targetOrderItem.order_detail_app_id)],
         mem_id: Number(memberInfo?.mem_id),
         order_status: 'CANCEL_APPLY',
       } as any);
       statusUpdated = true;
-      
+
       if (!statusUpdated) return;
 
-      const samePaymentItems = orderAppList.filter((it: any) => Number(it.payment_app_id) === paymentAppId);
-      const hasReturnApp = samePaymentItems.some((it: any) => !!it.return_app_id);
+      // 5) 반품/취소 레코드 기록 (기존 상세 기준으로 연결)
+      const targetIdsForReturn = [Number(targetOrderItem.order_detail_app_id)];
+      const hasReturnApp = orderAppList.some((it: any) => targetIdsForReturn.includes(Number(it.order_detail_app_id)) && !!it.return_app_id);
 
       if (hasReturnApp) {
         await updateMemberReturnApp({
-          order_detail_app_ids: samePaymentItems.map((it: any) => Number(it.order_detail_app_id)),
+          order_detail_app_ids: targetIdsForReturn,
           mem_id: Number(memberInfo?.mem_id),
+          quantity: cancelQty,
           cancel_yn: 'N',
           return_reason_type: selectedReturnReason,
           reason: returnReasonDetail || '',
         } as any);
       } else {
         await Promise.all(
-          samePaymentItems.map((it: any) =>
+          targetIdsForReturn.map((oid: number) =>
             insertMemberReturnApp({
-              order_detail_app_id: it.order_detail_app_id,
+              order_detail_app_id: oid,
               mem_id: Number(memberInfo?.mem_id),
               return_applicator: 'BUYER',
               return_reason_type: selectedReturnReason,
               reason: returnReasonDetail || '',
-              quantity: it.order_detail_app_id === targetOrderItem.order_detail_app_id
-                ? Number(cancelQuantity || it.order_quantity || 0)
-                : it.order_quantity,
+              quantity: cancelQty,
+              order_address_id: Number(targetOrderItem?.order_address_id ?? newOrderAddressId),
             } as any)
           )
         );
@@ -191,29 +446,87 @@ const ShoppingOrderHistory = () => {
   // 취소접수 취소 처리 (반품접수 취소 + 상태 복구)
   const cancelCancelApply = async (firstItem: any) => {
     try {
-      const samePaymentItems = orderAppList.filter((it: any) => Number(it.payment_app_id) === Number(firstItem.payment_app_id));
+      const targetOrderDetailId = Number(firstItem?.order_detail_app_id);
+      if (!targetOrderDetailId) return;
+
       let statusUpdated = false;
-      
       await updateOrderStatus({
-        order_detail_app_ids: samePaymentItems.map((it: any) => Number(it.order_detail_app_id)),
+        order_detail_app_ids: [targetOrderDetailId],
         mem_id: Number(memberInfo?.mem_id),
-        order_status: 'PAYMENT_COMPLETE',
+        order_status: ((firstItem?.order_status === 'RETURN_APPLY') || (firstItem?.order_status === 'EXCHANGE_APPLY'))
+          ? (firstItem?.purchase_confirm_dt ? 'PURCHASE_CONFIRM' : 'SHIPPING_COMPLETE')
+          : 'PAYMENT_COMPLETE',
         order_group: 1,
       } as any);
       statusUpdated = true;
-      
+
       if (!statusUpdated) return;
 
-      await cancelMemberReturnApp({
-        order_detail_app_ids: samePaymentItems.map((it: any) => Number(it.order_detail_app_id)),
+      if (firstItem?.order_status === 'RETURN_APPLY' && firstItem?.order_address_id) {
+        try {
+          await deleteMemberOrderAddress({
+            order_detail_app_id: targetOrderDetailId,
+            mem_id: Number(memberInfo?.mem_id),
+          } as any);
+        } catch (e) {
+        }
+
+        try {
+          let addrDetail = (orderAddressData && typeof orderAddressData === 'object')
+            ? (orderAddressData as any)[Number(firstItem?.order_address_id)]
+            : undefined;
+
+          // 로컬 맵에 없으면 서버에서 단건 조회로 보완
+          if (!addrDetail && Number(firstItem?.order_address_id)) {
+            try {
+              const singleRes = await getTargetMemberOrderAddress({ order_address_id: Number(firstItem.order_address_id) } as any);
+              if (singleRes?.success) {
+                addrDetail = singleRes.data;
+              }
+            } catch (e) {}
+          }
+
+          if (addrDetail) {
+            const insertRes = await insertMemberOrderAddress({
+              order_detail_app_id: targetOrderDetailId,
+              mem_id: Number(memberInfo?.mem_id),
+              order_address_type: 'ORDER',
+              receiver_name: addrDetail.receiver_name,
+              receiver_phone: addrDetail.receiver_phone,
+              address: addrDetail.address,
+              address_detail: addrDetail.address_detail,
+              zip_code: addrDetail.zip_code,
+              enter_way: addrDetail.enter_way,
+              enter_memo: addrDetail.enter_memo,
+              delivery_request: addrDetail.delivery_request,
+            } as any);
+
+            const newAddrId = Number((insertRes && (insertRes.data?.order_address_id ?? insertRes.order_address_id)) || 0) || undefined;
+            if (Number.isFinite(newAddrId) && newAddrId! > 0) {
+              try {
+                await updateMemberReturnAppOrderAddressId({
+                  order_detail_app_id: targetOrderDetailId,
+                  order_address_id: Number(newAddrId),
+                  mem_id: Number(memberInfo?.mem_id),
+                } as any);
+              } catch (e) {}
+            }
+          }
+        } catch (e) {}
+      }
+
+      await updateMemberReturnAppCancelYn({
+        order_detail_app_ids: [targetOrderDetailId],
         mem_id: Number(memberInfo?.mem_id),
+        cancel_yn: 'Y',
       } as any);
+
       await fetchOrderList();
     } catch (e) {
       console.log('cancelCancelApply error', e);
     }
   };
-
+  
   return (
     <>
       <CommonHeader 
@@ -315,16 +628,37 @@ const ShoppingOrderHistory = () => {
                     return acc;
                   }, {} as Record<string, any[]>)).map((group: any[]) => {
                     const first = group[0];
+                    const isSplitGroup = (() => {
+                      try {
+                        // 동일 결제 내에서 같은 order_app_id가 2개 이상 존재하면 분할된 것으로 간주
+                        const counts: Record<string, number> = {};
+                        for (const gi of group) {
+                          const key = String(gi?.order_app_id ?? '');
+                          counts[key] = (counts[key] || 0) + 1;
+                          if (counts[key] > 1) return true;
+                        }
+                        return false;
+                      } catch (e) {
+                        return false;
+                      }
+                    })();
+
                     return (
-                      <View key={first.order_app_id} style={styles.orderItem}>
-                        <View style={[layoutStyle.rowStart]}>
+                      <View key={`pay_${first.payment_app_id}`} style={styles.orderItem}>
+                            <View style={[layoutStyle.rowStart]}>
                           <Text style={styles.orderDate}>{first.order_dt}</Text>
-                          <View style={[styles.orderStatusContainer, {backgroundColor: first.order_status == 'CANCEL_APPLY' ? '#000' : '#42B649'}]}>
-                            <Text style={styles.orderStatusText}>{getOrderStatusLabel(first.order_status)}</Text>
-                          </View>
+                          {!isSplitGroup && (
+                            <View
+                              style={[
+                                styles.orderStatusContainer
+                                , {backgroundColor: ORDER_STATUS_BADGE_COLOR[first.order_status] || '#BDBDBD'}
+                              ]}>
+                              <Text style={styles.orderStatusText}>{getOrderStatusLabel(first.order_status)}</Text>
+                            </View>
+                          )}
                         </View>
                         {group.map((gi: any, index: number) => (
-                          <View key={gi.order_app_id}>
+                          <View key={`od_${gi.order_detail_app_id || gi.order_app_id}_${index}`}>
                             <View style={[styles.orderItemImgContainer, {borderTopWidth: index == 0 ? 0 : 2, borderTopColor: '#EEEEEE', marginHorizontal: -scale(16), paddingHorizontal: scale(16),}]}>
                               <TouchableOpacity 
                                 style={styles.orderItemImgContainer}
@@ -340,13 +674,66 @@ const ShoppingOrderHistory = () => {
                                   productAppId={gi.product_app_id}
                                 />
                                 <View style={[layoutStyle.columnStretchEvenly, {marginLeft: scale(10), flex: 1}]}> 
-                                  <Text style={styles.productName}>{gi.brand_name}</Text>
-                                  <Text style={styles.productTitle} numberOfLines={2} ellipsizeMode="tail">{gi.product_title}</Text>
-                                  <Text style={styles.productInfo}>{gi.product_name} {gi.option_amount}{gi.option_unit}({gi.option_gender == 'W' ? '여성' : gi.option_gender == 'M' ? '남성' : '공용'}) / {gi.order_quantity}개</Text>
-                                  <Text style={styles.productPrice}>{(Number(String((gi.price) ?? 0).replace(/,/g, '')) * Number((gi.order_quantity) ?? 0)).toLocaleString()}원</Text>
+                                  <View style={[layoutStyle.rowStart, {alignItems: 'center'}]}>
+                                    <Text style={styles.productName}>{gi.brand_name}</Text>
+                                    {isSplitGroup && (
+                                      <View style={[styles.orderStatusContainer, {marginLeft: scale(6), backgroundColor: ORDER_STATUS_BADGE_COLOR[gi.order_status] || '#BDBDBD'}]}>
+                                        <Text style={styles.orderStatusText}>{getOrderStatusLabel(gi.order_status)}</Text>
+                                      </View>
+                                    )}
+                                  </View>
+                                  <View style={[layoutStyle.rowStart, {alignItems: 'center'}]}>
+                                    <Text style={styles.productTitle} numberOfLines={2} ellipsizeMode="tail">{gi.product_title}</Text>
+                                  </View>
+                                  <Text style={styles.productInfo}>{gi.option_amount}{gi.option_unit}{gi.option_gender == 'W' ? '여성' : gi.option_gender == 'M' ? '남성' : '공용'} / {gi.order_quantity}개</Text>
                                 </View>
                               </TouchableOpacity>
                               </View>
+
+                              
+                              {!isSplitGroup && (
+                                <View style={[commonStyle.mt10]}>
+                                  <View style={[layoutStyle.rowBetween, {alignItems: 'center'}]}>
+                                    <Text style={styles.productName}>상품금액</Text>
+                                    <Text style={styles.productPrice}>{(Number(String((gi.price) ?? 0).replace(/,/g, '')) * Number((gi.order_quantity) ?? 0)).toLocaleString()}원</Text>
+                                  </View>
+                                  {Number(gi.total_payment_amount) < Number(gi.free_shipping_amount) && Number(gi.free_shipping_amount) && (
+                                    <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
+                                      <Text style={styles.productName}>배송비</Text>
+                                      <Text style={styles.productPrice}>{gi.delivery_fee?.toLocaleString()}원</Text>
+                                    </View>
+                                  )}
+                                  {Number(gi.total_delivery_fee_amount) > 0 && (
+                                    <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
+                                      <Text style={styles.productName}>{gi.order_status === 'EXCHANGE_COMPLETE' ? '교환' : '반품'} 배송비</Text>
+                                      <Text style={styles.productPrice}>{Number(gi.total_delivery_fee_amount)?.toLocaleString()}원</Text>
+                                    </View>
+                                  )}
+                                  {(gi.extra_shipping_area_cnt > 0) && (gi.remote_delivery_fee > 0) && (
+                                    <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
+                                      <Text style={styles.productName}>도서산간 배송비</Text>
+                                      <Text style={styles.productPrice}>{gi.remote_delivery_fee?.toLocaleString()}원</Text>
+                                    </View>
+                                  )}
+                                  <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
+                                    <Text style={styles.totalPriceText}>총 결제금액</Text>
+                                    <Text style={styles.totalPriceText}>{Number(gi.total_payment_amount)?.toLocaleString()}원</Text>
+                                  </View>
+                                  {(gi.order_status === 'CANCEL_COMPLETE' || gi.order_status === 'RETURN_COMPLETE') && (
+                                    <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
+                                      <Text style={styles.totalPriceText}>환불 금액</Text>
+                                      <Text style={styles.totalPriceText}>{(
+                                        Number(
+                                          String(
+                                            (gi as any)?.total_refund_amount ?? (gi as any)?.refund_amount ?? (gi as any)?.payment_amount ?? 0
+                                          ).replace(/,/g, '')
+                                        )
+                                      ).toLocaleString()}원</Text>
+                                    </View>
+                                  )}
+                                </View>
+                              )}
+
                               <View style={[layoutStyle.rowCenter, commonStyle.mt10]}>
                                 {gi.order_status === 'PAYMENT_COMPLETE' ? (
                                   <>
@@ -354,7 +741,10 @@ const ShoppingOrderHistory = () => {
                                       style={[styles.bottomBtnContainer, commonStyle.mr5]}
                                       onPress={() => {
                                         setPendingOrderItem({ ...gi, order_status: 'CANCEL_APPLY' });
-                                        setCancelQuantity('1');
+                                        setSelectedReturnReason('');
+                                        setReturnReasonDetail('');
+                                        setShowReasonDropdown(false);
+                                        setCancelQuantity('');
                                         showConfirmPopup('결제를 취소하시겠습니까?', () => {}, () => {});
                                       }}
                                     >
@@ -388,14 +778,94 @@ const ShoppingOrderHistory = () => {
                                   </>
                                 ) : gi.order_status === 'SHIPPING_COMPLETE' ? (
                                   <>
-                                    <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.mr5]}>
+                                    <TouchableOpacity
+                                      style={[styles.bottomBtnContainer, commonStyle.mr5]}
+                                      disabled={!!confirmingMap[Number(gi.order_detail_app_id)]}
+                                      onPress={async () => {
+                                        const odId = Number(gi.order_detail_app_id);
+                                        if (confirmingMap[odId]) return;
+                                        setConfirmingMap(prev => ({ ...prev, [odId]: true }));
+                                        try {
+                                          await updateOrderStatus({
+                                            order_detail_app_ids: [Number(gi.order_detail_app_id)],
+                                            mem_id: Number(memberInfo?.mem_id),
+                                            order_status: 'PURCHASE_CONFIRM',
+                                          } as any);
+                                          // 지급 포인트가 있는 경우 포인트 적립
+                                          const givePoint = Number(gi?.give_point ?? 0);
+                                          const orderQtyForPoint = Number(gi?.order_quantity ?? 1) || 1;
+                                          const totalGivePoint = Math.max(0, givePoint * orderQtyForPoint);
+                                          const shouldShowPointPopup = totalGivePoint > 0;
+                                          if (shouldShowPointPopup) {
+                                            try {
+                                              await insertMemberPointApp({
+                                                mem_id: Number(memberInfo?.mem_id),
+                                                order_app_id: Number(gi.order_app_id),
+                                                point_status: 'POINT_ADD',
+                                                point_amount: totalGivePoint,
+                                              } as any);
+                                              setGivePoint(totalGivePoint);
+                                              setPointPopupVisible(true);
+                                            } catch (e) {
+                                              // 포인트 적립 실패는 UI 흐름에 영향 주지 않음
+                                            }
+                                          }
+                                          await fetchOrderList();
+                                        } catch (e) {
+                                          // ignore
+                                        } finally {
+                                          setConfirmingMap(prev => {
+                                            const next = { ...prev };
+                                            delete next[odId];
+                                            return next;
+                                          });
+                                        }
+                                      }}
+                                    >
                                       <Text style={styles.bottomBtnText}>구매 확정</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                       style={[styles.bottomBtnContainer, commonStyle.mr5]}
-                                      onPress={() => navigation.navigate('ShoppingReturn' as never, { item: gi } as never)}
+                                      onPress={() => navigation.navigate('ShoppingReturn' as never, { item: gi, maxQuantity: gi.order_quantity } as never)}
                                     >
                                       <Text style={styles.bottomBtnText}>반품/교환 요청</Text>
+                                    </TouchableOpacity>
+                                  </>
+                                ) : gi.order_status === 'PURCHASE_CONFIRM' ? (
+                                  <>
+                                    {isWithinDaysFrom(gi?.purchase_confirm_dt, 3) && (
+                                      <TouchableOpacity
+                                        style={[styles.bottomBtnContainer, commonStyle.mr5]}
+                                        onPress={() => navigation.navigate('ShoppingReturn' as never, { item: gi, maxQuantity: gi.order_quantity } as never)}
+                                      >
+                                        <Text style={styles.bottomBtnText}>반품/교환 요청</Text>
+                                        <Text style={[styles.bottomBtnText, {fontSize: scale(10)}]}>(3일 이내 가능)</Text>
+                                      </TouchableOpacity>
+                                    )}
+                                    <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
+                                      const phone = gi?.inquiry_phone_number || '';
+                                      if (phone) {
+                                        Clipboard.setString(String(phone));
+                                      }
+                                    }}>
+                                      <Text style={styles.bottomBtnText}>문의하기</Text>
+                                    </TouchableOpacity>
+                                  </>
+                                ) : (gi.order_status === 'RETURN_APPLY' || gi.order_status === 'EXCHANGE_APPLY') ? (
+                                  <>
+                                    <TouchableOpacity
+                                      style={[styles.bottomBtnContainer, commonStyle.mr5]}
+                                      onPress={() => cancelCancelApply(gi)}
+                                    >
+                                      <Text style={styles.bottomBtnText}>{gi.order_status === 'EXCHANGE_APPLY' ? '교환접수 취소' : '반품접수 취소'}</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
+                                      const phone = gi?.inquiry_phone_number || '';
+                                      if (phone) {
+                                        Clipboard.setString(String(phone));
+                                      }
+                                    }}>
+                                      <Text style={styles.bottomBtnText}>문의하기</Text>
                                     </TouchableOpacity>
                                   </>
                                 ) : gi.order_status === 'CANCEL_APPLY' ? (
@@ -415,12 +885,86 @@ const ShoppingOrderHistory = () => {
                                       <Text style={styles.bottomBtnText}>문의하기</Text>
                                     </TouchableOpacity>
                                   </>
+                                ) : (gi.order_status === 'CANCEL_COMPLETE' || gi.order_status === 'RETURN_COMPLETE' || gi.order_status === 'EXCHANGE_COMPLETE') ? (
+                                  <>
+                                    <TouchableOpacity
+                                      style={[styles.bottomBtnContainer, commonStyle.mr5]}
+                                      onPress={() => navigation.navigate('ShoppingReturnHistoryDetail' as never, { item: gi } as never)}
+                                    >
+                                      <Text style={styles.bottomBtnText}>상세 내역</Text>
+                                    </TouchableOpacity>
+                                  </>
                                 ) : (
                                   <></>
                                 )}
                             </View>
                           </View>
                         ))}
+
+                        {/* 그룹 하단 요약 금액 블록 (분할된 경우만) */}
+                        {isSplitGroup && (
+                          <View style={[commonStyle.mt10]}>
+                            <View style={[layoutStyle.rowBetween, {alignItems: 'center'}]}>
+                              <Text style={styles.productName}>상품금액</Text>
+                              <Text style={styles.productPrice}>{group.reduce((sum: number, it: any) => {
+                                const price = Number(String(it?.price ?? 0).replace(/,/g, '')) || 0;
+                                const qty = Number(it?.order_quantity ?? 0) || 0;
+                                return sum + price * qty;
+                              }, 0).toLocaleString()}원</Text>
+                            </View>
+                            <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
+                              <Text style={styles.productName}>배송비</Text>
+                              <Text style={styles.productPrice}>{first.delivery_fee?.toLocaleString()}원</Text>
+                            </View>
+                            {(() => {
+                              const returnFeeSum = (group as any[]).reduce((sum: number, it: any) => {
+                                if (String(it?.order_status) === 'RETURN_COMPLETE') {
+                                  const v = Number(String(it?.total_delivery_fee_amount ?? 0).replace(/,/g, '')) || 0;
+                                  return sum + v;
+                                }
+                                return sum;
+                              }, 0);
+                              return returnFeeSum > 0 ? (
+                                <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
+                                  <Text style={styles.productName}>반품 배송비</Text>
+                                  <Text style={styles.productPrice}>{returnFeeSum.toLocaleString()}원</Text>
+                                </View>
+                              ) : null;
+                            })()}
+                            {(first.extra_shipping_area_cnt > 0) && (first.remote_delivery_fee > 0) && (
+                              <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
+                                <Text style={styles.productName}>도서산간 배송비</Text>
+                                <Text style={styles.productPrice}>{first.remote_delivery_fee?.toLocaleString()}원</Text>
+                              </View>
+                            )}
+                            <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
+                              <Text style={styles.totalPriceText}>총 결제금액</Text>
+                              <Text style={styles.totalPriceText}>{(
+                                Number(String((first as any)?.total_payment_amount ?? 0).replace(/,/g, '')) || 0
+                              ).toLocaleString()}원</Text>
+                            </View>
+
+                          {(() => {
+                            const hasRefund = (group as any[]).some((it: any) => (
+                              it?.order_status === 'CANCEL_COMPLETE' || it?.order_status === 'RETURN_COMPLETE'
+                            ));
+                            if (!hasRefund) return null;
+                            const refundSum = (group as any[]).reduce((sum: number, it: any) => {
+                              if (it?.order_status === 'CANCEL_COMPLETE' || it?.order_status === 'RETURN_COMPLETE') {
+                                const r = Number(String(it?.total_refund_amount ?? 0).replace(/,/g, '')) || 0;
+                                return sum + r;
+                              }
+                              return sum;
+                            }, 0);
+                            return (
+                              <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
+                                <Text style={styles.productName}>환불 금액</Text>
+                                <Text style={styles.productPrice}>{refundSum.toLocaleString()}원</Text>
+                              </View>
+                            );
+                          })()}
+                          </View>
+                        )}
                       </View>
                     );
                   })}
@@ -449,13 +993,31 @@ const ShoppingOrderHistory = () => {
             return;
           }
           if (pendingOrderItem) {
-            await insertCancelApply(pendingOrderItem);
-            setPendingOrderItem(null);
+            const extraFee = computeExtraShippingFeeForCancel(pendingOrderItem, qtyNum);
+            if (extraFee > 0) {
+              setPortonePaymentData({
+                amount: extraFee,
+                currency: 'KRW',
+                merchantOrderId: `extra_ship_${pendingOrderItem.payment_app_id}_${Date.now()}`,
+                customerName: String((memberInfo as any)?.mem_name || ''),
+                customerEmail: String((memberInfo as any)?.mem_email || ''),
+                customerPhone: String((memberInfo as any)?.mem_phone || ''),
+                description: '취소에 따른 추가 배송비 결제',
+              });
+              setPortoneVisible(true);
+              if (popup.onConfirm) {
+                popup.onConfirm();
+              }
+              return;
+            } else {
+              await insertCancelApply(pendingOrderItem);
+              setPendingOrderItem(null);
+              if (popup.onConfirm) {
+                popup.onConfirm();
+              }
+              await fetchOrderList();
+            }
           }
-          if (popup.onConfirm) {
-            popup.onConfirm();
-          }
-          await fetchOrderList();
         }}
         onCancel={() => { if (popup.onCancel) { popup.onCancel(); } }}
         confirmText="확인"
@@ -532,7 +1094,7 @@ const ShoppingOrderHistory = () => {
           {pendingOrderItem && (
             <View style={{ marginTop: scale(8), marginBottom: scale(14) }}>
               <Text style={{ marginBottom: scale(6), color: '#202020', fontSize: scale(12) }}>
-                취소 수량 (최대 {pendingOrderItem?.order_quantity})
+                취소 수량 (최대 {pendingOrderItem?.order_quantity}개)
               </Text>
               <TextInput
                 value={cancelQuantity}
@@ -560,10 +1122,77 @@ const ShoppingOrderHistory = () => {
                   fontSize: scale(12),
                 }}
               />
+              {/* 무료배송 기준 하락 시 경고 문구 */}
+              {(() => {
+                try {
+                  const qtyNum = Number(cancelQuantity);
+                  if (!pendingOrderItem || !qtyNum) return null;
+                  const extraFee = computeExtraShippingFeeForCancel(pendingOrderItem, qtyNum);
+                  if (extraFee > 0) {
+                    return (
+                      <Text style={{ color: '#FF3B30', fontSize: scale(12), marginTop: scale(8) }}>
+                        현재 상품 가격은 무료배송비용보다 적습니다. 취소를 계속 진행할 경우 배송비 추가 결제가 필요합니다.
+                      </Text>
+                    );
+                  }
+                  return null;
+                } catch {
+                  return null;
+                }
+              })()}
             </View>
           )}
         </View>
       </CommonPopup>
+
+      {/* 포인트 발급 안내 팝업 */}
+      <CommonPopup
+        visible={pointPopupVisible}
+        message={`${givePoint} 포인트가 발급되었습니다~!\n마이페이지에서 확인해보세요:)`}
+        titleWeight="normal"
+        backgroundColor="#FFFFFF"
+        textColor="#202020"
+        onConfirm={() => setPointPopupVisible(false)}
+        confirmText="확인"
+      />
+
+      <Modal
+        visible={portoneVisible}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent
+        onRequestClose={() => {
+          setPortoneVisible(false);
+          setPortonePaymentData(null);
+        }}
+      >
+        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+          <Portone
+            visible={true}
+            paymentData={portonePaymentData || { amount: 0, currency: 'KRW', merchantOrderId: '', customerName: '', customerEmail: '', customerPhone: '' }}
+            onPaymentSuccess={async () => {
+              try {
+                if (pendingOrderItem) {
+                  await insertCancelApply(pendingOrderItem);
+                  setPendingOrderItem(null);
+                  await fetchOrderList();
+                }
+              } finally {
+                setPortoneVisible(false);
+                setPortonePaymentData(null);
+              }
+            }}
+            onPaymentFailure={() => {
+              setPortoneVisible(false);
+              setPortonePaymentData(null);
+            }}
+            onCancel={() => {
+              setPortoneVisible(false);
+              setPortonePaymentData(null);
+            }}
+          />
+        </View>
+      </Modal>
     </>
   )
 };
@@ -653,15 +1282,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   orderStatusContainer: {
-    backgroundColor: '#42B649',
+    backgroundColor: 'transparent',
     borderRadius: scale(5),
-    paddingHorizontal: scale(8),
+    paddingHorizontal: scale(5),
     paddingVertical: scale(3),
     marginLeft: scale(10),
   },
   orderStatusText: {
-    fontSize: scale(12),
+    fontSize: scale(10),
     color: '#FFFFFF',
+    fontFamily: 'Pretendard-SemiBold',
   },
   orderItemImgContainer: {
     flexDirection: 'row',
@@ -669,9 +1299,9 @@ const styles = StyleSheet.create({
     marginTop: scale(16),
   },
   productName: {
-    fontSize: scale(14),
-    color: '#202020',
-    fontWeight: '600',
+    fontSize: scale(12),
+    fontFamily: 'Pretendard-SemiBold',
+    color: '#848484',
   },
   productTitle: {
     fontSize: scale(12),
@@ -682,9 +1312,14 @@ const styles = StyleSheet.create({
     color: '#848484',
   },
   productPrice: {
+    fontSize: scale(12),
+    fontFamily: 'Pretendard-SemiBold',
+    color: '#848484',
+  },
+  totalPriceText: {
     fontSize: scale(14),
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
-    fontWeight: '600',
   },
   bottomBtnContainer: {
     flex: 1,

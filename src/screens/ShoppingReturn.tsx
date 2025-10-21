@@ -23,9 +23,12 @@ import { commonStyle, layoutStyle } from '../assets/styles/common';
 import { createModalPanResponder } from '../utils/commonFunction';
 import ReturnImgPicker from '../components/ReturnImgPicker';
 import { Asset } from 'react-native-image-picker';
-import { getMemberReturnAppList } from '../api/services/memberReturnAppService';
+import { getMemberReturnAppList, updateMemberReturnApp, updateMemberReturnAppCancelYn } from '../api/services/memberReturnAppService';
 import { getTargetMemberShippingAddress, ShippingAddressItem, updateSelectYn } from '../api/services/memberShippingAddressService';
 import { insertMemberReturnApp } from '../api/services/memberReturnAppService';
+import { updateOrderStatus, insertMemberOrderDetailApp, updateOrderQuantity, getMemberOrderAppList } from '../api/services/memberOrderAppService';
+import { insertMemberOrderAddress, deleteMemberOrderAddress, updateMemberOrderAddress, updateOrderDetailAppId } from '../api/services/memberOrderAddressService';
+import { getReturnExchangePolicyList, ReturnExchangePolicy } from '../api/services/returnExchangePolicyService';
 import CommonPopup from '../components/CommonPopup';
 import CustomToast from '../components/CustomToast';
 import ShoppingThumbnailImg from '../components/ShoppingThumbnailImg';
@@ -60,19 +63,24 @@ const ShoppingReturn = ({route}: any) => {
   const [selectedReason, setSelectedReason] = useState('');
   const [showReasonDropdown, setShowReasonDropdown] = useState(false);
   const [returnReasons, setReturnReasons] = useState<CommonCode[]>([]);
-  const [selectedImages, setSelectedImages] = useState<Asset[]>([]);
-  const [fileIds, setFileIds] = useState<number[]>([]);
   const [returnData, setReturnData] = useState<any>(null);
   const [shippingAddress, setShippingAddress] = useState<ShippingAddressItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
+  const [popupType, setPopupType] = useState<'info' | 'warning' | 'success' | 'error'>('info');
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [customReason, setCustomReason] = useState('');
   const [selectedCommonCode, setSelectedCommonCode] = useState('');
   const [showPolicyModal, setShowPolicyModal] = useState(false);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [quantityText, setQuantityText] = useState<string>('1');
+  const maxQty = Number(route?.params?.maxQuantity ?? item?.order_quantity ?? 1);
+  const [requestConfirmVisible, setRequestConfirmVisible] = useState(false);
+  const [returnPolicies, setReturnPolicies] = useState<ReturnExchangePolicy[]>([]);
+  const [originalTotalQty, setOriginalTotalQty] = useState<number | undefined>(undefined);
 
   // 뒤로가기 처리 함수
   const handleBackPress = async () => {
@@ -91,30 +99,7 @@ const ShoppingReturn = ({route}: any) => {
     } else {
     }
     navigation.goBack();
-  };
-  
-  // 반품 배송비 계산 함수
-  const getShippingFee = () => {
-    // 교환인 경우 항상 배송비 반환
-    if (selectedType === 'exchange') {
-      return parseInt(item?.delivery_fee?.toString().replace(/,/g, '') || '0') * 2;
-    }
-    
-    // 반품인 경우 사유에 따라 배송비 결정
-    if (!selectedReason) return 0;
-    
-    const selectedReasonData = returnReasons.find(reason => reason.common_code_name === selectedReason);
-    if (selectedReasonData) {
-      switch (selectedReasonData.common_code_memo) {
-        case 'FREE_FEE':
-          return 0;
-        default:
-          return parseInt(item?.delivery_fee?.toString().replace(/,/g, '') || '0');
-      }
-    }
-    
-    return 0;
-  };
+  };  
   
   // getTargetMemberShippingAddress API 통신
   const fetchShippingAddress = async () => {
@@ -133,9 +118,8 @@ const ShoppingReturn = ({route}: any) => {
   // getMemberReturnApp API 통신
   const fetchMemberReturnApp = async () => {
     try {
-      console.log('fetchMemberReturnApp');
-      const response = await getMemberReturnAppList({ mem_id: Number(memberInfo?.mem_id) });
-      console.log('response', response);
+      const response = await getMemberReturnAppList({ mem_id: Number(memberInfo?.mem_id), order_detail_app_id: Number(item?.order_detail_app_id) });
+      
       if (response.success) {
         setReturnData(response.data);
       }
@@ -151,10 +135,20 @@ const ShoppingReturn = ({route}: any) => {
         try {
           const response = await getCommonCodeList({ group_code: 'RETURN_REASON_TYPE' });
           if (response.success && response.data) {
-            setReturnReasons(response.data);
+            setReturnReasons(response.data.filter((item: any) => item.common_code !== 'QUANTITY_REASON'));
           }
         } catch (error) {
           console.error('반품 사유 API 에러:', error);
+          setReturnReasons([]);
+        }
+      } else if (selectedType === 'exchange') {
+        try {
+          const exRes = await getCommonCodeList({ group_code: 'EXCHANGE_REASON_TYPE' });
+          const list = (exRes?.success && Array.isArray(exRes.data) && exRes.data.length > 0)
+            ? exRes.data
+            : ((await getCommonCodeList({ group_code: 'RETURN_REASON_TYPE' }))?.data || []);
+          setReturnReasons(Array.isArray(list) ? list.filter((it: any) => it?.common_code !== 'QUANTITY_REASON') : []);
+        } catch (error) {
           setReturnReasons([]);
         }
       } else {
@@ -164,12 +158,43 @@ const ShoppingReturn = ({route}: any) => {
     };
     
     fetchReturnReasons();
+    // 탭 전환 시 사유 드롭다운 닫기
+    setShowReasonDropdown(false);
   }, [selectedType]);
 
   useFocusEffect(
     useCallback(() => {
       fetchMemberReturnApp();
       fetchShippingAddress();
+      (async () => {
+        try {
+          const res = await getReturnExchangePolicyList({ product_app_id: String(item?.product_app_id ?? '') });
+          if (res?.success && Array.isArray(res.data)) {
+            const sorted = [...res.data].sort((a, b) => Number(a.order_seq ?? 0) - Number(b.order_seq ?? 0));
+            setReturnPolicies(sorted);
+          } else {
+            setReturnPolicies([]);
+          }
+        } catch (e) {
+          setReturnPolicies([]);
+        }
+      })();
+
+      // 원래 총 수량 보정: 동일 결제/동일 상품 기준으로 합산
+      (async () => {
+        try {
+          if (!memberInfo?.mem_id || !item) return;
+          const res = await getMemberOrderAppList({ mem_id: Number(memberInfo?.mem_id), screen_type: 'ORDER_HISTORY' } as any);
+          if (res?.success && Array.isArray(res.data)) {
+            const related = res.data.filter((it: any) =>
+              String(it?.payment_app_id) === String((item as any)?.payment_app_id) &&
+              String(it?.product_detail_app_id) === String((item as any)?.product_detail_app_id)
+            );
+            const sum = related.reduce((acc: number, it: any) => acc + (Number(it?.order_quantity ?? 0) || 0), 0);
+            if (sum > 0) setOriginalTotalQty(sum);
+          }
+        } catch (e) {}
+      })();
       
       // 배송지 관리에서 돌아온 경우 선택된 배송지 정보 업데이트
       if (route.params?.selectedAddress) {
@@ -180,7 +205,8 @@ const ShoppingReturn = ({route}: any) => {
     }, [])
   );
 
-  const showPopup = (message: string) => {
+  const showPopup = (message: string, type: 'info' | 'warning' | 'success' | 'error' = 'info') => {
+    setPopupType(type);
     setPopupMessage(message);
     setPopupVisible(true);
   };
@@ -194,7 +220,7 @@ const ShoppingReturn = ({route}: any) => {
   const handleReturnRequest = async () => {
     // 유효성 검사
     if (!selectedReason) {
-      showPopup(`${selectedType === 'return' ? '반품' : '교환'} 사유를 선택해주세요.`);
+      showPopup(`${selectedType === 'return' ? '반품' : '교환'} 사유를 선택해주세요.`, 'warning');
       return;
     }
 
@@ -203,25 +229,142 @@ const ShoppingReturn = ({route}: any) => {
       return;
     }
 
+    // 교환 사유 상세 입력 필수
+    if (selectedType === 'exchange') {
+      const reasonText = (customReason || '').trim();
+      if (!reasonText) {
+        showPopup('교환 사유를 입력해주세요.', 'warning');
+        return;
+      }
+    }
+
     try {
       setIsSubmitting(true);
-      
-      let uploadedFileNames: string[] = [];
-      
-      if (selectedImages.length > 0) {
-        uploadedFileNames = selectedImages.map(img => img.fileName).filter(Boolean);
+
+      // 분할 처리: 신청 수량이 전체 수량보다 적으면 나머지 수량으로 새 주문상세 생성
+      try {
+        const originalQty = Number(item?.order_quantity ?? 0);
+        const requestQty = Number(quantity ?? 0);
+        const remainderQty = Math.max(0, originalQty - requestQty);
+        if (requestQty > 0 && remainderQty > 0) {
+          // 1) 남은 수량으로 새 주문상세 생성 (현재 주문 상태 유지)
+          const newDetailRes = await insertMemberOrderDetailApp({
+            order_detail_app_id: Number(item?.order_detail_app_id),
+            order_app_id: Number(item?.order_app_id),
+            product_detail_app_id: Number(item?.product_detail_app_id),
+            order_status: String(item?.order_status || 'PAYMENT_COMPLETE'),
+            order_quantity: remainderQty,
+            order_group: 1,
+            mem_id: Number(memberInfo?.mem_id),
+            courier_code: String((item as any)?.company_courier_code || (item as any)?.customer_courier_code || (item as any)?.courier_code || ''),
+            tracking_number: String((item as any)?.company_tracking_number || (item as any)?.customer_tracking_number || (item as any)?.tracking_number || ''),
+            goodsflow_id: String((item as any)?.goodsflow_id || ''),
+            purchase_confirm_dt: String((item as any)?.purchase_confirm_dt || ''),
+          } as any);
+          const newOrderDetailId = Number((newDetailRes as any)?.order_detail_app_id || 0);
+
+          // 1-1) 기존 ORDER 주소를 신규 주문상세로 매핑
+          try {
+            const originalAddrId = Number((item as any)?.order_address_id);
+            if (Number.isFinite(originalAddrId) && originalAddrId > 0 && Number.isFinite(newOrderDetailId) && newOrderDetailId > 0) {
+              await updateOrderDetailAppId({
+                order_address_id: originalAddrId,
+                mem_id: Number(memberInfo?.mem_id),
+                order_detail_app_id: newOrderDetailId,
+              } as any);
+            }
+          } catch (e) {}
+
+          // 2) 원 상세 수량을 신청 수량으로 업데이트 (반품/교환 대상)
+          await updateOrderQuantity({
+            order_detail_app_id: Number(item?.order_detail_app_id),
+            mem_id: Number(memberInfo?.mem_id),
+            order_quantity: requestQty,
+          } as any);
+        }
+      } catch (e) {
+        // 분할 실패 시에도 기존 흐름은 그대로 진행
       }
 
-      const response = await insertMemberReturnApp({
-        order_app_id: item.order_app_id,
-        shipping_address_id: shippingAddress?.shipping_address_id,
+      // cancel_yn 기준 통합 분기 처리
+      const isPreviouslyCancelled = Array.isArray(returnData)
+        ? returnData.some((it: any) => it?.cancel_yn === 'Y')
+        : (returnData && (returnData as any)?.cancel_yn === 'Y');
+
+      let orderAddressIdToUse: number | undefined = undefined;
+      
+      if (isPreviouslyCancelled) {
+        try {
+          await deleteMemberOrderAddress({
+            order_detail_app_id: Number(item?.order_detail_app_id),
+            mem_id: Number(memberInfo?.mem_id),
+          } as any);
+        } catch (e) {}
+      }
+
+      const insertAddrRes = await insertMemberOrderAddress({
+        order_detail_app_id: Number(item?.order_detail_app_id),
         mem_id: Number(memberInfo?.mem_id),
-        return_type: selectedType === 'return' ? 'RETURN' : 'EXCHANGE',
-        reason: selectedReason,
-        file_ids: fileIds.length > 0 ? fileIds : undefined
-      });
+        order_address_type: 'RETURN',
+        receiver_name: shippingAddress?.receiver_name || '',
+        receiver_phone: (shippingAddress?.receiver_phone || '').replace(/-/g, ''),
+        address: shippingAddress?.address || '',
+        address_detail: shippingAddress?.address_detail || '',
+        zip_code: shippingAddress?.zip_code || '',
+        enter_way: shippingAddress?.enter_way,
+        enter_memo: shippingAddress?.enter_memo,
+        delivery_request: shippingAddress?.delivery_request,
+      } as any);
+      orderAddressIdToUse = Number((insertAddrRes && (insertAddrRes.data?.order_address_id ?? insertAddrRes.order_address_id)) || undefined);
+    
+      // 최신 반품/교환 데이터 확인 후 분기 (기록이 하나라도 있으면 업데이트 경로)
+      let hasAnyReturnRecord = false;
+      try {
+        const latest = await getMemberReturnAppList({
+          mem_id: Number(memberInfo?.mem_id),
+          order_detail_app_id: Number(item?.order_detail_app_id),
+        });
+        hasAnyReturnRecord = !!(latest?.success && (Array.isArray(latest.data) ? latest.data.length > 0 : !!latest.data));
+      } catch (e) {}
+
+      let response;
+      if (hasAnyReturnRecord) {
+        // 취소 접수 해제: cancel_yn = 'N'
+        await updateMemberReturnAppCancelYn({
+          order_detail_app_ids: [Number(item?.order_detail_app_id)],
+          mem_id: Number(memberInfo?.mem_id),
+          cancel_yn: 'N',
+        } as any);
+        // 상세 정보 업데이트(사유/수량 등)
+        response = await updateMemberReturnApp({
+          order_detail_app_ids: [Number(item?.order_detail_app_id)],
+          mem_id: Number(memberInfo?.mem_id),
+          quantity: quantity,
+          cancel_yn: 'N',
+          return_reason_type: selectedCommonCode,
+          reason: customReason,
+        } as any);
+      } else {
+        response = await insertMemberReturnApp({
+          order_detail_app_id: item.order_detail_app_id,
+          order_address_id: Number(orderAddressIdToUse),
+          mem_id: Number(memberInfo?.mem_id),
+          return_reason_type: selectedCommonCode,
+          reason: customReason,
+          quantity: quantity
+        });
+      }
 
       if (response.success) {
+        try {
+          await updateOrderStatus({
+            order_detail_app_ids: [Number(item?.order_detail_app_id)],
+            mem_id: Number(memberInfo?.mem_id),
+            order_status: (selectedType === 'exchange') ? 'EXCHANGE_APPLY' : 'RETURN_APPLY',
+          } as any);
+        } catch (e) {}
+
+        // updateMemberOrderDetailApp 제거 (요청 사항)
         showToast(`${selectedType === 'return' ? '반품' : '교환'} 신청이 완료되었습니다.`, 'success');
         navigation.goBack();
       } else {
@@ -234,11 +377,11 @@ const ShoppingReturn = ({route}: any) => {
       setIsSubmitting(false);
     }
   };
-  
+  console.log('item', item);
   return (
     <>
       <CommonHeader 
-        title={!returnData || returnData.length === 0 ? "반품/교환 신청" : "반품/교환 이력"}
+        title="반품/교환 신청"
         titleColor="#202020"
         backIcon={IMAGES.icons.arrowLeftBlack}
         backgroundColor="#FFFFFF"
@@ -277,9 +420,8 @@ const ShoppingReturn = ({route}: any) => {
               <Text style={styles.policyTitle}>반품/교환 정책 안내 및 반송 확인 방법</Text>
               <Image source={IMAGES.icons.arrowRightGray} style={{width: scale(10), height: scale(10), resizeMode: 'contain'}} />
             </TouchableOpacity>
-            <Text style={styles.policyText}>제품이 물류센터 도착 후, 다음날부터 영업일 기준 검수시간 1~3일 후 반품이 완료됩니다</Text>
           </View>
-          {!returnData || returnData.length === 0 ? (
+          
             <View style={styles.tabContent}>
               {/* 체크박스 영역 */}
               <View style={styles.checkboxContainer}>
@@ -327,7 +469,10 @@ const ShoppingReturn = ({route}: any) => {
               {selectedType === 'exchange' && (
                 <View style={styles.exchangeProductContainer}>
                   <Text style={styles.exchangeProductTitle}>교환 상품</Text>
-                  <View style={[layoutStyle.rowAlignStart]}>
+                  <TouchableOpacity 
+                    style={[layoutStyle.rowAlignStart]}
+                    onPress={() => navigation.navigate('ShoppingDetail' as never, { productParams: { product_app_id: item.product_app_id, product_detail_app_id: item.product_detail_app_id } } as never)}
+                  >
                     <ShoppingThumbnailImg 
                       productAppId={item.product_app_id}
                       width={scale(70)} 
@@ -338,11 +483,23 @@ const ShoppingReturn = ({route}: any) => {
                       <Text style={styles.brandName}>{item?.brand_name}</Text>
                       <Text style={styles.productName}>{item?.product_name}</Text>
                       <View style={[layoutStyle.rowStart, {marginTop: scale(10)}]}>
-                        <Text style={[styles.productPrice]}>{Number(item?.payment_amount ?? 0).toLocaleString()}원</Text>
+                        <Text style={[styles.productPrice]}>{(() => {
+                          const toNum = (v: any) => {
+                            const n = Number(String(v ?? 0).replace(/[^0-9.-]/g, ''));
+                            return isNaN(n) ? 0 : n;
+                          };
+                          const price = toNum((item as any)?.price);
+                          const paymentAmount = toNum((item as any)?.payment_amount);
+                          const totalPayment = toNum((item as any)?.total_payment_amount);
+                          const qty = toNum(item?.order_quantity) || 1;
+                          const derived = totalPayment > 0 && qty > 0 ? Math.round(totalPayment / qty) : 0;
+                          const unit = price || paymentAmount || derived;
+                          return unit.toLocaleString();
+                        })()}원</Text>
                         <Text style={[styles.productPrice, commonStyle.ml5]}>/ {item?.option_unit} {item?.order_quantity}개</Text>
                       </View>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 </View>
               )}
 
@@ -384,30 +541,61 @@ const ShoppingReturn = ({route}: any) => {
                       </View>
                     )}
                     
-                    {selectedCommonCode === 'ETC_REASON' && (
-                      <TextInput
-                        style={styles.customReasonInput}
-                        placeholder="기타 사유를 입력해주세요"
-                        placeholderTextColor="#848484"
-                        value={customReason}
-                        onChangeText={setCustomReason}
-                        multiline={true}
-                        numberOfLines={3}
-                        maxLength={200}
-                      />
-                    )}
+                    <TextInput
+                      style={styles.customReasonInput}
+                      placeholder="사유를 입력해주세요(선택)"
+                      placeholderTextColor="#848484"
+                      value={customReason}
+                      onChangeText={setCustomReason}
+                      multiline={true}
+                      numberOfLines={3}
+                      maxLength={200}
+                    />
                   </View>
                 ) : (
-                  <TextInput
-                    style={styles.customReasonInput}
-                    placeholder="교환 사유를 입력해주세요"
-                    placeholderTextColor="#848484"
-                    value={customReason}
-                    onChangeText={setCustomReason}
-                    multiline={true}
-                    numberOfLines={3}
-                    maxLength={200}
-                  />
+                  <View style={commonStyle.mt15}>
+                    <TouchableOpacity
+                      style={styles.selectBox}
+                      onPress={() => setShowReasonDropdown(!showReasonDropdown)}
+                    >
+                      <Text style={[styles.selectBoxText, !selectedReason && styles.placeholderText]}>
+                        {selectedReason || '교환 사유를 선택해주세요'}
+                      </Text>
+                      <Image 
+                        source={IMAGES.icons.arrowDownGray}
+                        style={[styles.arrowIcon, showReasonDropdown && styles.arrowIconRotated]}
+                      />
+                    </TouchableOpacity>
+
+                    {showReasonDropdown && (
+                      <View style={styles.dropdown}>
+                        {returnReasons.map((reason, index) => (
+                          <TouchableOpacity
+                            key={index}
+                            style={[styles.dropdownItem, selectedReason === reason.common_code_name && styles.selectedDropdownItem]}
+                            onPress={() => {
+                              setSelectedCommonCode((reason as any).common_code);
+                              setSelectedReason(reason.common_code_name);
+                              setShowReasonDropdown(false);
+                            }}
+                          >
+                            <Text style={styles.dropdownText}>{reason.common_code_name}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+
+                    <TextInput
+                      style={styles.customReasonInput}
+                      placeholder={'교환 사유를 입력해주세요 (예: 사이즈 M→L, 색상 변경, 불량 위치, 구성품 누락)'}
+                      placeholderTextColor="#848484"
+                      value={customReason}
+                      onChangeText={setCustomReason}
+                      multiline={true}
+                      numberOfLines={3}
+                      maxLength={200}
+                    />
+                  </View>
                 )}
               </View>
 
@@ -447,12 +635,70 @@ const ShoppingReturn = ({route}: any) => {
                 </View>
               </View>
 
+              <View style={styles.quantityContainer}>
+                <Text style={styles.quantityTitle}>수량</Text>
+                <View style={[styles.quantityControl, commonStyle.mt10]}>
+                  <TouchableOpacity
+                    style={styles.qtyBtn}
+                    onPress={() =>
+                      setQuantity(prev => {
+                        const next = Math.max(1, prev - 1);
+                        setQuantityText(String(next));
+                        return next;
+                      })
+                    }
+                  >
+                    <Text style={styles.qtyBtnText}>-</Text>
+                  </TouchableOpacity>
+                  <TextInput
+                    style={styles.qtyInput}
+                    keyboardType="number-pad"
+                    value={quantityText}
+                    onChangeText={(text) => {
+                       const digitsOnly = text.replace(/[^0-9]/g, '');
+                      if (digitsOnly === '') {
+                        setQuantityText('');
+                        return;
+                      }
+                      setQuantityText(digitsOnly);
+                      const parsed = parseInt(digitsOnly, 10);
+                      if (!isNaN(parsed)) {
+                        const clamped = Math.min(maxQty, Math.max(1, parsed));
+                        setQuantity(clamped);
+                      }
+                    }}
+                    onEndEditing={() => {
+                      if (quantityText === '') {
+                        setQuantity(1);
+                        setQuantityText('1');
+                      } else {
+                        const parsed = parseInt(quantityText, 10);
+                        const clamped = isNaN(parsed) ? 1 : Math.min(maxQty, Math.max(1, parsed));
+                        setQuantity(clamped);
+                        setQuantityText(String(clamped));
+                      }
+                    }}
+                  />
+                  <TouchableOpacity
+                    style={styles.qtyBtn}
+                    onPress={() =>
+                      setQuantity(prev => {
+                        const next = Math.min(maxQty, prev + 1);
+                        setQuantityText(String(next));
+                        return next;
+                      })
+                    }
+                  >
+                    <Text style={styles.qtyBtnText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               <View style={styles.returnContainer}>
                 <Text style={styles.returnTitle}>예상 {selectedType === 'return' ? '반품' : '교환'} 배송비</Text>
-                <Text style={[styles.refundText, commonStyle.mt5, commonStyle.mb10]}>귀책에 따라 반품 배송비가 정해지며, 배송비는 <Text style={{color: '#202020'}}>착불</Text>로만 결제 가능합니다</Text>
-                <View style={[layoutStyle.rowBetween, {marginBottom: scale(10)}]}>
+                <View style={[layoutStyle.rowBetween, {marginVertical: scale(10)}]}>
                   <Text style={styles.refundText}>배송비</Text>
-                  <Text style={styles.refundText}>{Number(getShippingFee() ?? 0).toLocaleString()}원</Text>
+                  <Text style={styles.refundText}>{(item?.return_delivery_fee * (selectedType === 'exchange' ? 2 : 1))?.toLocaleString()}원</Text>
                 </View>
                 {shippingAddress?.zip_code && isCJRemoteArea(shippingAddress.zip_code) && (
                   <View style={[layoutStyle.rowBetween, {marginBottom: scale(10)}]}>
@@ -465,12 +711,25 @@ const ShoppingReturn = ({route}: any) => {
               {selectedType === 'return' && (
                 <View style={styles.refundContainer}>
                   <View style={[commonStyle.mb5]}>
-                    <Text style={styles.refundTitle}>환불금액</Text>
+                    <Text style={styles.refundTitle}>예상 환불 금액</Text>
                   </View>
                     <>
                       <View style={[layoutStyle.rowBetween, {marginVertical: scale(5)}]}>
-                        <Text style={styles.refundTotalTitle}>최종 환불 금액</Text>
-                        <Text style={styles.refundTotalAmount}>{Number(item?.payment_amount ?? 0).toLocaleString()}원</Text>
+                        <Text style={styles.refundTotalTitle}>환불 금액</Text>
+                        <Text style={styles.refundTotalAmount}>{(() => {
+                          const toNum = (v: any) => {
+                            const n = Number(String(v ?? 0).replace(/[^0-9.-]/g, ''));
+                            return isNaN(n) ? 0 : n;
+                          };
+                          const totalPayment = toNum((item as any)?.total_payment_amount);
+                          const originalQty = (originalTotalQty ?? toNum(item?.order_quantity));
+                          const totalQty = Number((originalQty || 1));
+                          const perUnit = totalQty > 0 ? totalPayment / totalQty : 0;
+                          const qtyNum = Number(quantity ?? 1);
+                          const qty = Number.isNaN(qtyNum) ? 1 : qtyNum;
+                          const refund = Math.max(0, perUnit * qty);
+                          return Math.round(refund).toLocaleString();
+                        })()}원</Text>
                       </View>
                     </>
                 </View>
@@ -479,7 +738,7 @@ const ShoppingReturn = ({route}: any) => {
               <View style={styles.requestContainer}>
                 <TouchableOpacity 
                   style={[styles.requestBtn, isSubmitting && styles.disabledBtn]} 
-                  onPress={handleReturnRequest}
+                  onPress={() => setRequestConfirmVisible(true)}
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -490,80 +749,6 @@ const ShoppingReturn = ({route}: any) => {
                 </TouchableOpacity>
               </View>
             </View>
-          ) : (
-            <View>
-              {!returnData.length ? (
-                <View style={styles.emptyContainer}>
-                  <Image source={IMAGES.icons.xDocumentGray} style={styles.emptyIcon}/>
-                  <Text style={styles.emptyText}>반품/교환 이력이 없어요</Text>
-                </View>
-              ) : (
-                <View>
-                  {returnData.map((item, index) => (
-                    <View key={index} style={styles.returnDataContainer}>
-                      <Text style={styles.returnStatus}>{item.return_status === 'RETURN_APPLY' ? '반품 신청 완료' : '교환 신청 완료'}</Text>
-                      <View style={[layoutStyle.rowStart, commonStyle.mt10, commonStyle.mb10]}>
-                        <Text style={styles.returnDt}>{item.reg_dt}</Text>
-                        {/* <TouchableOpacity
-                          style={[layoutStyle.rowStart, commonStyle.ml10]}
-                          onPress={() => {
-                            navigation.navigate('ShoppingOrderHistory', {
-                              orderAppId: item.order_app_id
-                            });
-                          }}
-                        >
-                          <Text style={styles.returnDetail}>주문 상세</Text>
-                          <Image source={IMAGES.icons.arrowRightGray} style={{width: scale(10), height: scale(10), resizeMode: 'contain'}} />
-                        </TouchableOpacity> */}
-                      </View>
-                      <View style={[layoutStyle.rowAlignStart, commonStyle.mb10]}>
-                        <TouchableOpacity
-                          style={[layoutStyle.rowStart, commonStyle.ml10]}
-                          onPress={() => {
-                            navigation.navigate('ShoppingDetail', {
-                              productParams: item
-                            });
-                          }}
-                        >
-                          <ShoppingThumbnailImg 
-                            productAppId={item.product_app_id}
-                            width={scale(70)} 
-                            height={scale(70)}
-                            style={styles.exchangeProductImage}
-                            />
-                          <View style={[commonStyle.ml10]}>
-                            <Text style={styles.brandName}>{item.brand_name}</Text>
-                            <Text style={styles.productName}>{item.product_name}</Text>
-                            <View style={[layoutStyle.rowStart, {marginTop: scale(10)}]}>
-                              <Text style={[styles.productPrice]}>{Number(item?.payment_amount ?? 0).toLocaleString()}원</Text>
-                              <Text style={[commonStyle.ml5, styles?.productPrice]}>/ {item?.option_unit} {item?.order_quantity}개</Text>
-                            </View>
-                          </View>
-                        </TouchableOpacity>
-                      </View>
-
-                      <View style={[layoutStyle.rowBetween, commonStyle.mt10, {gap: scale(5)}]}>
-                        <TouchableOpacity 
-                          style={styles.returnBtn}
-                          onPress={() => {
-                            navigation.navigate('ShoppingShipping', {
-                              item: item,
-                              screen: 'ShoppingReturn'
-                            });
-                          }}
-                        >
-                          <Text>버튼1</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.returnBtn}>
-                          <Text>버튼2</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
         </ScrollView>
       </View>
 
@@ -572,7 +757,21 @@ const ShoppingReturn = ({route}: any) => {
         textColor="#202020"
         visible={popupVisible}
         message={popupMessage}
+        type={popupType === 'warning' ? 'warning' : 'default'}
         onConfirm={() => setPopupVisible(false)}
+      />
+      <CommonPopup
+        backgroundColor="#FFFFFF"
+        textColor="#202020"
+        visible={requestConfirmVisible}
+        message={`${selectedType === 'return' ? '반품' : '교환'}을 신청하시겠습니까?`}
+        onConfirm={async () => {
+          setRequestConfirmVisible(false);
+          await handleReturnRequest();
+        }}
+        onCancel={() => setRequestConfirmVisible(false)}
+        confirmText="확인"
+        cancelText="취소"
       />
       
       <CustomToast
@@ -589,7 +788,28 @@ const ShoppingReturn = ({route}: any) => {
         content="반품/교환 정책 내용이 여기에 표시됩니다."
         background="#FFFFFF"
         textColor="#202020"
-      />
+      >
+        {returnPolicies && returnPolicies.length > 0 ? (
+          <View style={[commonStyle.mt15, commonStyle.mb20]}>
+            {returnPolicies.map((ele, idx) => (
+              <View key={idx}>
+                <View style={ele?.direction === 'COLUMN' ? commonStyle.mb10 : styles.returnRowItem}>
+                  <View style={ele?.direction === 'COLUMN' ? '' : styles.returnRowItemTitleCont}>
+                    <Text style={ele?.direction === 'COLUMN' ? styles.returnColumnTitle : styles.returnRowItemTitle}>{ele.title}</Text>
+                  </View>
+                  <View style={ele?.direction === 'COLUMN' ? '' : styles.returnRowItemDescCont}>
+                    <Text style={ele?.direction === 'COLUMN' ? styles.returnColumnDesc : styles.returnRowItemDesc}>{ele.content}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={{color: '#202020', fontSize: scale(12), lineHeight: scale(18)}}>
+            제품이 물류센터 도착 후, 다음날부터 영업일 기준 검수시간 1~3일 후 반품이 완료됩니다
+          </Text>
+        )}
+      </CommonModal>
     </>
   );
 };
@@ -683,6 +903,14 @@ const styles = StyleSheet.create({
     fontSize: scale(12),
     color: '#202020',
     fontWeight: '400',
+  },
+  quantityContainer: {
+    marginTop: scale(20),
+  },
+  quantityTitle: {
+    fontSize: scale(16),
+    color: '#202020',
+    fontWeight: '600',
   },
   returnContainer: {
     marginTop: scale(20),
@@ -823,10 +1051,14 @@ const styles = StyleSheet.create({
   customReasonInput: {
     marginTop: scale(10),
     padding: scale(10),
+    paddingTop: scale(12),
     borderWidth: 1,
     borderColor: '#848484',
     borderRadius: scale(10),
     height: scale(100),
+    textAlignVertical: 'top',
+    textAlign: 'left',
+    lineHeight: scale(18),
     
   },
   exchangeProductContainer: {
@@ -902,6 +1134,90 @@ const styles = StyleSheet.create({
     padding: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  quantityControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#848484',
+    borderRadius: scale(10),
+    overflow: 'hidden',
+    height: scale(36),
+    width: scale(130),
+  },
+  qtyBtn: {
+    width: scale(36),
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qtyBtnText: {
+    fontSize: scale(18),
+    color: '#202020',
+    fontWeight: '500',
+  },
+  qtyInput: {
+    flex: 1,
+    height: '100%',
+    textAlign: 'center',
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: 'transparent',
+    color: '#202020',
+    fontSize: scale(14),
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+  },
+  returnColumnTitle: {
+    backgroundColor: '#EEEEEE',
+    fontSize: scale(12),
+    fontWeight: '500',
+    color: '#202020',
+    textAlign: 'center',
+    paddingVertical: scale(10),
+    borderWidth: 1,
+    borderColor: '#D9D9D9',
+  },
+  returnColumnDesc: {
+    fontSize: scale(12),
+    color: '#202020',
+    borderWidth: 1,
+    borderColor: '#D9D9D9',
+    padding: scale(16),
+    marginTop: scale(4),
+  },
+  returnRowItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: '2%',
+  },
+  returnRowItemTitleCont: {
+    backgroundColor: '#EEEEEE',
+    width: '24%',
+    borderWidth: 1,
+    borderColor: '#D9D9D9',
+    paddingVertical: scale(5),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  returnRowItemTitle: {
+    fontSize: scale(12),
+    fontWeight: '500',
+    color: '#202020',
+    textAlign: 'center',
+  },
+  returnRowItemDescCont: {
+    width: '74%',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#D9D9D9',
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(5),
+  },
+  returnRowItemDesc: {
+    fontSize: scale(12),
+    color: '#202020',
   },
 });
 

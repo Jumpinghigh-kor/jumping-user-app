@@ -35,3 +35,26 @@ export const getMemberPointAppList = async (params: GetMemberPointAppRequest): P
     throw error;
   }
 }; 
+
+export interface InsertMemberPointAppRequest {
+  mem_id: number;
+  point_amount: number;
+  point_status: 'PLUS' | 'MINUS';
+  reason?: string;
+  order_detail_app_id?: number;
+}
+
+export interface InsertMemberPointAppResponse {
+  success: boolean;
+  message?: string;
+  data?: any;
+}
+
+export const insertMemberPointApp = async (params: InsertMemberPointAppRequest): Promise<InsertMemberPointAppResponse> => {
+  try {
+    const response = await axiosInstance.post('/member-point-app/insertMemberPointApp', params);
+    return response.data;
+  } catch (error: any) {
+    throw error;
+  }
+};

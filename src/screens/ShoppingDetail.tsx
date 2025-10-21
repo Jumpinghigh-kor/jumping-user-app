@@ -220,22 +220,32 @@ const ShoppingDetail = ({route, navigation}) => {
       if (response.success) {
         const imageArray = Array.isArray(response.data) ? response.data : [];
         const validImages = imageArray.filter(img => img != null);
+        const getOrder = (img: any) => {
+          try {
+            const raw = (img?.order_seq ?? img?.img_order ?? img?.order ?? img?.sort_order ?? img?.sequence ?? 0);
+            const n = parseInt(String(raw).replace(/[^0-9]/g, ''), 10);
+            return isNaN(n) ? 0 : n;
+          } catch {
+            return 0;
+          }
+        };
+        const sortByOrder = (arr: any[]) => arr.slice().sort((a, b) => getOrder(a) - getOrder(b));
         
         // 대표 이미지 필터링
-        const representerImages = validImages.filter((img: any) => 
-          ['REPRESENTER'].includes(img.img_form || img.image_form || img.form)
+        const representerImages = sortByOrder(
+          validImages.filter((img: any) => ['REPRESENTER'].includes(img.img_form || img.image_form || img.form))
         );
         
         // 상세 이미지 필터링
-        const detailImageList = validImages.filter((img: any) => 
-          ['DETAIL'].includes(img.img_form || img.image_form || img.form)
+        const detailImageList = sortByOrder(
+          validImages.filter((img: any) => ['DETAIL'].includes(img.img_form || img.image_form || img.form))
         );
 
         // 대표 이미지 설정
         if (representerImages.length > 0) {
           setProductImages(representerImages);
         } else if (validImages.length > 0) {
-          setProductImages(validImages);
+          setProductImages(sortByOrder(validImages));
         } else {
           setProductImages([{ image_url: productParams.image }]);
         }

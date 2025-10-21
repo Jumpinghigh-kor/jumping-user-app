@@ -103,7 +103,7 @@ const CommonModal: React.FC<CommonModalProps> = ({
             <Text style={[styles.modalTitle, { color: textColor }]}>{title}</Text>
           </View>
           
-          <ScrollView style={styles.modalScrollView}>
+          <ScrollView style={styles.modalScrollView} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
             {children ? (
               children
             ) : (

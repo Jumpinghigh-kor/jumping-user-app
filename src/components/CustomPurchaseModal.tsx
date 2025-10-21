@@ -403,6 +403,7 @@ const CustomPurchaseModal = ({ visible, onClose, product }) => {
                   const selectedItems = selectedOptions.map((option, index) => ({
                     title: product.title,
                     product_app_id: product.product_app_id,
+                    product_detail_app_id: option.product_detail_app_id,
                     brand_name: product.brand_name,
                     product_name: product.product_name,
                     original_price: product.original_price,

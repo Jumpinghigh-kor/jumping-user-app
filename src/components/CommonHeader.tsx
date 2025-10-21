@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: scale(16),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-SemiBold',
     textAlign: 'center',
   },
   emptyArea: {

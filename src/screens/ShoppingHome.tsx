@@ -92,8 +92,7 @@ const ShoppingHome: React.FC = () => {
         
         if (response.success && response.data && response.data.length > 0) {
           setSmallCategory(response.data);
-          // 첫 번째 소카테고리를 기본값으로 설정
-          setSelectedSmallCategory(response.data[0].common_code);
+          setSelectedSmallCategory('');
         } else {
           setSmallCategory([]);
           setSelectedSmallCategory('');
@@ -223,6 +222,23 @@ const ShoppingHome: React.FC = () => {
               showsHorizontalScrollIndicator={false} 
               contentContainerStyle={styles.smallCategoryList}
             >
+              <TouchableOpacity
+                key={'ALL'}
+                style={[
+                  styles.smallCategoryButton,
+                  selectedSmallCategory === '' && styles.selectedSmallCategory
+                ]}
+                onPress={() => setSelectedSmallCategory('')}
+              >
+                <Text 
+                  style={[
+                    styles.smallCategoryText,
+                    selectedSmallCategory === '' && styles.selectedSmallCategoryText
+                  ]}
+                >
+                  전체
+                </Text>
+              </TouchableOpacity>
               {smallCategory.map((category) => (
                 <TouchableOpacity
                   key={category.common_code}

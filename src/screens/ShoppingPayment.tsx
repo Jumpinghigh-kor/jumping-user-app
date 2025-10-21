@@ -18,15 +18,16 @@ import { TextInput } from 'react-native-gesture-handler';
 import { useAppSelector } from '../store/hooks';
 import { getTargetMemberShippingAddress, updateDeliveryRequest, updateSelectYn } from '../api/services/memberShippingAddressService';
 import {getCommonCodeList} from '../api/services/commonCodeService';
-import { getMemberCouponAppList } from '../api/services/memberCouponApp';
+import { getMemberCouponAppList, updateMemberCouponApp } from '../api/services/memberCouponApp';
 import CommonPopup from '../components/CommonPopup';
 import { usePopup } from '../hooks/usePopup';
 import { toggleCheckbox } from '../utils/commonFunction';
 import Portone from '../components/Portone';
 import { verifyPayment } from '../api/services/portoneService';
-import { insertMemberPaymentApp } from '../api/services/memberPaymentAppService';
+import { insertMemberOrderApp, insertMemberOrderDetailApp } from '../api/services/memberOrderAppService';
 import { insertMemberOrderAddress } from '../api/services/memberOrderAddressService';
-import { insertMemberOrderApp } from '../api/services/memberOrderAppService';
+import { insertMemberPaymentApp } from '../api/services/memberPaymentAppService';
+import { insertMemberPointApp } from '../api/services/memberPointAppService';
 import { isCJRemoteArea } from '../constants/postCodeData';
 
 type ShoppingPaymentRouteParams = {
@@ -232,7 +233,12 @@ const ShoppingPayment = () => {
       showWarningPopup('배송지를 먼저 선택해주세요');
       return;
     }
-    
+
+    if (TEST_MODE) {
+      handlePortonePaymentSuccess(mockPortoneResult);
+      return;
+    }
+
     setShowPortone(true);
   };
 
@@ -247,80 +253,110 @@ const ShoppingPayment = () => {
     description: '점핑하이 쇼핑몰 상품 주문'
   };
 
+  // TEST ONLY: 포트원 우회용 테스트 플래그 및 더미 결과
+  const TEST_MODE = __DEV__ && true;
+  const mockPortoneResult = {
+    imp_uid: 'imp_test_123',
+    pay_method: 'card',
+    status: 'paid',
+    card_name: 'TEST'
+  };
+
+  const handlePortonePaymentSuccess = async (result: any) => {
+    try {
+      // 1) 서버 결제 검증 (테스트 모드에서는 스킵)
+      if (!TEST_MODE) {
+        await verifyPayment({ imp_uid: result.imp_uid });
+      }
+
+      // 2) 주문 생성 (order_app)
+      const orderAppRes = await insertMemberOrderApp({
+        mem_id: Number(memberInfo?.mem_id)
+      } as any);
+      const order_app_id = (orderAppRes as any)?.order_app_id ?? (orderAppRes as any)?.data?.order_app_id;
+
+      // 3) 주문 상세 생성 + 상세별 배송지 저장
+      const deliveryRequest = showCustomInput
+        ? customRequestText
+        : (selectedRequestType ? selectedRequestType.common_code_name : '');
+
+      for (const item of selectedItems) {
+        const orderDetailRes = await insertMemberOrderDetailApp({
+          order_app_id,
+          product_detail_app_id: item.product_detail_app_id,
+          order_status: 'PAYMENT_COMPLETE',
+          order_group: 1,
+          order_quantity: item.quantity,
+          mem_id: Number(memberInfo?.mem_id)
+        } as any);
+        const order_detail_app_id = (orderDetailRes as any)?.order_detail_app_id ?? (orderDetailRes as any)?.data?.order_detail_app_id;
+
+        await insertMemberOrderAddress({
+          order_detail_app_id,
+          mem_id: Number(memberInfo?.mem_id),
+          order_address_type: 'ORDER',
+          receiver_name: selectedAddress.receiver_name,
+          receiver_phone: selectedAddress.receiver_phone.replace(/-/g, ''),
+          address: selectedAddress.address,
+          address_detail: selectedAddress.address_detail,
+          zip_code: selectedAddress.zip_code,
+          enter_way: selectedAddress.enter_way,
+          enter_memo: selectedAddress.enter_memo,
+          delivery_request: deliveryRequest
+        });
+      }
+
+      // 4) 결제 저장 (order_app_id 포함)
+      await insertMemberPaymentApp({
+        order_app_id,
+        mem_id: Number(memberInfo?.mem_id),
+        payment_status: 'PAYMENT_COMPLETE',
+        payment_type: 'PRODUCT_BUY',
+        payment_method: result.pay_method || 'PORTONE',
+        payment_amount: getFinalPaymentAmount(),
+        portone_imp_uid: result.imp_uid,
+        portone_merchant_uid: paymentData.merchantOrderId,
+        portone_status: result.status || 'SUCCESS',
+        card_name: result.card_name || 'PORTONE'
+      } as any);
+
+      // 5) 포인트 사용 시 차감 기록
+      if (pointInput) {
+        await insertMemberPointApp({
+          order_app_id,
+          mem_id: Number(memberInfo?.mem_id),
+          point_amount: parseInt(pointInput),
+          point_status: 'POINT_MINUS'
+        } as any);
+      }
+
+      // 6) 쿠폰 사용 시 사용 처리
+      if (selectedCoupon?.member_coupon_app_id) {
+        await updateMemberCouponApp(
+          Number(selectedCoupon.member_coupon_app_id),
+          Number(order_app_id),
+          Number(memberInfo?.mem_id),
+          'Y'
+        );
+      }
+
+      setShowPortone(false);
+      showWarningPopup('결제가 완료되었습니다');
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.message || error?.message || 'Unknown error';
+      console.error('결제 처리 실패:', errMsg);
+      setShowPortone(false);
+      showWarningPopup('결제 처리 중 오류가 발생했습니다.\n고객센터에 문의해주세요');
+    }
+  };
+
   if (showPortone) {
     return (
       <Portone
         visible={showPortone}
         paymentData={paymentData}
         onPaymentSuccess={(result) => {
-          
-          // 서버에서 결제 검증
-          verifyPayment({ imp_uid: result.imp_uid })
-            .then((verificationResult) => {
-              console.log('결제 검증 성공:', verificationResult);
-              
-              // 결제 정보를 member_payment_app 테이블에 저장
-              return insertMemberPaymentApp({
-                mem_id: Number(memberInfo?.mem_id),
-                payment_method: result.pay_method || 'PORTONE',
-                payment_amount: getFinalPaymentAmount(),
-                portone_imp_uid: result.imp_uid,
-                portone_merchant_uid: paymentData.merchantOrderId,
-                portone_status: result.status || 'SUCCESS',
-                card_name: result.card_name || 'PORTONE'
-              });
-            })
-            .then((paymentResult) => {
-              console.log('결제 정보 저장 성공:', paymentResult);
-              
-              // 주문 배송지 정보를 member_order_address 테이블에 저장
-              const deliveryRequest = showCustomInput 
-                ? customRequestText 
-                : (selectedRequestType ? selectedRequestType.common_code_name : '');
-              
-              return insertMemberOrderAddress({
-                mem_id: Number(memberInfo?.mem_id),
-                receiver_name: selectedAddress.receiver_name,
-                receiver_phone: selectedAddress.receiver_phone.replace(/-/g, ''),
-                address: selectedAddress.address,
-                address_detail: selectedAddress.address_detail,
-                zip_code: selectedAddress.zip_code,
-                enter_way: selectedAddress.enter_way,
-                enter_memo: selectedAddress.enter_memo,
-                delivery_request: deliveryRequest
-              }).then(orderAddressResult => {
-                return {
-                  paymentResult,
-                  orderAddressResult
-                };
-              });
-            })
-            .then(({ paymentResult, orderAddressResult }) => {
-              console.log('주문 배송지 저장 성공:', orderAddressResult);
-              
-              // 각 상품별로 주문 정보를 member_order_app 테이블에 저장
-              const orderPromises = selectedItems.map(item => {
-                return insertMemberOrderApp({
-                  payment_app_id: paymentResult.data?.payment_app_id,
-                  product_detail_app_id: item.product_detail_app_id,
-                  mem_id: Number(memberInfo?.mem_id),
-                  order_address_id: orderAddressResult.data?.order_address_id,
-                  order_quantity: item.quantity
-                });
-              });
-              
-              return Promise.all(orderPromises);
-            })
-            .then((orderResults) => {
-              console.log('주문 정보 저장 성공:', orderResults);
-              setShowPortone(false);
-              showWarningPopup('결제가 완료되었습니다');
-            })
-            .catch((error) => {
-              console.error('결제 검증 또는 저장 실패:', error);
-              setShowPortone(false);
-              showWarningPopup('결제 검증에 실패했습니다.\n고객센터에 문의해주세요');
-            });
+          handlePortonePaymentSuccess(result);
         }}
         onPaymentFailure={(error) => {
           console.log('결제 실패:', error);
@@ -667,7 +703,7 @@ const ShoppingPayment = () => {
             <Text style={styles.paymentTitle}>결제 금액</Text>
               <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
                 <Text style={styles.amountLabel}>상품 금액</Text>
-                <Text style={styles.deliveryFee}>{selectedItems[0]?.original_price?.toLocaleString()} 원</Text>
+                <Text style={styles.deliveryFee}>{selectedItems.reduce((acc, item) => acc + (parseInt(item.original_price?.toString().replace(/,/g, '')) * item.quantity), 0).toLocaleString()} 원</Text>
               </View>
             {!!selectedItems[0]?.discount && (
               <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
@@ -677,7 +713,7 @@ const ShoppingPayment = () => {
                   -{
                     Math.floor(
                       (parseInt((selectedItems[0]?.original_price || '0').toString().replace(/,/g, ''), 10) || 0)
-                      * ((Number(selectedItems[0]?.discount) || 0) / 100)
+                      * ((Number(selectedItems[0]?.discount) || 0) / 100) * selectedItems[0]?.quantity
                     ).toLocaleString()
                   } 원
                 </Text>
