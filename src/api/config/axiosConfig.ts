@@ -17,8 +17,8 @@ export const setSessionExpiredHandler = (
 };
 
 // 테스트용 서버 IP
-const SERVER_IP = 'http://192.168.0.173:3000/'; 
-//const SERVER_IP = ''; // 실제 서버 IP
+// const SERVER_IP = 'http://192.168.0.173:3000/'; 
+const SERVER_IP = 'http://cozcozy.co.kr:3508/api/'; // 실제 서버 IP
 
 const BASE_URL = SERVER_IP;
 

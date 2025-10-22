@@ -184,7 +184,7 @@ const PostList = () => {
                     <View style={[commonStyle.mt10, commonStyle.mb10]}>
                       <View style={[styles.contentRow]}>
                         <Text style={[styles.postContentText, styles.postContentInline]} numberOfLines={3} ellipsizeMode="tail">{item?.content}</Text>
-                        <Text style={styles.moreText}>더보기</Text>
+                        {/* <Text style={styles.moreText}>더보기</Text> */}
                       </View>
                     </View>
                     <View style={layoutStyle.rowEnd}>

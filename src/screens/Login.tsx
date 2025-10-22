@@ -143,26 +143,6 @@ const Login = () => {
     }
   };
 
-  const handleForgotId = () => {
-    navigation.navigate('ForgotCredentials', { initialTab: 'FindID' });
-  };
-
-  const handleForgotPassword = () => {
-    navigation.navigate('ForgotCredentials', { initialTab: 'FindPassword' });
-  };
-
-  const handleSignupClick = () => {
-    setSignupPopup(true);
-  };
-
-  const handleCloseSignupPopup = () => {
-    setSignupPopup(false);
-  };
-
-  const handleCloseErrorPopup = () => {
-    setErrorPopup(false);
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.innerContainer}>
@@ -170,7 +150,7 @@ const Login = () => {
         <Image source={IMAGES.logo.jumpingWhite} style={styles.logoImage} />
 
         {/* Input Fields */}
-        <View style={styles.inputContainer}>
+        <View>
           <TextInput
             style={styles.input}
             placeholder="이메일"
@@ -232,18 +212,18 @@ const Login = () => {
         {/* 회원가입 Button */}
         <TouchableOpacity
           style={[styles.signUpButton]}
-          onPress={handleSignupClick}
+          onPress={() => setSignupPopup(true)}
         >
           <Text style={styles.signUpButtonText}>회원가입</Text>
         </TouchableOpacity>
 
         <View style={styles.forgotContainer}>
           <View style={styles.forgotTextContainer}>
-            <TouchableOpacity onPress={handleForgotId} disabled={loading}>
+            <TouchableOpacity onPress={() => navigation.navigate('ForgotCredentials', { initialTab: 'FindID' })} disabled={loading}>
               <Text style={styles.forgotText}>아이디 찾기</Text>
             </TouchableOpacity>
             <Text style={[styles.forgotText, {marginHorizontal: scale(15)}]}>|</Text>
-            <TouchableOpacity onPress={handleForgotPassword} disabled={loading}>
+            <TouchableOpacity onPress={() => navigation.navigate('ForgotCredentials', { initialTab: 'FindPassword' })} disabled={loading}>
               <Text style={styles.forgotText}>비밀번호 찾기</Text>
             </TouchableOpacity>
           </View>
@@ -253,7 +233,7 @@ const Login = () => {
         <CommonPopup
           visible={signupPopup}
           message={'회원가입은 매장에서\n도와드리고 있어요:)\n현재 다니고 있는 매장에\n문의해주세요!'}
-          onConfirm={handleCloseSignupPopup}
+          onConfirm={() => setSignupPopup(false)}
           confirmText="확인"
         />
 
@@ -262,7 +242,7 @@ const Login = () => {
           visible={errorPopup}
           message={error || ''}
           type="warning"
-          onConfirm={handleCloseErrorPopup}
+          onConfirm={() => setErrorPopup(false)}
           confirmText="확인"
         />
       </View>
@@ -285,9 +265,6 @@ const styles = StyleSheet.create({
     alignSelf:'center',
     resizeMode: 'contain',
     marginBottom: scale(30),
-  },
-  inputContainer: {
-    // marginBottom: 20,
   },
   input: {
     backgroundColor: '#373737',

@@ -50,14 +50,13 @@ const FindIDScreen = () => {
       }
 
       const response = await findId(name, phone);
-      
       if (response.success) {
         setIdInfo(response.data);
       } else {
         setIdInfo(null);
         showPopup('입력하신 정보로 아이디를 찾을 수 없습니다.', 'warning');
       }
-
+      
     } catch (error) {
       showPopup('아이디 찾기 중 문제가 발생했습니다.', 'warning');
     }
