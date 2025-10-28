@@ -135,7 +135,12 @@ const Login = () => {
         setErrorPopup(true);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '로그인 중 오류가 발생했습니다.';
+      let errorMessage = err instanceof Error ? err.message : '로그인 중 오류가 발생했습니다.';
+      if (typeof (err as any)?.message === 'string' && (err as any).message.toLowerCase().includes('timeout')) {
+        errorMessage = '서버 오류입니다.\n관리자에게 문의해주세요.';
+      } else if ((err as any)?.code === 'ECONNABORTED') {
+        errorMessage = '서버 오류입니다.\n관리자에게 문의해주세요.';
+      }
       setError(errorMessage);
       setErrorPopup(true);
     } finally {

@@ -23,7 +23,7 @@ const Event = ({navigation, route}) => {
   const [contentImageUrl, setContentImageUrl] = useState('');
   const [buttonImageUrl, setButtonImageUrl] = useState('');
   const [buttonLink, setButtonLink] = useState('');
-  
+
   useFocusEffect(
     useCallback(() => {
       const fetchEventData = async () => {
@@ -37,7 +37,7 @@ const Event = ({navigation, route}) => {
               if (Array.isArray(response.data)) {
                 response.data.forEach((imageData: any) => {
                   if (imageData.file_path && imageData.file_name) {
-                    const imagePath = `${imageData.file_division}/${imageData.file_name}`.replace(/^\//, '');
+                    const imagePath = `${imageData.event_img_type.toLowerCase()}/${imageData.file_name}`.replace(/^\//, '');
 
                     try {
                       const { data } = supabase.storage
@@ -146,7 +146,14 @@ const Event = ({navigation, route}) => {
                 await Linking.openURL(link);
               } catch (e) {}
             } else {
-              navigation.navigate('MainTab', {screen: link});
+              if(link === 'RedirectScreen'){
+                navigation.navigate('RedirectScreen', {type: 'shopping'});
+              } else if(link === 'NoticesAppList'){
+                navigation.navigate('NoticesAppList');
+              } else {
+                navigation.navigate('MainTab', {screen: link});
+              }
+              // navigation.navigate({screen: link});
             }
           }
         }}

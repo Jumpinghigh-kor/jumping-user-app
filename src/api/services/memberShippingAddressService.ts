@@ -37,6 +37,7 @@ export interface InsertMemberShippingAddressRequest {
   receiver_name: string;
   receiver_phone: string;
   default_yn: 'Y' | 'N';
+  select_yn: 'Y' | 'N';
   del_yn: 'Y' | 'N';
   address: string;
   address_detail: string;
@@ -64,17 +65,19 @@ export interface DeleteMemberShippingAddressResponse {
 
 export interface UpdateMemberShippingAddressRequest {
   shipping_address_id: number;
-  mem_id: string | number;
+  mem_id: number;
   shipping_address_name: string;
   receiver_name: string;
   receiver_phone: string;
-  default_yn: 'Y' | 'N';
-  del_yn: 'Y' | 'N';
+  default_yn: string;
+  select_yn: string;
+  del_yn: string;
   address: string;
   address_detail: string;
   zip_code: string;
   enter_way?: string;
   enter_memo?: string;
+  delivery_request?: string;
 }
 
 export interface UpdateMemberShippingAddressResponse {

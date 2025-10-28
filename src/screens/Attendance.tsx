@@ -120,7 +120,7 @@ const Attendance = () => {
       // 출석 처리 API 호출
       const response = await insertCheckinLog({
         mem_id: parseInt(memId, 10),
-        ci_password: inputNumber,
+        // ci_password: inputNumber,
         memo_id: selectedOrder.memo_id,
         pro_type: selectedOrder.pro_type,
         center_id: selectedOrder.center_id,

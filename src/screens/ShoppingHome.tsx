@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import {View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, FlatList, ActivityIndicator, Alert} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
@@ -41,6 +41,11 @@ const ShoppingHome: React.FC = () => {
   const [smallCategory, setSmallCategory] = useState<CommonCode[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedSmallCategory, setSelectedSmallCategory] = useState('');
+  const displayedProducts = useMemo(() => {
+    return selectedSmallCategory === ''
+      ? filteredProducts
+      : filteredProducts.filter(product => product.small_category === selectedSmallCategory);
+  }, [filteredProducts, selectedSmallCategory]);
 
   // 배송지 선택 상태 초기화 함수
   const resetShippingAddressSelection = async () => {
@@ -59,7 +64,7 @@ const ShoppingHome: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       setRefreshKey(prev => prev + 1);
-      loadProducts();
+      // 제품은 선택된 대카테고리가 확정된 뒤에 로드 (빈 값이면 전체가 섞여 들어올 수 있음)
       resetShippingAddressSelection();
       loadMemberInfo();
     }, [])
@@ -112,11 +117,16 @@ const ShoppingHome: React.FC = () => {
   // 상품 조회
   useFocusEffect(
     useCallback(() => {
-      loadProducts();
+      if (selectedCategory) {
+        loadProducts();
+      }
     }, [selectedCategory])
   );
 
   const loadProducts = async () => {
+    if (!selectedCategory) {
+      return; // 대카테고리 미지정 상태에서는 요청하지 않음
+    }
     setLoading(true);
     try {
       const response = await getProductAppList({
@@ -266,9 +276,9 @@ const ShoppingHome: React.FC = () => {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#43B546" />
           </View>
-        ) : filteredProducts.length > 0 ? (
+        ) : displayedProducts.length > 0 ? (
           <FlatList
-            data={selectedSmallCategory === '' ? filteredProducts : filteredProducts.filter(product => product.small_category === selectedSmallCategory)}
+            data={displayedProducts}
             renderItem={({item}) => (
               <ProductListItem 
                 item={item} 

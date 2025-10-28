@@ -316,7 +316,7 @@ const ShoppingPayment = () => {
         payment_amount: getFinalPaymentAmount(),
         portone_imp_uid: result.imp_uid,
         portone_merchant_uid: paymentData.merchantOrderId,
-        portone_status: result.status || 'SUCCESS',
+        portone_status: 'SUCCESS',
         card_name: result.card_name || 'PORTONE'
       } as any);
 

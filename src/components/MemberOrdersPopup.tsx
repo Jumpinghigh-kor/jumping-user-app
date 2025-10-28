@@ -39,6 +39,20 @@ const MemberOrdersPopup: React.FC<MemberOrdersPopupProps> = ({
   // 리덕스에서 회원 정보 가져오기
   const memberInfo = useAppSelector(state => state.member.memberInfo);
 
+  const formatISODateYMD = (dateString?: string) => {
+    if (!dateString) return '';
+    try {
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return String(dateString);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    } catch {
+      return String(dateString);
+    }
+  };
+
   return (
     <Modal
       visible={visible}
@@ -87,8 +101,8 @@ const MemberOrdersPopup: React.FC<MemberOrdersPopupProps> = ({
                       </Text>
                     ) : (
                       <Text style={styles.orderText}>
-                        {order.memo_start_date || order.start_date} ~{' '}
-                        {order.memo_end_date || order.end_date}
+                    {formatISODateYMD(order.memo_start_date)} ~{' '}
+                    {formatISODateYMD(order.memo_end_date)}
                       </Text>
                     )}
                   </View>

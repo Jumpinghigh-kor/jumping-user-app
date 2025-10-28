@@ -160,10 +160,10 @@ const ShoppingMypage: React.FC = () => {
               <Text style={styles.menuText}>장바구니 보기</Text>
               <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ShoppingInquiry')}>
+            {/* <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ShoppingInquiry')}>
               <Text style={styles.menuText}>문의 하기</Text>
               <Image source={IMAGES.icons.arrowRightBlack} style={styles.arrowIcon} />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <TouchableOpacity style={styles.menuItem} onPress={() => {
               setShowExitPopup(true);
             }}>

@@ -151,25 +151,28 @@ const ShoppingAddressAdd = ({ navigation, route }) => {
       setLoading(true);
       
       const params: any = {
-        mem_id: memberInfo.mem_id,
+        mem_id: Number(memberInfo.mem_id),
         shipping_address_name: addressName || detailAddress.substring(0, 10),
         receiver_name: name,
         receiver_phone: phone,
         default_yn: isDefaultAddress ? 'Y' : 'N' as 'Y' | 'N',
+        select_yn: 'N' as 'Y' | 'N',
         del_yn: 'N' as 'Y' | 'N',
         address: address,
         address_detail: detailAddress,
         zip_code: zipCode,
         enter_way: enterWay,
         enter_memo: enterMemo,
-        select_yn: route.params?.screen === 'ShoppingPayment' ? 'Y' : 'N' as 'Y' | 'N'
       };
       
       let response;
       
       // If editing, use update API
       if (addressData) {
+        params.receiver_phone = String(params.receiver_phone || '').replace(/-/g, '');
         params.shipping_address_id = addressData.shipping_address_id;
+        params.select_yn = 'N';
+        params.delivery_request = null;
         response = await updateMemberShippingAddress(params);
       } else {
         response = await insertMemberShippingAddress(params);
@@ -184,6 +187,7 @@ const ShoppingAddressAdd = ({ navigation, route }) => {
         setShowPopup(true);
       }
     } catch (error) {
+      console.error(error.response);
       setPopupMessage(addressData ? '배송지 수정 중 오류가 발생했습니다.' : '배송지 추가 중 오류가 발생했습니다.');
       setShowPopup(true);
     } finally {

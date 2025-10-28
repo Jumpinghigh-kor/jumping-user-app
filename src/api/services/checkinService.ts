@@ -9,7 +9,7 @@ interface CheckinLogRequest {
 
 interface InsertCheckinLogRequest {
   mem_id: number;
-  ci_password: string;
+  // ci_password: string;
   memo_id?: number;
   pro_type?: string;
   center_id?: number;
@@ -64,6 +64,7 @@ export const insertCheckinLog = async (params: InsertCheckinLogRequest): Promise
     const response = await axiosInstance.post('/checkinLog/insertCheckinLog', params);
     return response.data;
   } catch (error) {
+    console.error('insertCheckinLog error', error.response.data.message);
     throw new Error('관리자에게 문의해주세요.');
   }
 };

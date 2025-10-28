@@ -552,25 +552,17 @@ const Reservation: React.FC = () => {
                     <View key={schedule.sch_app_id} style={styles.scheduleItem}>
                       <TouchableOpacity 
                         onPress={() => {
-                          // 예약당일(dDay === 0)인 경우만 취소 불가
-                          // 예약마감(isPast)은 취소 가능하도록 수정
-                          if (dDay !== 0) {
-                            // 가장 기본적인 체크박스 토글 기능
+                          if (dDay !== 0 && !isPast) {
                             const id = schedule.sch_app_id;
-                            
-                            // 현재 선택 상태 확인
                             const isAlreadySelected = state.selectedSchedules.includes(id);
-                            
                             if (isAlreadySelected) {
-                              // 이미 선택되어 있으면 선택 해제
                               setState(prev => ({...prev, selectedSchedules: state.selectedSchedules.filter(item => item !== id)}));
                             } else {
-                              // 선택되어 있지 않으면 기존 선택에 추가 (다중 선택)
                               setState(prev => ({...prev, selectedSchedules: [...state.selectedSchedules, id]}));
                             }
                           }
                         }}
-                        disabled={dDay === 0}
+                        disabled={dDay === 0 || isPast}
                         style={{width: '100%'}}
                       >
                         <View style={styles.scheduleHeader}>

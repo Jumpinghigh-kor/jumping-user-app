@@ -162,7 +162,7 @@ const MyPage = () => {
             onImageUpdate={loadProfileImage}
           />
           <View style={{marginVertical: scale(10)}}>
-            <Text style={styles.nickname}>{memberInfo?.mem_nickname}{ memberInfo?.mem_role === 'ADMIN' ? '(관리자)' : memberInfo?.mem_role === 'FRANCHISEE' ? '(점주)' : '(회원)'}</Text>
+            <Text style={styles.nickname}>{memberInfo?.mem_nickname}{ memberInfo?.mem_role === 'ADMIN' ? '(관리자)' : memberInfo?.mem_role === 'FRANCHISEE' ? '(가맹점주)' : ''}</Text>
             <Text style={styles.centerName}>{memberInfo?.center_name}</Text>
           </View>
           <Text style={styles.emailId}>회원번호 : {memberInfo?.mem_checkin_number}</Text>
@@ -321,7 +321,7 @@ const MyPage = () => {
         title={modalTitle}
         content={
           modalTitle === '현재 버전' && updateInfo
-            ? `${modalContent}\n\n${formatDateYYYYMMDD(updateInfo.reg_dt)}`
+            ? `${modalContent}\n\n\n${updateInfo.reg_dt}`
             : modalContent
         }
         onClose={() => setModalVisible(false)}

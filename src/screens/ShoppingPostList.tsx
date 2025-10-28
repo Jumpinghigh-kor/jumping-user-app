@@ -151,7 +151,7 @@ const ShoppingPostList = () => {
                 >
                   <View style={styles.postContent}>
                     <View style={layoutStyle.rowBetween}>
-                      <View style={layoutStyle.rowStart}>
+                      <View style={[layoutStyle.rowStart, styles.titleRow]}>
                         <View style={[styles.badge, {backgroundColor: item.read_yn === 'Y' ? '#43B546' : '#D9D9D9'}]}>
                           <Text style={[styles.badgeText, {color: item.read_yn === 'Y' ? '#FFFFFF' : '#848484'}]}>{item.read_yn === 'Y' ? '읽음' : '읽지 않음'}</Text>
                         </View>
@@ -343,6 +343,13 @@ const styles = StyleSheet.create({
     color: '#202020',
     fontSize: scale(14),
     fontFamily: 'Pretendard-SemiBold',
+    flexShrink: 1,
+    maxWidth: '100%',
+  },
+  titleRow: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'center',
   },
   postContentText: {
     color: '#202020',

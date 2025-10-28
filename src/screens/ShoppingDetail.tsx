@@ -299,14 +299,14 @@ const ShoppingDetail = ({route, navigation}) => {
       console.error('리뷰 로드 실패:', error);
     }
   };
-
+  
   // 초기 찜 상태 확인
   const checkWishStatus = async () => {
     try {
-      if (memberInfo?.mem_id) {
+      if (memberInfo?.mem_id && productParams?.product_app_id) {
         const response = await getMemberZzimAppDetail({
-          mem_id: memberInfo.mem_id,
-          product_app_id: productParams.product_app_id
+          mem_id: Number(memberInfo.mem_id),
+          product_app_id: Number(productParams.product_app_id)
         });
         
         if (response.success && response.data) {
@@ -565,10 +565,10 @@ const ShoppingDetail = ({route, navigation}) => {
                   <View key={index}>
                     <View style={item?.direction === 'COLUMN' ? commonStyle.mb10 : styles.returnRowItem}>
                       <View style={item?.direction === 'COLUMN' ? '' : styles.returnRowItemTitleCont}>
-                      <Text style={item?.direction === 'COLUMN' ? styles.returnColumnTitle : styles.returnRowItemTitle}>{item.title}</Text>
+                        <Text style={item?.direction === 'COLUMN' ? styles.returnColumnTitle : styles.returnRowItemTitle}>{item.title}</Text>
                       </View>
                       <View style={item?.direction === 'COLUMN' ? '' : styles.returnRowItemDescCont}>
-                      <Text style={item?.direction === 'COLUMN' ? styles.returnColumnDesc : styles.returnRowItemDesc}>{item.content}</Text>
+                        <Text style={item?.direction === 'COLUMN' ? styles.returnColumnDesc : styles.returnRowItemDesc}>{item.content}</Text>
                       </View>
                     </View>
                   </View>
@@ -751,9 +751,9 @@ const ShoppingDetail = ({route, navigation}) => {
       }
 
       const response = await insertInquiryShoppingApp({
-        mem_id: memberInfo?.mem_id,
         product_app_id: productParams.product_app_id,
-        description: inquiryText
+        content: inquiryText,
+        mem_id: memberInfo?.mem_id ? Number(memberInfo.mem_id) : undefined
       });
 
       if (response.success) {
@@ -761,12 +761,12 @@ const ShoppingDetail = ({route, navigation}) => {
         setShowCustomToast(true);
         setInquiryText('');
       } else {
-        setCustomToastMessage('소중한 의견이 반영되지 않았습니다.');
+        setCustomToastMessage('데이터 전송이 실패하였습니다.');
         setShowCustomToast(true);
       }
     } catch (error) {
-      console.error('등록 실패:', error);
-      setCustomToastMessage('소중한 의견이 반영되지 않았습니다.');
+      console.error('등록 실패:', error.response.data.message);
+      setCustomToastMessage('데이터 전송이 실패하였습니다.');
       setShowCustomToast(true);
     }
   };
@@ -1613,6 +1613,7 @@ const styles = StyleSheet.create({
     paddingVertical: scale(5),
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: scale(10),
   },
   returnRowItemTitle: {
     fontSize: scale(12),

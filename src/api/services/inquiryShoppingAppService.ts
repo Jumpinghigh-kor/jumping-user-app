@@ -3,14 +3,9 @@ import { axiosInstance } from '../config/axiosConfig';
 // 문의사항 타입 정의
 export interface InquiryShoppingApp {
   inquiry_shopping_app_id: number;
-  title: string;
   content: string;
-  inquiry_type?: string;
-  answer?: string;
-  answer_dt?: string;
   reg_dt: string;
   del_yn: string;
-  // 추가 필드가 있다면 여기에 정의
 }
 
 // 쇼핑 문의 조회 API
@@ -26,9 +21,8 @@ export const getInquiryShoppingAppList = async (inquiryShoppingAppData: any) => 
 
 // 쇼핑 문의 등록 API
 export interface InsertInquiryShoppingAppRequest {
-  title: string;
+  product_app_id: number;
   content: string;
-  inquiry_type: string;
   mem_id: number;
 }
 
@@ -48,9 +42,7 @@ export const insertInquiryShoppingApp = async (params: InsertInquiryShoppingAppR
 
 // 문의사항 수정 API
 export interface UpdateInquiryShoppingAppRequest {
-  title: string;
   content: string;
-  inquiry_type: string;
   mem_id: number;
   inquiry_shopping_app_id: number;
 }

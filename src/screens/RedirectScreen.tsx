@@ -23,7 +23,7 @@ type NavigationProp = NativeStackNavigationProp<AuthStackParamList>;
 const RedirectScreen = (params: { type: string }) => {
   const navigation = useNavigation<NavigationProp>();
   const memberInfo = useAppSelector(state => state.member.memberInfo);
-  const navigationType = params?.route.params.type;
+  const navigationType = params?.route.params?.type;
 
   // 애니메이션 값들
   const fadeAnim1 = React.useRef(new Animated.Value(0)).current;
