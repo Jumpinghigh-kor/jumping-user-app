@@ -321,7 +321,7 @@ const MyPage = () => {
         title={modalTitle}
         content={
           modalTitle === '현재 버전' && updateInfo
-            ? `${modalContent}\n\n\n${updateInfo.reg_dt}`
+            ? `${modalContent}\n${updateInfo.reg_dt}`
             : modalContent
         }
         onClose={() => setModalVisible(false)}
