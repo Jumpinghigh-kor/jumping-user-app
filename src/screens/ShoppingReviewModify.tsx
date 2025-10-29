@@ -33,6 +33,7 @@ type ShoppingNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 interface RouteParams {
   review_app_id: number;
+  order_app_id: number;
   product_app_id: number;
   product_detail_app_id: number;
   product_name: string;
@@ -155,6 +156,7 @@ const ShoppingReviewModify: React.FC = () => {
       } else { 
         response = await insertMemberReviewApp({
           mem_id: Number(memberInfo?.mem_id),
+          order_app_id: params.order_app_id,
           product_app_id: params.product_app_id,
           title: title,
           content: content,
@@ -173,6 +175,7 @@ const ShoppingReviewModify: React.FC = () => {
         showPopup(response.message || (params?.review_app_id ? '리뷰 수정 중 오류가 발생했습니다.' : '리뷰 작성 중 오류가 발생했습니다.'), 'warning');
       }
     } catch (error) {
+      console.error('ShoppingReviewModify error:', error.response.data.message);
       showPopup(params?.review_app_id ? '리뷰 수정 중 오류가 발생했습니다.' : '리뷰 작성 중 오류가 발생했습니다.', 'warning');
     }
   };

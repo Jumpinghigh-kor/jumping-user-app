@@ -8,6 +8,7 @@ import {
   Image,
   FlatList,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,12 +20,15 @@ import { getMemberOrderAppList, MemberOrderAppItem } from '../api/services/membe
 import { useAppSelector } from '../store/hooks';
 import ShoppingThumbnailImg from '../components/ShoppingThumbnailImg';
 import { commonStyle, layoutStyle } from '../assets/styles/common';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 
 // 네비게이션 타입 정의
 type RootStackParamList = {
   ShoppingHome: undefined;
   ShoppingReviewModify: {
     reviewAppId?: number;
+    orderAppId: number;
     productAppId: number;
     productDetailAppId: number;
     productName: string;
@@ -50,7 +54,7 @@ const ShoppingReview: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   
   const memberInfo = useAppSelector(state => state.member.memberInfo);
-
+  
   useFocusEffect(
     useCallback(() => {
       fetchMemberReviewAppList();
@@ -83,7 +87,9 @@ const ShoppingReview: React.FC = () => {
     try {
       const response = await getCompleteMemberReviewAppList({ mem_id: Number(memberInfo.mem_id) } as any);
       if (response.success) {
-        setMemberReviewAppList(response.data);
+        setMemberReviewAppList(response.data || []);
+      } else {
+        setMemberReviewAppList([]);
       }
     } catch (err: any) {
       
@@ -103,9 +109,9 @@ const ShoppingReview: React.FC = () => {
         screen_type: 'REVIEW'
       });
       if (response.success && response.data) {
-        setMemberOrderAppList(response.data);
+        setMemberOrderAppList(response.data || []);
       } else {
-        
+        setMemberOrderAppList([]);
       }
     } catch (err: any) {
       
@@ -113,6 +119,66 @@ const ShoppingReview: React.FC = () => {
       setLoading(false);
     }
   };
+  
+  // pull-to-refresh 전용 (전체 로딩 토글 없이 데이터만 갱신)
+  const refreshMemberReviewAppList = async () => {
+    if (!memberInfo?.mem_id) return;
+    try {
+      const response = await getCompleteMemberReviewAppList({ mem_id: Number(memberInfo.mem_id) } as any);
+      if (response.success) {
+        setMemberReviewAppList(response.data || []);
+      } else {
+        setMemberReviewAppList([]);
+      }
+    } catch (err) {}
+  };
+
+  const refreshMemberOrderAppList = async () => {
+    if (!memberInfo?.mem_id) return;
+    try {
+      const response = await getMemberOrderAppList({
+        mem_id: Number(memberInfo.mem_id),
+        screen_type: 'REVIEW'
+      } as any);
+      if (response.success && response.data) {
+        setMemberOrderAppList(response.data || []);
+      } else {
+        setMemberOrderAppList([]);
+      }
+    } catch (err) {}
+  };
+  
+  // 무한 스크롤: 탭별 별도 관리
+  const {
+    displayedItems: displayedWrite,
+    loadingMore: loadingMoreWrite,
+    handleLoadMore: handleLoadMoreWrite,
+  } = useInfiniteScroll<MemberOrderAppItem>({
+    items: memberOrderAppList,
+    pageSize: 5,
+    isLoading: loading,
+    resetDeps: [activeTab],
+  });
+
+  const {
+    displayedItems: displayedReview,
+    loadingMore: loadingMoreReview,
+    handleLoadMore: handleLoadMoreReview,
+  } = useInfiniteScroll<Review>({
+    items: memberReviewAppList,
+    pageSize: 5,
+    isLoading: loading,
+    resetDeps: [activeTab],
+  });
+
+  // 당겨서 새로고침: 탭별 별도 관리
+  const { refreshing: refreshingWrite, onRefresh: onRefreshWrite } = usePullToRefresh(async () => {
+    await refreshMemberOrderAppList();
+  }, [activeTab]);
+
+  const { refreshing: refreshingReview, onRefresh: onRefreshReview } = usePullToRefresh(async () => {
+    await refreshMemberReviewAppList();
+  }, [activeTab]);
   
   return (
     <>
@@ -157,9 +223,20 @@ const ShoppingReview: React.FC = () => {
                 </View>
               ) : (
                 <FlatList
-                  data={memberOrderAppList}
+                  data={displayedWrite}
                   keyExtractor={(item, index) => `${item.product_app_id}`}
                   showsVerticalScrollIndicator={false}
+                  bounces={true}
+                  alwaysBounceVertical={true}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={refreshingWrite}
+                      onRefresh={onRefreshWrite}
+                      tintColor="#43B546"
+                      colors={["#43B546"]}
+                      progressBackgroundColor="#FFFFFF"
+                    />
+                  }
                   renderItem={({ item }) => (
                     <View style={styles.orderItem}>
                       <Text style={styles.orderDateText}>주문일자 {item?.order_dt}</Text>
@@ -187,6 +264,15 @@ const ShoppingReview: React.FC = () => {
                       </TouchableOpacity>
                     </View>
                   )}
+                  onEndReachedThreshold={0.2}
+                  onEndReached={() => handleLoadMoreWrite()}
+                  ListFooterComponent={
+                    (loadingMoreWrite && (displayedWrite.length < (memberOrderAppList?.length || 0))) ? (
+                      <View style={styles.loadMoreContainer}>
+                        <ActivityIndicator size="small" color="#43B546" />
+                      </View>
+                    ) : null
+                  }
                 />
               )}
             </View>
@@ -194,16 +280,27 @@ const ShoppingReview: React.FC = () => {
             <View style={styles.reviewListContainer}>
               {loading ? (
                 <ActivityIndicator size="large" color="#43B546" style={styles.loader} />
-              ) : !memberReviewAppList ? (
+              ) : !memberReviewAppList || memberReviewAppList.length === 0 ? (
                 <View style={styles.emptyContainer}>
                   <Image source={IMAGES.icons.reviewGray} style={styles.emptyIcon} />
                   <Text style={styles.emptyText}>내가 쓴 리뷰가 없어요</Text>
                 </View>
               ) : (
                 <FlatList
-                  data={memberReviewAppList}
+                  data={displayedReview}
                   keyExtractor={(item) => item.review_app_id.toString()}
                   showsVerticalScrollIndicator={false}
+                  bounces={true}
+                  alwaysBounceVertical={true}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={refreshingReview}
+                      onRefresh={onRefreshReview}
+                      tintColor="#43B546"
+                      colors={["#43B546"]}
+                      progressBackgroundColor="#FFFFFF"
+                    />
+                  }
                   renderItem={({ item }) => (
                     <View style={styles.reviewItem}>
                       <View style={{flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between'}}>
@@ -251,6 +348,15 @@ const ShoppingReview: React.FC = () => {
                       </View>
                     </View>
                   )}
+                  onEndReachedThreshold={0.2}
+                  onEndReached={() => handleLoadMoreReview()}
+                  ListFooterComponent={
+                    (loadingMoreReview && (displayedReview.length < (memberReviewAppList?.length || 0))) ? (
+                      <View style={styles.loadMoreContainer}>
+                        <ActivityIndicator size="small" color="#43B546" />
+                      </View>
+                    ) : null
+                  }
                 />
               )}
             </View>
@@ -415,6 +521,11 @@ const styles = StyleSheet.create({
     fontSize: scale(12),
     color: '#848484',
     marginTop: scale(10),
+  },
+  loadMoreContainer: {
+    paddingVertical: scale(12),
+    alignItems: 'center',
+    justifyContent: 'center',
   }
 });
 

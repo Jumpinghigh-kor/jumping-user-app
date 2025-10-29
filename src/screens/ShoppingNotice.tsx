@@ -10,15 +10,20 @@ import {
   Modal,
   Animated,
   Platform,
+  FlatList,
+  RefreshControl,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import IMAGES from '../utils/images';
 import CommonHeader from '../components/CommonHeader';
+import CommonModal from '../components/CommonModal';
 import { useAppSelector } from '../store/hooks';
 import { getNoticesShoppingAppList, NoticeShoppingApp } from '../api/services/noticesShoppingAppService';
 import { scale } from '../utils/responsive';
 import { commonStyle, layoutStyle } from '../assets/styles/common';
 import { createModalPanResponder } from '../utils/commonFunction';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 
 
 const ShoppingNotice = () => {
@@ -28,6 +33,8 @@ const ShoppingNotice = () => {
   const [loading, setLoading] = useState(true);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('');
+  const [selectedNotice, setSelectedNotice] = useState<NoticeShoppingApp | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const filterModalPan = useRef(new Animated.ValueXY()).current;
 
@@ -57,9 +64,32 @@ const ShoppingNotice = () => {
     }
   };
 
+  // pull-to-refresh 전용 (전체 로딩 UI 없이 데이터만 갱신)
+  const refreshNotices = async () => {
+    try {
+      const response = await getNoticesShoppingAppList({ notices_type: selectedFilter });
+      if (response.success) {
+        setNotices(response.data || []);
+      }
+    } catch {}
+  };
+
   useEffect(() => {
     fetchNotices();
   }, []);
+
+  // 무한 스크롤(8개씩)
+  const { displayedItems, loadingMore, handleLoadMore } = useInfiniteScroll<NoticeShoppingApp>({
+    items: notices,
+    pageSize: 8,
+    isLoading: loading,
+    resetDeps: [selectedFilter],
+  });
+
+  // 당겨서 새로고침
+  const { refreshing, onRefresh } = usePullToRefresh(async () => {
+    await refreshNotices();
+  }, [selectedFilter]);
 
   return (
     <>
@@ -82,21 +112,45 @@ const ShoppingNotice = () => {
             <ActivityIndicator size="large" color="#40B649" />
           </View>
         ) : notices?.length > 0 ? (
-          <ScrollView
-            style={styles.scrollView}
+          <FlatList
+            data={displayedItems}
+            keyExtractor={(item) => String(item.notices_shopping_app_id)}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
-          >
-            {notices.map((item) => (
-              <View key={item.notices_shopping_app_id} style={styles.noticeItem}>
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#40B649"
+                colors={["#40B649"]}
+                progressBackgroundColor="#FFFFFF"
+              />
+            }
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.noticeItem}
+                onPress={() => {
+                  setSelectedNotice(item);
+                  setModalVisible(true);
+                }}
+              >
                 <View style={styles.noticeContent}>
                   <Text style={[styles.noticeType, {color: item.notices_type === 'EVENT' ? '#FECB3D' : item.notices_type === 'GUIDE' ? '#F04D4D' : item.notices_type === 'SHOPPING' ? '#43B649' : '#202020'}]}>{item.notices_type === 'EVENT' ? '이벤트' : item.notices_type === 'NOTICE' ? '공지' : '쇼핑'}</Text>
                   <Text style={styles.noticeContent}>{item.content}</Text>
                   <Text style={styles.noticeDate}>{item.reg_dt}</Text>
                 </View>
-              </View>
-            ))}
-          </ScrollView>
+              </TouchableOpacity>
+            )}
+            onEndReachedThreshold={0.2}
+            onEndReached={() => handleLoadMore()}
+            ListFooterComponent={
+              loadingMore ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#40B649" />
+                </View>
+              ) : null
+            }
+          />
         ) : (
           <View style={styles.emptyContainer}>
             <Image source={IMAGES.icons.bellGray} style={styles.emptyIcon} />
@@ -170,6 +224,15 @@ const ShoppingNotice = () => {
             </Animated.View>
           </View>
         </Modal>
+
+        <CommonModal
+          visible={modalVisible}
+          title={selectedNotice?.title}
+          content={selectedNotice?.content}
+          onClose={() => setModalVisible(false)}
+          background="#FFFFFF"
+          textColor="#202020"
+       />
       </View>
     </>
   );

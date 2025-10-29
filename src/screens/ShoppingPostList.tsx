@@ -11,6 +11,7 @@ import {
   Image,
   TextInput,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -24,6 +25,8 @@ import CommonPopup from '../components/CommonPopup';
 import CommonHeader from '../components/CommonHeader';
 import { useAppSelector } from '../store/hooks';
 import { commonStyle, layoutStyle } from '../assets/styles/common';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -41,11 +44,36 @@ const ShoppingPostList = () => {
   const [popupMessage, setPopupMessage] = useState('');
   const [pendingDeleteIds, setPendingDeleteIds] = useState<number[]>([]);
 
+  // 페이징/리프레시 공통 훅 사용
+
   useFocusEffect(
     React.useCallback(() => {
       loadPostList();
     }, [])
   );
+
+  // 현재 탭 기준의 목록 계산
+  const notReadList = postList.filter((item) => {
+    const allSendYn = (item as any).all_send_yn;
+    const readYn = item.read_yn;
+    return (
+      (allSendYn === 'N' && readYn === 'N') ||
+      (allSendYn === 'Y' && (!readYn || readYn === ''))
+    );
+  });
+
+  const currentList = activeTab === 'allPostList' ? postList : notReadList;
+
+  const { displayedItems, loadingMore, handleLoadMore } = useInfiniteScroll<PostAppType>({
+    items: currentList,
+    pageSize: 5,
+    isLoading: loading,
+    resetDeps: [activeTab],
+  });
+
+  const { refreshing, onRefresh } = usePullToRefresh(async () => {
+    await refreshPostList();
+  }, [activeTab]);
 
   const loadPostList = async () => {
     setLoading(true);
@@ -58,6 +86,17 @@ const ShoppingPostList = () => {
       console.log(error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const refreshPostList = async () => {
+    try {
+      const response = await getPostAppList(parseInt(memberInfo.mem_id, 10), 'SHOPPING');
+      if (response.success) {
+        setPostList(response.data || []);
+      }
+    } catch (error) {
+      console.log(error);
     }
   };
   
@@ -112,102 +151,129 @@ const ShoppingPostList = () => {
         ) : dataList.length > 0 ? (
           <View style={{flex: 1}}>
             <View style={{flex: 1}}>
-              <ScrollView
-                contentContainerStyle={styles.listContainer}
-                showsVerticalScrollIndicator={false}
-                bounces={false}
-                alwaysBounceVertical={false}
-              >
-              {activeTab === 'allPostList' && (
-                <View style={styles.deleteAllContainer}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      const next = !selectAllRead;
-                      setSelectAllRead(next);
-                      setCheckedMap(prev => {
-                        const newMap: Record<number, boolean> = { ...prev };
-                        dataList.forEach(i => {
-                          if (i.read_yn === 'Y') {
-                            newMap[i.post_app_id] = next;
-                          }
-                        });
-                        return newMap;
-                      });
-                    }}
-                    style={[styles.checkboxButton, { marginRight: scale(8) }]}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                    <Text style={styles.deleteAllText}>전체 삭제</Text>
-                    <View style={styles.checkboxBox}>
-                      {selectAllRead && <View style={styles.checkboxInner} />}
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              )}
-              {dataList.map((item) => (
-                <TouchableOpacity
-                  key={item.post_app_id}
-                  style={styles.postItem} onPress={() => navigation.navigate('ShoppingPostDetail', { post: item })}
-                >
-                  <View style={styles.postContent}>
-                    <View style={layoutStyle.rowBetween}>
-                      <View style={[layoutStyle.rowStart, styles.titleRow]}>
-                        <View style={[styles.badge, {backgroundColor: item.read_yn === 'Y' ? '#43B546' : '#D9D9D9'}]}>
-                          <Text style={[styles.badgeText, {color: item.read_yn === 'Y' ? '#FFFFFF' : '#848484'}]}>{item.read_yn === 'Y' ? '읽음' : '읽지 않음'}</Text>
-                        </View>
-                        <Text style={styles.postTitle} numberOfLines={1} ellipsizeMode="tail">{item.title}</Text>
-                        {(
-                          (item.post_type === 'SHOPPING' && item.read_yn === 'N') ||
-                          (item.post_type === 'ALL' && (!item.read_yn || item.read_yn === 'N'))
-                        ) && (
-                          <View style={styles.notificationDot} />  
-                        )}
+              {(() => {
+                const totalLength = dataList.length;
+                // displayedItems는 현재 탭 기준으로 계산되므로, 탭별 렌더에서 dataList와 매칭
+                const listForRender = activeTab === 'allPostList' ? displayedItems : displayedItems;
+                return (
+                  <FlatList
+                    data={listForRender}
+                    keyExtractor={(item) => String(item.post_app_id)}
+                    contentContainerStyle={styles.listContainer}
+                    showsVerticalScrollIndicator={false}
+                    bounces={true}
+                    alwaysBounceVertical={true}
+                    refreshControl={
+                      <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        enabled={!loading && !isSubmitting}
+                        tintColor="#43B546"
+                        colors={["#43B546"]}
+                        progressBackgroundColor="#FFFFFF"
+                        progressViewOffset={Platform.OS === 'ios' ? scale(6) : 0}
+                      />
+                    }
+                    onEndReachedThreshold={0.2}
+                    onEndReached={() => handleLoadMore()}
+                    ListHeaderComponent={activeTab === 'allPostList' ? (
+                      <View style={styles.deleteAllContainer}>
+                        <TouchableOpacity
+                          onPress={() => {
+                            const next = !selectAllRead;
+                            setSelectAllRead(next);
+                            setCheckedMap(prev => {
+                              const newMap: Record<number, boolean> = { ...prev };
+                              dataList.forEach(i => {
+                                if (i.read_yn === 'Y') {
+                                  newMap[i.post_app_id] = next;
+                                }
+                              });
+                              return newMap;
+                            });
+                          }}
+                          style={[styles.checkboxButton, { marginRight: scale(8) }]}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Text style={styles.deleteAllText}>전체 체크</Text>
+                          <View style={styles.checkboxBox}>
+                            {selectAllRead && <View style={styles.checkboxInner} />}
+                          </View>
+                        </TouchableOpacity>
                       </View>
-                      {activeTab === 'allPostList' && (item.read_yn === 'Y') && (
+                    ) : null}
+                    renderItem={({item}) => (
                       <TouchableOpacity
-                        onPress={() =>
-                          setCheckedMap(prev => ({
-                            ...prev,
-                            [item.post_app_id]: !prev[item.post_app_id],
-                          }))
-                        }
-                        style={[styles.checkboxButton, item.read_yn !== 'Y' && { opacity: 0.4 }]}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        disabled={item.read_yn !== 'Y'}
+                        style={styles.postItem}
+                        onPress={() => navigation.navigate('ShoppingPostDetail', { post: item })}
                       >
-                        <View style={styles.checkboxBox}>
-                          {checkedMap[item.post_app_id] && <View style={styles.checkboxInner} />}
+                        <View style={styles.postContent}>
+                          <View style={layoutStyle.rowBetween}>
+                            <View style={[layoutStyle.rowStart, styles.titleRow]}>
+                              <View style={[styles.badge, {backgroundColor: item.read_yn === 'Y' ? '#43B546' : '#D9D9D9'}]}>
+                                <Text style={[styles.badgeText, {color: item.read_yn === 'Y' ? '#FFFFFF' : '#848484'}]}>{item.read_yn === 'Y' ? '읽음' : '읽지 않음'}</Text>
+                              </View>
+                              <Text style={styles.postTitle} numberOfLines={1} ellipsizeMode="tail">{item.title}</Text>
+                              {(
+                                (item.post_type === 'SHOPPING' && item.read_yn === 'N') ||
+                                (item.post_type === 'ALL' && (!item.read_yn || item.read_yn === 'N'))
+                              ) && (
+                                <View style={styles.notificationDot} />
+                              )}
+                            </View>
+                            {activeTab === 'allPostList' && (item.read_yn === 'Y') && (
+                              <TouchableOpacity
+                                onPress={() =>
+                                  setCheckedMap(prev => ({
+                                    ...prev,
+                                    [item.post_app_id]: !prev[item.post_app_id],
+                                  }))
+                                }
+                                style={[styles.checkboxButton, item.read_yn !== 'Y' && { opacity: 0.4 }]}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                disabled={item.read_yn !== 'Y'}
+                              >
+                                <View style={styles.checkboxBox}>
+                                  {checkedMap[item.post_app_id] && <View style={styles.checkboxInner} />}
+                                </View>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                          <View style={[commonStyle.mt10, commonStyle.mb10]}>
+                            <View style={[styles.contentRow]}>
+                              <Text style={[styles.postContentText, styles.postContentInline]} numberOfLines={3} ellipsizeMode="tail">{item?.content}</Text>
+                            </View>
+                          </View>
+                          <View style={layoutStyle.rowEnd}>
+                            <Text style={styles.postDate}>{item.reg_dt}</Text>
+                          </View>
                         </View>
                       </TouchableOpacity>
-                      )}
-                    </View>
-                    <View style={[commonStyle.mt10, commonStyle.mb10]}>
-                      <View style={[styles.contentRow]}>
-                        <Text style={[styles.postContentText, styles.postContentInline]} numberOfLines={3} ellipsizeMode="tail">{item?.content}</Text>
-                        {/* <Text style={styles.moreText}>더보기</Text> */}
-                      </View>
-                    </View>
-                    <View style={layoutStyle.rowEnd}>
-                      <Text style={styles.postDate}>{item.reg_dt}</Text>  
-                    </View>
-                  </View>
-                </TouchableOpacity>
-                ))}
-              </ScrollView>
+                    )}
+                    ListFooterComponent={
+                      (loadingMore && (listForRender.length < totalLength)) ? (
+                        <View style={styles.loadMoreContainer}>
+                          <ActivityIndicator size="small" color="#43B546" />
+                        </View>
+                      ) : null
+                    }
+                  />
+                );
+              })()}
             </View>
 
             {activeTab === 'allPostList' && (
-            <View style={styles.bottomButtonContainer}>
-              <TouchableOpacity 
-                style={[styles.submitButton, (loading || isSubmitting) && styles.disabledButton]}
-                onPress={handleDelete}
-                disabled={loading || isSubmitting}
-              >
-                {loading || isSubmitting ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.submitButtonText}>삭제하기</Text>
-                )}
+              <View style={styles.bottomButtonContainer}>
+                <TouchableOpacity 
+                  style={[styles.submitButton, (loading || isSubmitting) && styles.disabledButton]}
+                  onPress={handleDelete}
+                  disabled={loading || isSubmitting}
+                >
+                  {loading || isSubmitting ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.submitButtonText}>삭제하기</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             )}
@@ -504,6 +570,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#F04D4D',
     marginLeft: scale(5),
     marginBottom: scale(15),
+  },
+  loadMoreContainer: {
+    paddingVertical: scale(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadMoreText: {
+    marginTop: scale(6),
+    color: '#848484',
+    fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
   },
 });
 

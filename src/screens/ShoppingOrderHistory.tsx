@@ -9,6 +9,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Modal,
+  RefreshControl,
 } from 'react-native';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import IMAGES from '../utils/images';
@@ -30,6 +31,8 @@ import { getMemberOrderAddressList, insertMemberOrderAddress, updateMemberOrderA
 import { getTargetMemberShippingAddress, ShippingAddressItem } from '../api/services/memberShippingAddressService';
 import Clipboard from '@react-native-clipboard/clipboard';
 import Portone from '../components/Portone';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 
 export const ORDER_STATUS_BADGE_COLOR: Record<string, string> = {
   CANCEL_APPLY: '#BDBDBD',
@@ -80,6 +83,7 @@ const ShoppingOrderHistory = () => {
   const memberInfo = useAppSelector(state => state.member.memberInfo);
   const [orderAppList, setOrderAppList] = useState([]);
   const [loading, setLoading] = useState(false);
+  // 페이징/리프레시 공통 훅 사용
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showYearDropdown, setShowYearDropdown] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -98,6 +102,7 @@ const ShoppingOrderHistory = () => {
   const [portoneVisible, setPortoneVisible] = useState(false);
   const [portonePaymentData, setPortonePaymentData] = useState<any | null>(null);
   const [confirmingMap, setConfirmingMap] = useState<Record<number, boolean>>({});
+  // refreshing은 공통 훅 반환값 사용
   // ORDER_STATUS_TYPE 라벨 매핑
   const getOrderStatusLabel = (value: string) => {
     const found = orderStatusTypes.find(t => t.value === value);
@@ -289,6 +294,37 @@ const ShoppingOrderHistory = () => {
       fetchShippingOrderAddress();
       fetchOrderList();
     }, [memberInfo?.mem_id, selectedYear, searchQuery])
+  );
+
+  // 그룹화: 동일 결제(payment_app_id) 기준으로 묶기
+  const groups = React.useMemo(() => {
+    try {
+      return Object.values(orderAppList.reduce((acc: any, cur: any) => {
+        (acc[cur.payment_app_id] = acc[cur.payment_app_id] || []).push(cur);
+        return acc;
+      }, {} as Record<string, any[]>));
+    } catch {
+      return [] as any[];
+    }
+  }, [orderAppList]);
+
+  const { displayedItems: displayedGroups, handleScroll, loadingMore } = useInfiniteScroll<any[]>(
+    {
+      items: groups,
+      pageSize: 5,
+      isLoading: loading,
+      resetDeps: [selectedYear, searchQuery, memberInfo?.mem_id],
+    }
+  );
+
+  const { refreshing, onRefresh } = usePullToRefresh(
+    async () => {
+      await Promise.all([
+        fetchShippingOrderAddress(),
+        fetchOrderList(),
+      ]);
+    },
+    [selectedYear, searchQuery, memberInfo?.mem_id]
   );
 
   // CANCEL_APPLY + 반품/취소 접수 통합 처리
@@ -620,13 +656,21 @@ const ShoppingOrderHistory = () => {
                 <ScrollView
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={[commonStyle.pb50]}
-                  alwaysBounceVertical={false}
-                  bounces={false}
+                  alwaysBounceVertical={true}
+                  bounces={true}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={refreshing}
+                      onRefresh={onRefresh}
+                      tintColor="#40B649"
+                      colors={["#40B649"]}
+                      progressBackgroundColor="#FFFFFF"
+                    />
+                  }
+                  onScroll={handleScroll}
+                  scrollEventThrottle={16}
                 >
-                  {Object.values(orderAppList.reduce((acc: any, cur: any) => {
-                    (acc[cur.payment_app_id] = acc[cur.payment_app_id] || []).push(cur);
-                    return acc;
-                  }, {} as Record<string, any[]>)).map((group: any[]) => {
+                  {displayedGroups.map((group: any[]) => {
                     const first = group[0];
                     const isSplitGroup = (() => {
                       try {
@@ -974,6 +1018,12 @@ const ShoppingOrderHistory = () => {
           )}
       </View>
 
+      {loadingMore && (displayedGroups.length < groups.length) && (
+        <View style={styles.loadMoreContainer}>
+          <ActivityIndicator size="small" color="#40B649" />
+        </View>
+      )}
+
       <CommonPopup
         visible={popup.visible}
         message={popup.message}
@@ -1253,6 +1303,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     marginTop: scale(120),
+    backgroundColor: '#FFFFFF',
   },
   emptyContainer: {
     flex: 1,
@@ -1378,6 +1429,12 @@ const styles = StyleSheet.create({
     width: scale(13),
     height: scale(13),
     resizeMode: 'contain',
+  },
+  loadMoreContainer: {
+    paddingVertical: scale(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
   },
 });
 

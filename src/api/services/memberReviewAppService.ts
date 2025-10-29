@@ -28,6 +28,7 @@ export interface Review {
 // 리뷰 등록 요청 인터페이스
 export interface InsertMemberReviewRequest {
   mem_id: number;
+  order_app_id: number;
   product_app_id: number;
   title: string;
   content: string;
