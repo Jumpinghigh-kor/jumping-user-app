@@ -39,6 +39,7 @@ import ShoppingPostList from '../screens/ShoppingPostList';
 import ShoppingPostDetail from '../screens/ShoppingPostDetail';
 import ShoppingReturnHistory from '../screens/ShoppingReturnHistory';
 import ShoppingReturnHistoryDetail from '../screens/ShoppingReturnHistoryDetail';
+import NicknameChange from '../screens/NicknameChange';
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -57,6 +58,7 @@ export type AuthStackParamList = {
   };
   Settings: undefined;
   PasswordChange: undefined;
+  NicknameChange: undefined;
   ShoppingDetail: undefined;
   ShoppingMypage: undefined;
   ShoppingHome: undefined;
@@ -163,6 +165,11 @@ const AuthStackNavigator = () => {
       <Stack.Screen
         name="PasswordChange"
         component={PasswordChange}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="NicknameChange"
+        component={NicknameChange}
         options={{headerShown: false}}
       />
       <Stack.Screen

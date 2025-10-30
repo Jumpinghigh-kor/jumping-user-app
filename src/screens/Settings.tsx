@@ -27,9 +27,6 @@ const Settings = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  const handleGoBack = () => {
-    navigation.goBack();
-  };
 
   const showPopup = (title: string, message: string, action: string) => {
     setPopupTitle(title);
@@ -90,31 +87,25 @@ const Settings = () => {
     }
   };
 
-  const handlePopupCancel = () => {
-    setPopupVisible(false);
-  };
-
-  const handleLogout = () => {
-    showPopup('로그아웃', '정말 로그아웃 하시겠습니까?', 'logout');
-  };
-
-  const handlePasswordChange = () => {
-    // 비밀번호 변경 화면으로 이동
-    navigation.navigate('PasswordChange' as never);
-  };
-
-  const handleWithdrawal = () => {
-    showPopup('회원 탈퇴', '정말 탈퇴하시겠습니까?\n 이 작업은 되돌릴 수 없습니다.', 'withdrawal');
-  };
-
-  return (
+  return ( 
     <View style={styles.container}>
       <CommonHeader title="환경설정" />
       <View style={styles.contentContainer}>
         <View style={styles.menuContainer}>
           <TouchableOpacity 
             style={styles.menuItem}
-            onPress={handlePasswordChange}
+            onPress={() => navigation.navigate('NicknameChange' as never)}
+          >
+            <Text style={styles.menuText}>닉네임 변경</Text>
+            <Image 
+              source={IMAGES.icons.arrowRightWhite} 
+              style={styles.menuArrow} 
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('PasswordChange' as never)}
           >
             <Text style={styles.menuText}>비밀번호 변경</Text>
             <Image 
@@ -125,7 +116,7 @@ const Settings = () => {
           
           <TouchableOpacity 
             style={styles.menuItem}
-            onPress={handleLogout}
+            onPress={() => showPopup('로그아웃', '정말 로그아웃 하시겠습니까?', 'logout')}
           >
             <Text style={styles.menuText}>로그아웃</Text>
             <Image 
@@ -136,7 +127,7 @@ const Settings = () => {
           
           <TouchableOpacity 
             style={styles.menuItem}
-            onPress={handleWithdrawal}
+            onPress={() => showPopup('회원탈퇴', '정말 회원탈퇴 하시겠습니까?', 'withdrawal')}
           >
             <Text style={styles.withdrawalText}>회원탈퇴</Text>
             <Image 
@@ -153,7 +144,7 @@ const Settings = () => {
         message={popupMessage}
         type={currentAction === 'withdrawal' ? 'warning' : 'default'}
         onConfirm={handlePopupConfirm}
-        onCancel={currentAction === 'none' ? undefined : handlePopupCancel}
+        onCancel={currentAction === 'none' ? undefined : () => setPopupVisible(false)}
         confirmText="확인"
         cancelText="취소"
       />

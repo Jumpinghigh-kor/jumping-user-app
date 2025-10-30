@@ -11,6 +11,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { updateInquiry, Inquiry, deleteInquiry } from '../api/services/inquiryService';
@@ -42,6 +43,7 @@ const InquiryAppDetail = () => {
   const [popupMessage, setPopupMessage] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // 문의 유형 목록 (표시 텍스트와 실제 값 매핑)
   const inquiryTypes = [
@@ -78,6 +80,20 @@ const InquiryAppDetail = () => {
         await AsyncStorage.setItem('readInquiries', JSON.stringify(readInquiries));
       }
     } catch (error) {
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // 현재 라우트로 전달된 데이터를 다시 반영 (서버 재조회는 요구사항 외라 생략)
+      if (inquiry) {
+        setTitle(inquiry.title);
+        setContent(inquiry.content);
+        setInquiryType(inquiry.inquiry_type);
+      }
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -212,6 +228,17 @@ const InquiryAppDetail = () => {
         style={styles.formContainer}
         contentContainerStyle={styles.formContentContainer}
         keyboardShouldPersistTaps="handled"
+        bounces={true}
+        alwaysBounceVertical={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#FFFFFF"
+            colors={["#FFFFFF"]}
+            progressBackgroundColor="#202020"
+          />
+        }
       >
         <View style={styles.inputContainer}>
           <Text style={styles.label}>문의 유형<Text style={{color: '#FF0000'}}> *</Text></Text>
@@ -499,7 +526,7 @@ const styles = StyleSheet.create({
     padding: scale(16),
   },
   formContentContainer: {
-    paddingBottom: scale(80),
+    paddingBottom: scale(30),
   },
   inputContainer: {
     marginBottom: scale(20),

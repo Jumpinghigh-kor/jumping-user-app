@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  RefreshControl,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {getNoticesAppList, Notice} from '../api/services/noticesAppService';
@@ -21,6 +22,7 @@ import CommonHeader from '../components/CommonHeader';
 import { FONTS } from '../utils/fonts';
 import CommonModal from '../components/CommonModal';
 import CommonPopup from '../components/CommonPopup';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 
 const NoticesAppList = () => {
   const navigation = useNavigation();
@@ -40,6 +42,14 @@ const NoticesAppList = () => {
     message: '',
     onConfirm: () => {},
   });
+  const [refreshing, setRefreshing] = useState(false);
+
+  const { displayedItems, loadingMore, handleLoadMore, handleScroll, setPage } = useInfiniteScroll<Notice>({
+    items: notices,
+    pageSize: 10,
+    isLoading: loading,
+  });
+  const loadLockRef = useRef(false);
 
   useEffect(() => {
     loadNotices();
@@ -83,6 +93,23 @@ const NoticesAppList = () => {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const response = await getNoticesAppList();
+      if (response.success) {
+        setNotices(response.data || []);
+        setPage(1);
+      } else {
+        showPopup('공지사항을 불러오는데 실패했습니다.');
+      }
+    } catch (error) {
+      showPopup('공지사항을 불러오는데 실패했습니다.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const isNoticeRead = (noticeId: number): boolean => {
     return readNotices.includes(noticeId);
   };
@@ -109,7 +136,17 @@ const NoticesAppList = () => {
     return (
       <TouchableOpacity style={styles.noticeItem} onPress={() => handleNoticePress(item)}>
         <View style={styles.noticeContent}>
-          <Text style={styles.noticeType}>{item.notices_type === 'NOTICE' ? '공지' : item.notices_type === 'EVENT' ? '이벤트' : '가이드'}</Text>
+          {(() => {
+            const typeColor = item.notices_type === 'EVENT'
+              ? '#FECB3D'
+              : item.notices_type === 'NOTICE'
+              ? '#42B649'
+              : '#F04D4D';
+            const label = item.notices_type === 'NOTICE' ? '공지' : item.notices_type === 'EVENT' ? '이벤트' : '가이드';
+            return (
+              <Text style={[styles.noticeType, { color: typeColor }]}>{label}</Text>
+            );
+          })()}
           <View style={{flexDirection: 'row', alignItems: 'center', width: scale(250)}}>
             <Text style={styles.noticeTitle} numberOfLines={1} ellipsizeMode="tail">{item.title}</Text>
             {!isNoticeRead(item.notices_app_id) && (
@@ -133,10 +170,46 @@ const NoticesAppList = () => {
           </View>
         ) : notices?.length > 0 ? (
           <FlatList
-            data={notices}
+            data={displayedItems}
             renderItem={renderNoticeItem}
             keyExtractor={(item) => item.notices_app_id.toString()}
             contentContainerStyle={styles.listContainer}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            onScroll={(e) => {
+              try {
+                const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent || {};
+                const nearEndPadding = 80;
+                if (layoutMeasurement && contentOffset && contentSize) {
+                  const isNearEnd = layoutMeasurement.height + contentOffset.y >= contentSize.height - nearEndPadding;
+                  if (isNearEnd) {
+                    if (!loadLockRef.current) {
+                      loadLockRef.current = true;
+                      handleLoadMore();
+                    }
+                  } else {
+                    loadLockRef.current = false;
+                  }
+                }
+              } catch {}
+            }}
+            scrollEventThrottle={16}
+            ListFooterComponent={
+              loadingMore && displayedItems.length < notices.length ? (
+                <View style={{ paddingVertical: scale(12), alignItems: 'center' }}>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                </View>
+              ) : null
+            }
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#FFFFFF"
+                colors={["#FFFFFF"]}
+                progressBackgroundColor="#202020"
+              />
+            }
           />
         ) : (
           <View style={styles.emptyContainer}>
@@ -190,6 +263,18 @@ const styles = StyleSheet.create({
   },
   noticeType: {
     color: '#43B546',
+    fontSize: scale(12),
+    fontFamily: 'Pretendard-Bold',
+  },
+  noticeTypeBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: scale(6),
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(3),
+    marginBottom: scale(6),
+  },
+  noticeTypeText: {
+    color: '#FFFFFF',
     fontSize: scale(12),
     fontFamily: 'Pretendard-Bold',
   },

@@ -17,6 +17,7 @@ import { findId, findPassword } from '../api/services/membersService';
 import Clipboard from '@react-native-clipboard/clipboard';
 import CustomToast from '../components/CustomToast';
 import IMAGES from '../utils/images';
+import { commonStyle } from '../assets/styles/common';
 
 const Tab = createMaterialTopTabNavigator();
 const screenWidth = Dimensions.get('window').width;
@@ -223,15 +224,35 @@ const FindPasswordScreen = () => {
         </View>
 
         {passwordInfo && (
-          <View style={[styles.pwdContainer]}>
-            <Text style={[styles.pwdText]}>비밀번호 : {passwordInfo.temporary_password}</Text>
-            <TouchableOpacity onPress={() => {
-              Clipboard.setString(passwordInfo.temporary_password);
-              setCustomToastMessage(passwordInfo.temporary_password + '가 복사되었습니다');
-              setShowCustomToast(true);
-            }}>
-              <Image source={IMAGES.icons.copyWhite} style={styles.copyIcon} />
-            </TouchableOpacity>
+          <View>
+            <View style={[styles.pwdContainer]}>
+              <Text style={[styles.pwdText]}>임시 비밀번호 : {passwordInfo.temporary_password}</Text>
+              <TouchableOpacity onPress={() => {
+                Clipboard.setString(passwordInfo.temporary_password);
+                setCustomToastMessage(passwordInfo.temporary_password + '가 복사되었습니다');
+                setShowCustomToast(true);
+              }}>
+                <Image source={IMAGES.icons.copyWhite} style={styles.copyIcon} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={[commonStyle.mt25]}>
+              <Text style={[styles.guideText]}>
+                - 임시 비밀번호 옆 
+                <Text style={{color: '#F04D4D'}}> 문서 아이콘</Text>
+                을 클릭하면 임시 비밀번호를
+                <Text style={{color: '#F04D4D'}}> 복사</Text>
+                할 수 있습니다. 로그인 할 때
+                <Text style={{color: '#F04D4D'}}> 붙여넣기 </Text>
+                해서 입력해주세요.
+                </Text>
+              <Text style={[styles.guideText]}>
+                - 임시 비밀번호 발급 후 
+                <Text style={{color: '#40B649'}}>[마이페이지 -&gt; 내 계정 정보 -&gt; 비밀번호 변경]</Text>
+                에서 반드시 비밀번호를
+                <Text style={{color: '#F04D4D'}}> 변경 </Text>해주세요.
+              </Text>
+            </View>
           </View>
         )}
       </View>
@@ -240,7 +261,7 @@ const FindPasswordScreen = () => {
         <TouchableOpacity
           style={[styles.button]}
           onPress={() => handleFindID()}
-          >
+        >
           <Text style={styles.buttonText}>확인</Text>
         </TouchableOpacity>
       </View>
@@ -397,6 +418,11 @@ const styles = StyleSheet.create({
     width: scale(20),
     height: scale(20),
     resizeMode: 'contain',
+  },
+  guideText: {
+    color: '#FFFFFF',
+    fontSize: scale(12),
+    marginTop: scale(10),
   },
 });
 

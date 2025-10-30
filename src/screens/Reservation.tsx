@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useRef, useCallback, useMemo} from 'react';
-import {View, StyleSheet, Text, TouchableOpacity, Image, ScrollView, FlatList, Modal, ActivityIndicator, Animated, ToastAndroid, Platform, Alert} from 'react-native';
+import {View, StyleSheet, Text, TouchableOpacity, Image, ScrollView, FlatList, Modal, ActivityIndicator, Animated, ToastAndroid, Platform, Alert, RefreshControl} from 'react-native';
 import { scale } from '../utils/responsive';
 import CommonHeader from '../components/CommonHeader';
 import images from '../utils/images';
@@ -28,6 +28,9 @@ const Reservation: React.FC = () => {
     reservingLoading: false,
     cancelLoading: false,
     membershipError: false,
+    historyRefreshing: false,
+    historyPage: 1,
+    historyLoadingMore: false,
     
     // 예약 관련 상태
     selectedTime: '',
@@ -49,6 +52,7 @@ const Reservation: React.FC = () => {
   const [showCustomToast, setShowCustomToast] = useState(false);
   const [customToastMessage, setCustomToastMessage] = useState('');
   const [cancelPopupVisible, setCancelPopupVisible] = useState(false);
+  const historyLoadLockRef = useRef(false);
   
   // 메모이제이션된 panResponder
   const panResponder = useMemo(() => 
@@ -168,6 +172,21 @@ const Reservation: React.FC = () => {
   useFocusEffect(useCallback(() => {
     loadData();
   }, [loadData]));
+
+  // 예약 내역 당겨서 새로고침
+  const onRefreshHistory = useCallback(async () => {
+    setState(prev => ({...prev, historyRefreshing: true}));
+    try {
+      await fetchMemberSchedules();
+    } finally {
+      setState(prev => ({...prev, historyRefreshing: false}));
+    }
+  }, [fetchMemberSchedules]);
+
+  // 예약 내역 데이터 또는 탭 변경 시 페이지 초기화
+  useEffect(() => {
+    setState(prev => ({...prev, historyPage: 1}));
+  }, [state.memberSchedules.length, state.activeTab]);
 
   // 이벤트 핸들러들을 useCallback으로 메모이제이션
   const handleDateSelect = useCallback((formattedDate: string, isScheduled: boolean) => {
@@ -388,7 +407,7 @@ const Reservation: React.FC = () => {
               keyboardShouldPersistTaps="handled"
               onStartShouldSetResponderCapture={() => true}
               onMoveShouldSetResponderCapture={() => true}
-              >
+            >
               <Text style={styles.sectionTitle}>안내</Text>
               <Text style={styles.memberSchInfo}>
                 '{memberInfo?.mem_nickname}'님의 기본 시간표는
@@ -502,7 +521,14 @@ const Reservation: React.FC = () => {
               </View>
               
               <View style={styles.buttonContainer}>
-                <TouchableOpacity style={styles.reserveButton} onPress={handleReservation}>
+                <TouchableOpacity 
+                  style={[
+                    styles.reserveButton,
+                    (!state.selectedDate || !state.selectedTime) && { backgroundColor: '#848484' }
+                  ]}
+                  onPress={handleReservation}
+                  disabled={!state.selectedDate || !state.selectedTime}
+                >
                   <Text style={styles.reserveButtonText}>
                     {state.scheduledDates.includes(state.selectedDate) ? '예약 신청 변경' : '예약 신청'}
                   </Text>
@@ -513,16 +539,61 @@ const Reservation: React.FC = () => {
         ) : (
           <View style={styles.historyContainer} key={state.forceUpdateCounter}>
             {state.memberSchedules.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Image source={images.icons.speechGray} style={styles.speechIcon} />
-                <Text style={styles.emptyText}>예약 내역이 없어요</Text>
-              </View>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{paddingBottom: scale(80), alignItems: 'center', justifyContent: 'center', flexGrow: 1}}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={state.historyRefreshing}
+                    onRefresh={onRefreshHistory}
+                    tintColor="#FFFFFF"
+                    colors={["#40B649"]}
+                    progressBackgroundColor="#202020"
+                  />
+                }
+                bounces={true}
+                alwaysBounceVertical={true}
+              >
+                <View style={styles.emptyContainer}>
+                  <Image source={images.icons.speechGray} style={styles.speechIcon} />
+                  <Text style={styles.emptyText}>예약 내역이 없어요</Text>
+                </View>
+              </ScrollView>
             ) : (
               <ScrollView
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{paddingBottom: scale(20)}}
+                contentContainerStyle={{paddingBottom: scale(120)}}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={state.historyRefreshing}
+                    onRefresh={onRefreshHistory}
+                    tintColor="#FFFFFF"
+                    colors={["#40B649"]}
+                    progressBackgroundColor="#202020"
+                  />
+                }
+                bounces={true}
+                alwaysBounceVertical={true}
+                onMomentumScrollEnd={(e) => {
+                  try {
+                    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent || {};
+                    const paddingToBottom = 50;
+                    const displayedLen = Math.min(state.memberSchedules.length, state.historyPage * 5);
+                    if (layoutMeasurement && contentOffset && contentSize) {
+                      const isNearEnd = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+                      if (contentOffset.y > 0 && isNearEnd && !state.historyLoadingMore && displayedLen < state.memberSchedules.length && !historyLoadLockRef.current) {
+                        historyLoadLockRef.current = true;
+                        setState(prev => ({...prev, historyLoadingMore: true}));
+                        setTimeout(() => {
+                          setState(prev => ({...prev, historyPage: prev.historyPage + 1, historyLoadingMore: false}));
+                          historyLoadLockRef.current = false;
+                        }, 300);
+                      }
+                    }
+                  } catch {}
+                }}
               >
-                {state.memberSchedules.map((schedule, index) => {
+                {state.memberSchedules.slice(0, state.historyPage * 5).map((schedule, index) => {
                   const dDay = calculateDDay(String(schedule.sch_dt));
                   const isPast = isSchedulePast(String(schedule.sch_dt), schedule.sch_time);
                   
@@ -603,22 +674,41 @@ const Reservation: React.FC = () => {
                     </View>
                   );
                 })}
-                {state.memberSchedules.length > 0 && (
-                  <View style={[styles.buttonContainer, {marginBottom: scale(100)}]}>
-                    <TouchableOpacity 
-                      style={styles.reserveButton} 
-                      onPress={() => {
-                        if (state.selectedSchedules.length > 0) {
-                          setCancelPopupVisible(true);
-                        }
-                      }}
-                    >
-                      <Text style={[styles.reserveButtonText]}>예약취소</Text>
-                    </TouchableOpacity>
+                {(state.historyLoadingMore && (state.historyPage * 5) < state.memberSchedules.length) && (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color="#FFFFFF" />
                   </View>
                 )}
               </ScrollView>
             )}
+            {/* Floating cancel (X) button */}
+            <TouchableOpacity
+              style={{
+                position: 'absolute',
+                right: scale(20),
+                bottom: scale(80),
+                width: scale(56),
+                height: scale(56),
+                opacity: state.selectedSchedules.length === 0 ? 0.5 : 1,
+                borderRadius: scale(28),
+                backgroundColor: state.selectedSchedules.length === 0 ? '#848484' : '#F04D4D',
+                alignItems: 'center',
+                justifyContent: 'center',
+                shadowColor: '#000',
+                shadowOpacity: 0.2,
+                shadowRadius: 4,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: 4,
+              }}
+              onPress={() => {
+                if (state.selectedSchedules.length > 0) {
+                  setCancelPopupVisible(true);
+                }
+              }}
+              disabled={state.selectedSchedules.length === 0}
+            >
+              <Image source={images.icons.xWhite} style={{ width: scale(22), height: scale(22), resizeMode: 'contain' }} />
+            </TouchableOpacity>
           </View>
         )}
       </View>

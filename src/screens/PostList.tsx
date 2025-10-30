@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Image,
   TextInput,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -24,6 +25,7 @@ import CommonPopup from '../components/CommonPopup';
 import CommonHeader from '../components/CommonHeader';
 import { useAppSelector } from '../store/hooks';
 import { commonStyle, layoutStyle } from '../assets/styles/common';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -40,6 +42,25 @@ const PostList = () => {
   const [popupType, setPopupType] = useState<'warning' | 'confirm'>('confirm');
   const [popupMessage, setPopupMessage] = useState('');
   const [pendingDeleteIds, setPendingDeleteIds] = useState<number[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const notReadList = useMemo(() => {
+    return postList.filter((item) => {
+      const allSendYn = (item as any).all_send_yn;
+      const readYn = item.read_yn;
+      return (
+        (allSendYn === 'N' && readYn === 'N') ||
+        (allSendYn === 'Y' && (!readYn || readYn === ''))
+      );
+    });
+  }, [postList]);
+
+  const { displayedItems, loadingMore, handleScroll, setPage } = useInfiniteScroll<PostAppType>({
+    items: activeTab === 'allPostList' ? postList : notReadList,
+    pageSize: 5,
+    isLoading: loading,
+    resetDeps: [activeTab],
+  });
 
   useFocusEffect(
     React.useCallback(() => {
@@ -58,6 +79,16 @@ const PostList = () => {
       console.log(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadPostList();
+      setPage(1);
+    } finally {
+      setRefreshing(false);
     }
   };
   
@@ -105,18 +136,25 @@ const PostList = () => {
   const renderList = (dataList: PostAppType[]) => {
     return (
       <>
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#43B546" />
-          </View>
-        ) : dataList.length > 0 ? (
+        {dataList.length > 0 ? (
           <View style={{flex: 1}}>
             <View style={{flex: 1}}>
               <ScrollView
                 contentContainerStyle={styles.listContainer}
                 showsVerticalScrollIndicator={false}
-                bounces={false}
-                alwaysBounceVertical={false}
+                bounces={true}
+                alwaysBounceVertical={true}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    tintColor="#FFFFFF"
+                    colors={["#FFFFFF"]}
+                    progressBackgroundColor="#FFFFFF"
+                  />
+                }
               >
               {activeTab === 'allPostList' && (
                 <View style={styles.deleteAllContainer}>
@@ -144,7 +182,7 @@ const PostList = () => {
                   </TouchableOpacity>
                 </View>
               )}
-              {dataList.map((item) => (
+              {displayedItems.map((item) => (
                 <TouchableOpacity
                   key={item.post_app_id}
                   style={styles.postItem} onPress={() => navigation.navigate('PostDetail', { post: item })}
@@ -193,6 +231,11 @@ const PostList = () => {
                   </View>
                 </TouchableOpacity>
                 ))}
+                {(loadingMore && displayedItems.length < (activeTab === 'allPostList' ? postList.length : notReadList.length)) && (
+                  <View style={{ paddingVertical: scale(12), alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  </View>
+                )}
               </ScrollView>
             </View>
 
@@ -227,17 +270,7 @@ const PostList = () => {
       return renderList(postList);
     }
     if (activeTab === 'notReadPostList') {
-      const filteredList = postList.filter((item) => {
-        const allSendYn = (item as any).all_send_yn;
-        const readYn = item.read_yn;
-
-        return (
-          (allSendYn === 'N' && readYn === 'N') ||
-          (allSendYn === 'Y' && (!readYn || readYn === ''))
-        );
-      });
-
-      return renderList(filteredList);
+      return renderList(notReadList);
     }
   };
 

@@ -232,9 +232,12 @@ const PasswordChange = () => {
         </View>
 
         <TouchableOpacity
-          style={[styles.submitButton, loading && styles.disabledButton]}
+          style={[
+            styles.submitButton,
+            (loading || !currentPassword || !newPassword || !confirmPassword) && styles.disabledButton
+          ]}
           onPress={handleChangePassword}
-          disabled={loading}
+          disabled={loading || !currentPassword || !newPassword || !confirmPassword}
         >
           <Text style={styles.submitButtonText}>비밀번호 변경</Text>
         </TouchableOpacity>
@@ -317,7 +320,7 @@ const styles = StyleSheet.create({
     paddingVertical: scale(12),
   },
   disabledButton: {
-    opacity: 0.7,
+    backgroundColor: '#848484',
   },
   submitButtonText: {
     color: '#FFFFFF',

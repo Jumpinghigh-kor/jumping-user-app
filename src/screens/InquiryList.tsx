@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Image,
   TextInput,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -24,6 +25,7 @@ import CommonPopup from '../components/CommonPopup';
 import CommonHeader from '../components/CommonHeader';
 import { useAppSelector } from '../store/hooks';
 import CustomToast from '../components/CustomToast';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -37,6 +39,7 @@ const InquiryList = () => {
   const [readInquiries, setReadInquiries] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<'createInquiry' | 'myInquiries'>('createInquiry');
   const memberInfo = useAppSelector(state => state.member.memberInfo);
+  const [refreshing, setRefreshing] = useState(false);
 
   // 문의하기 관련 상태
   const [title, setTitle] = useState('');
@@ -48,6 +51,13 @@ const InquiryList = () => {
   const [popupMessage, setPopupMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+
+  const { displayedItems, loadingMore, handleLoadMore, setPage } = useInfiniteScroll<Inquiry>({
+    items: inquiries,
+    pageSize: 10,
+    isLoading: loading,
+  });
+  const loadLockRef = useRef(false);
 
   // 문의 유형 목록 (표시 텍스트와 실제 값 매핑)
   const inquiryTypes = [
@@ -91,11 +101,22 @@ const InquiryList = () => {
         setShowToast(true);
       }
     } catch (error) {
-      console.log(error.response.data);
+      console.log(error.response?.data || error);
       setToastMessage('문의사항을 불러오는데 실패했습니다.');
       setShowToast(true);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadInquiries();
+      await loadReadInquiries();
+      setPage(1);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -197,38 +218,66 @@ const InquiryList = () => {
     if (activeTab === 'myInquiries') {
     return (
       <>
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#43B546" />
-          </View>
-        ) : inquiries.length > 0 ? (
+        {inquiries.length > 0 ? (
           <ScrollView
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
-            bounces={false}
-            alwaysBounceVertical={false}
+            bounces={true}
+            alwaysBounceVertical={true}
+            onScroll={(e) => {
+              try {
+                const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent || {};
+                const nearEndPadding = 80;
+                const hasMore = displayedItems.length < inquiries.length;
+                if (layoutMeasurement && contentOffset && contentSize) {
+                  const isNearEnd = layoutMeasurement.height + contentOffset.y >= contentSize.height - nearEndPadding;
+                  if (isNearEnd && hasMore && !loadLockRef.current && !loadingMore) {
+                    loadLockRef.current = true;
+                    handleLoadMore();
+                  }
+                  if (!isNearEnd) {
+                    loadLockRef.current = false;
+                  }
+                }
+              } catch {}
+            }}
+            scrollEventThrottle={16}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#FFFFFF"
+                colors={["#FFFFFF"]}
+                progressBackgroundColor="#202020"
+              />
+            }
           >
-            {inquiries.map((item) => (
-            <TouchableOpacity
-              key={item.inquiry_app_id}
-              style={styles.inquiryItem} onPress={() => handleInquiryPress(item)}
-            >
-              <View style={styles.inquiryContent}>
-                <View style={styles.titleContainer}>
-                  <View style={{flexDirection: 'row', alignItems: 'center', width: scale(200)}}>
-                    <Text style={styles.inquiryTitle} numberOfLines={1} ellipsizeMode="tail">{item.title}</Text>
-                    {item.answer && !isInquiryRead(item.inquiry_app_id) && (
-                      <View style={styles.notificationDot} />
-                    )}
+            {displayedItems.map((item) => (
+              <TouchableOpacity
+                key={item.inquiry_app_id}
+                style={styles.inquiryItem} onPress={() => handleInquiryPress(item)}
+              >
+                <View style={styles.inquiryContent}>
+                  <View style={styles.titleContainer}>
+                    <View style={{flexDirection: 'row', alignItems: 'center', width: scale(200)}}>
+                      <Text style={styles.inquiryTitle} numberOfLines={1} ellipsizeMode="tail">{item.title}</Text>
+                      {item.answer && !isInquiryRead(item.inquiry_app_id) && (
+                        <View style={styles.notificationDot} />
+                      )}
+                    </View>
+                    <Text style={styles.inquiryDate}>{formatDateYYYYMMDD(item.reg_dt)}</Text>
                   </View>
-                  <Text style={styles.inquiryDate}>{formatDateYYYYMMDD(item.reg_dt)}</Text>
                 </View>
-              </View>
-              <View style={[styles.statusContainer, {borderColor: item.answer ? '#F04D4D' : '#B4B4B4', backgroundColor: item.answer ? '#F04D4D' : ''}]}>
-                <Text style={[styles.statusText, {color: item.answer ? '#FFFFFF' : '#B4B4B4'}]}>{item.answer ? '답변완료' : '접수'}</Text>
-              </View>
-            </TouchableOpacity>
+                <View style={[styles.statusContainer, {borderColor: item.answer ? '#F04D4D' : '#B4B4B4', backgroundColor: item.answer ? '#F04D4D' : ''}]}>
+                  <Text style={[styles.statusText, {color: item.answer ? '#FFFFFF' : '#B4B4B4'}]}>{item.answer ? '답변완료' : '접수'}</Text>
+                </View>
+              </TouchableOpacity>
             ))}
+            {(loadingMore && displayedItems.length < inquiries.length) && (
+              <View style={{ paddingVertical: scale(12), alignItems: 'center' }}>
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              </View>
+            )}
           </ScrollView>
         ) : (
           <View style={styles.emptyContainer}>

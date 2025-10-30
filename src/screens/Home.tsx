@@ -13,6 +13,7 @@ import {
   Image,
   ActivityIndicator,
   TextInput,
+  RefreshControl,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -84,6 +85,7 @@ const Home = () => {
   const [showCustomToast, setShowCustomToast] = useState(false);
   const [customToastMessage, setCustomToastMessage] = useState('');
   const [bannerKey, setBannerKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   // 푸시 토큰 가져와서 서버에 전송
   const initializePushToken = async () => {
@@ -580,7 +582,31 @@ const Home = () => {
         scrollEnabled={true}
         bounces={true}
         alwaysBounceVertical={true}
-        keyboardShouldPersistTaps="handled">
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              try {
+                await Promise.all([
+                  fetchExerciseData(),
+                  getTodayExerciseData(),
+                  checkUnreadNotifications(),
+                  loadProfileImage(),
+                ]);
+                setBannerKey(prev => prev + 1);
+              } catch (e) {
+              } finally {
+                setRefreshing(false);
+              }
+            }}
+            tintColor="#FFFFFF"
+            colors={["#43B546"]}
+            progressBackgroundColor="#202020"
+          />
+        }
+      >
         {/* 헤더 부분 */}
 
         {/* <View style={styles.gradientGreenContainer}>

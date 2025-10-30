@@ -173,6 +173,19 @@ export const findId = async (name: string, phone: string) => {
   }
 };
 
+// 닉네임 변경 API
+export const updateChangeNickname = async (memId: string, nickname: string) => {
+  try {
+    const response = await axiosInstance.post('/members/updateChangeNickname', {
+      mem_id: memId,
+      mem_nickname: nickname,
+    });
+    return response.data;
+  } catch (error: any) {
+    throw error;
+  }
+};
+
 // 비밀번호 찾기 API
 export const findPassword = async (id: string, name: string, phone: string) => {
   try {
