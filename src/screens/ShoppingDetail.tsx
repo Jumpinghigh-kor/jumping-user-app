@@ -533,7 +533,7 @@ const ShoppingDetail = ({route, navigation}) => {
                   }}
                   javaScriptEnabled={true}
                   domStorageEnabled={true}
-                  scrollEnabled={showMoreDetailImages}
+                  scrollEnabled={false}
                   injectedJavaScript={`
                     setTimeout(function() {
                       window.ReactNativeWebView.postMessage(document.body.scrollHeight);

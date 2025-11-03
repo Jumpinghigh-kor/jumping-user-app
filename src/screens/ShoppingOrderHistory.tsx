@@ -228,9 +228,7 @@ const ShoppingOrderHistory = () => {
           params.year = selectedYear;
         }
 
-        if (searchQuery) {
-          params.search_title = searchQuery;
-        }
+        // 검색은 클라이언트에서 대소문자 구분 없이 필터링 처리
         
         const response = await getMemberOrderAppList(params);
         
@@ -296,13 +294,49 @@ const ShoppingOrderHistory = () => {
     }, [memberInfo?.mem_id, selectedYear, searchQuery])
   );
 
-  // 그룹화: 동일 결제(payment_app_id) 기준으로 묶기
+  // 검색어 대소문자 무시 필터링 (상품명/브랜드명)
+  const normalizedList = React.useMemo(() => {
+    try {
+      const q = String(searchQuery ?? '').trim().toLowerCase();
+      if (!q) return orderAppList;
+      return (Array.isArray(orderAppList) ? orderAppList : []).filter((it: any) => {
+        const name = String(it?.product_title ?? it?.title ?? it?.product_name ?? '').toLowerCase();
+        const brand = String(it?.brand_name ?? '').toLowerCase();
+        return name.includes(q) || brand.includes(q);
+      });
+    } catch {
+      return orderAppList;
+    }
+  }, [orderAppList, searchQuery]);
+
+  // 그룹화: 동일 결제(payment_app_id) 기준으로 묶기 (최신순 보정)
   const groups = React.useMemo(() => {
     try {
-      return Object.values(orderAppList.reduce((acc: any, cur: any) => {
-        (acc[cur.payment_app_id] = acc[cur.payment_app_id] || []).push(cur);
-        return acc;
-      }, {} as Record<string, any[]>));
+      const map = new Map<string, any[]>();
+      const orderKeys: string[] = [];
+      for (const cur of (Array.isArray(normalizedList) ? normalizedList : [])) {
+        const key = String(cur?.payment_app_id ?? '');
+        if (!map.has(key)) {
+          map.set(key, []);
+          orderKeys.push(key);
+        }
+        map.get(key)!.push(cur);
+      }
+      const grouped = orderKeys.map(k => map.get(k)!).filter(Boolean);
+      const toNum = (v: any) => {
+        const n = Number(String(v ?? '').replace(/[^0-9]/g, ''));
+        return Number.isFinite(n) ? n : 0;
+      };
+      const latestValue = (g: any[]) => {
+        const maxDt = g.reduce((m: number, it: any) => {
+          const dt = parseCompactDateTime(it?.order_dt);
+          return Math.max(m, dt ? dt.getTime() : 0);
+        }, 0);
+        if (maxDt) return maxDt;
+        return g.reduce((m: number, it: any) => Math.max(m, toNum(it?.order_app_id)), 0);
+      };
+      grouped.sort((a, b) => latestValue(b) - latestValue(a));
+      return grouped;
     } catch {
       return [] as any[];
     }
@@ -486,6 +520,22 @@ const ShoppingOrderHistory = () => {
       if (!targetOrderDetailId) return;
 
       let statusUpdated = false;
+      // 반품/교환 접수 취소 시 선결제 환불 시도 (imp_uid가 제공될 때)
+      try {
+        const impUid = String((firstItem as any)?.delivery_fee_portone_imp_uid || '').trim();
+        if (impUid) {
+          const toNum = (v: any) => {
+            const n = Number(String(v ?? 0).replace(/[^0-9.-]/g, ''));
+            return isNaN(n) ? 0 : n;
+          };
+          const amount = toNum((firstItem as any)?.total_delivery_fee_amount);
+          const deliveryFeePaymentAppId = Number((firstItem as any)?.delivery_fee_payment_app_id);
+          const merchantUid = String((firstItem as any)?.delivery_fee_portone_merchant_uid || '').trim();
+          await cancelPayment({ imp_uid: impUid, merchant_uid: merchantUid, reason: '반품/교환 접수 취소 환불', refundAmount: amount, payment_app_id: deliveryFeePaymentAppId, mod_id: Number(memberInfo?.mem_id) } as any);
+        }
+      } catch (e) {
+        // 환불 실패는 이후 복구 흐름을 막지 않음
+      }
       await updateOrderStatus({
         order_detail_app_ids: [targetOrderDetailId],
         mem_id: Number(memberInfo?.mem_id),
@@ -701,249 +751,250 @@ const ShoppingOrderHistory = () => {
                             </View>
                           )}
                         </View>
-                        {group.map((gi: any, index: number) => (
-                          <View key={`od_${gi.order_detail_app_id || gi.order_app_id}_${index}`}>
-                            <View style={[styles.orderItemImgContainer, {borderTopWidth: index == 0 ? 0 : 2, borderTopColor: '#EEEEEE', marginHorizontal: -scale(16), paddingHorizontal: scale(16),}]}>
-                              <TouchableOpacity 
-                                style={styles.orderItemImgContainer}
-                                onPress={() => {
-                                  const productData = {
-                                    product_app_id: gi.product_app_id,
-                                    product_detail_app_id: gi.product_detail_app_id,
-                                  };
-                                  navigation.navigate('ShoppingDetail' as never, { productParams: productData } as never);
-                                }}
-                              >
-                                <ShoppingThumbnailImg
-                                  productAppId={gi.product_app_id}
-                                />
-                                <View style={[layoutStyle.columnStretchEvenly, {marginLeft: scale(10), flex: 1}]}> 
-                                  <View style={[layoutStyle.rowStart, {alignItems: 'center'}]}>
-                                    <Text style={styles.productName}>{gi.brand_name}</Text>
-                                    {isSplitGroup && (
-                                      <View style={[styles.orderStatusContainer, {marginLeft: scale(6), backgroundColor: ORDER_STATUS_BADGE_COLOR[gi.order_status] || '#BDBDBD'}]}>
-                                        <Text style={styles.orderStatusText}>{getOrderStatusLabel(gi.order_status)}</Text>
+                        {group.map((gi: any, index: number) => {
+                          return(
+                            <View key={`od_${gi.order_detail_app_id || gi.order_app_id}_${index}`}>
+                              <View style={[styles.orderItemImgContainer, {borderTopWidth: index == 0 ? 0 : 2, borderTopColor: '#EEEEEE', marginHorizontal: -scale(16), paddingHorizontal: scale(16),}]}>
+                                <TouchableOpacity 
+                                  style={styles.orderItemImgContainer}
+                                  onPress={() => {
+                                    const productData = {
+                                      product_app_id: gi.product_app_id,
+                                      product_detail_app_id: gi.product_detail_app_id,
+                                    };
+                                    navigation.navigate('ShoppingDetail' as never, { productParams: productData } as never);
+                                  }}
+                                >
+                                  <ShoppingThumbnailImg
+                                    productAppId={gi.product_app_id}
+                                  />
+                                  <View style={[layoutStyle.columnStretchEvenly, {marginLeft: scale(10), flex: 1}]}> 
+                                    <View style={[layoutStyle.rowStart, {alignItems: 'center'}]}>
+                                      <Text style={styles.productName}>{gi.brand_name}</Text>
+                                      {isSplitGroup && (
+                                        <View style={[styles.orderStatusContainer, {marginLeft: scale(6), backgroundColor: ORDER_STATUS_BADGE_COLOR[gi.order_status] || '#BDBDBD'}]}>
+                                          <Text style={styles.orderStatusText}>{getOrderStatusLabel(gi.order_status)}</Text>
+                                        </View>
+                                      )}
+                                    </View>
+                                    <View style={[layoutStyle.rowStart, {alignItems: 'center'}]}>
+                                      <Text style={styles.productTitle} numberOfLines={2} ellipsizeMode="tail">{gi.product_title}</Text>
+                                    </View>
+                                    <Text style={styles.productInfo}>{gi.option_amount ? gi.option_amount : ''}{gi.option_unit !== 'NONE_UNIT' ? gi.option_unit + ' ' : ''}{gi.option_gender ? (gi.option_gender == 'W' ? '여성' : gi.option_gender == 'M' ? '남성' : '공용') : ''} / {gi.order_quantity}개</Text>
+                                  </View>
+                                </TouchableOpacity>
+                                </View>
+
+                                {!isSplitGroup && (
+                                  <View style={[commonStyle.mt10]}>
+                                    <View style={[layoutStyle.rowBetween, {alignItems: 'center'}]}>
+                                      <Text style={styles.productName}>상품금액</Text>
+                                      <Text style={styles.productPrice}>{(Number(String((gi.price) ?? 0).replace(/,/g, '')) * Number((gi.order_quantity) ?? 0)).toLocaleString()}원</Text>
+                                    </View>
+                                    {Number(gi.total_payment_amount) < Number(gi.free_shipping_amount) && Number(gi.free_shipping_amount) && (
+                                      <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
+                                        <Text style={styles.productName}>배송비</Text>
+                                        <Text style={styles.productPrice}>{gi.delivery_fee?.toLocaleString()}원</Text>
+                                      </View>
+                                    )}
+                                    {Number(gi.total_delivery_fee_amount) > 0 && (
+                                      <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
+                                        <Text style={styles.productName}>{gi.order_status === 'EXCHANGE_COMPLETE' ? '교환' : '반품'} 배송비</Text>
+                                        <Text style={styles.productPrice}>{Number(gi.total_delivery_fee_amount)?.toLocaleString()}원</Text>
+                                      </View>
+                                    )}
+                                    {(gi.extra_shipping_area_cnt > 0) && (gi.remote_delivery_fee > 0) && (
+                                      <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
+                                        <Text style={styles.productName}>도서산간 배송비</Text>
+                                        <Text style={styles.productPrice}>{gi.remote_delivery_fee?.toLocaleString()}원</Text>
+                                      </View>
+                                    )}
+                                    <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
+                                      <Text style={styles.totalPriceText}>총 결제금액</Text>
+                                      <Text style={styles.totalPriceText}>{Number(gi.total_payment_amount)?.toLocaleString()}원</Text>
+                                    </View>
+                                    {(gi.order_status === 'CANCEL_COMPLETE' || gi.order_status === 'RETURN_COMPLETE') && (
+                                      <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
+                                        <Text style={styles.totalPriceText}>환불 금액</Text>
+                                        <Text style={styles.totalPriceText}>{(
+                                          Number(
+                                            String(
+                                              (gi as any)?.total_refund_amount ?? (gi as any)?.refund_amount ?? (gi as any)?.payment_amount ?? 0
+                                            ).replace(/,/g, '')
+                                          )
+                                        ).toLocaleString()}원</Text>
                                       </View>
                                     )}
                                   </View>
-                                  <View style={[layoutStyle.rowStart, {alignItems: 'center'}]}>
-                                    <Text style={styles.productTitle} numberOfLines={2} ellipsizeMode="tail">{gi.product_title}</Text>
-                                  </View>
-                                  <Text style={styles.productInfo}>{gi.option_amount}{gi.option_unit}{gi.option_gender == 'W' ? '여성' : gi.option_gender == 'M' ? '남성' : '공용'} / {gi.order_quantity}개</Text>
-                                </View>
-                              </TouchableOpacity>
-                              </View>
+                                )}
 
-                              
-                              {!isSplitGroup && (
-                                <View style={[commonStyle.mt10]}>
-                                  <View style={[layoutStyle.rowBetween, {alignItems: 'center'}]}>
-                                    <Text style={styles.productName}>상품금액</Text>
-                                    <Text style={styles.productPrice}>{(Number(String((gi.price) ?? 0).replace(/,/g, '')) * Number((gi.order_quantity) ?? 0)).toLocaleString()}원</Text>
-                                  </View>
-                                  {Number(gi.total_payment_amount) < Number(gi.free_shipping_amount) && Number(gi.free_shipping_amount) && (
-                                    <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
-                                      <Text style={styles.productName}>배송비</Text>
-                                      <Text style={styles.productPrice}>{gi.delivery_fee?.toLocaleString()}원</Text>
-                                    </View>
-                                  )}
-                                  {Number(gi.total_delivery_fee_amount) > 0 && (
-                                    <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
-                                      <Text style={styles.productName}>{gi.order_status === 'EXCHANGE_COMPLETE' ? '교환' : '반품'} 배송비</Text>
-                                      <Text style={styles.productPrice}>{Number(gi.total_delivery_fee_amount)?.toLocaleString()}원</Text>
-                                    </View>
-                                  )}
-                                  {(gi.extra_shipping_area_cnt > 0) && (gi.remote_delivery_fee > 0) && (
-                                    <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
-                                      <Text style={styles.productName}>도서산간 배송비</Text>
-                                      <Text style={styles.productPrice}>{gi.remote_delivery_fee?.toLocaleString()}원</Text>
-                                    </View>
-                                  )}
-                                  <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
-                                    <Text style={styles.totalPriceText}>총 결제금액</Text>
-                                    <Text style={styles.totalPriceText}>{Number(gi.total_payment_amount)?.toLocaleString()}원</Text>
-                                  </View>
-                                  {(gi.order_status === 'CANCEL_COMPLETE' || gi.order_status === 'RETURN_COMPLETE') && (
-                                    <View style={[layoutStyle.rowBetween, {alignItems: 'center'}, commonStyle.mt10]}>
-                                      <Text style={styles.totalPriceText}>환불 금액</Text>
-                                      <Text style={styles.totalPriceText}>{(
-                                        Number(
-                                          String(
-                                            (gi as any)?.total_refund_amount ?? (gi as any)?.refund_amount ?? (gi as any)?.payment_amount ?? 0
-                                          ).replace(/,/g, '')
-                                        )
-                                      ).toLocaleString()}원</Text>
-                                    </View>
-                                  )}
-                                </View>
-                              )}
-
-                              <View style={[layoutStyle.rowCenter, commonStyle.mt10]}>
-                                {gi.order_status === 'PAYMENT_COMPLETE' ? (
-                                  <>
-                                    <TouchableOpacity
-                                      style={[styles.bottomBtnContainer, commonStyle.mr5]}
-                                      onPress={() => {
-                                        setPendingOrderItem({ ...gi, order_status: 'CANCEL_APPLY' });
-                                        setSelectedReturnReason('');
-                                        setReturnReasonDetail('');
-                                        setShowReasonDropdown(false);
-                                        setCancelQuantity('');
-                                        showConfirmPopup('결제를 취소하시겠습니까?', () => {}, () => {});
-                                      }}
-                                    >
-                                      <Text style={styles.bottomBtnText}>결제 취소 접수</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
-                                      const phone = gi?.inquiry_phone_number || '';
-                                      if (phone) {
-                                        Clipboard.setString(String(phone));
-                                      }
-                                    }}>
-                                      <Text style={styles.bottomBtnText}>문의하기</Text>
-                                    </TouchableOpacity>
-                                  </>
-                                ) : gi.order_status === 'SHIPPINGING' ? (
-                                  <>
-                                    <TouchableOpacity
-                                      style={[styles.bottomBtnContainer, commonStyle.mr5]}
-                                      onPress={() => navigation.navigate('ShoppingShipping' as never, { item: gi } as never)}
-                                    >
-                                      <Text style={styles.bottomBtnText}>배송 현황</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
-                                      const phone = gi?.inquiry_phone_number || '';
-                                      if (phone) {
-                                        Clipboard.setString(String(phone));
-                                      }
-                                    }}>
-                                      <Text style={styles.bottomBtnText}>문의하기</Text>
-                                    </TouchableOpacity>
-                                  </>
-                                ) : gi.order_status === 'SHIPPING_COMPLETE' ? (
-                                  <>
-                                    <TouchableOpacity
-                                      style={[styles.bottomBtnContainer, commonStyle.mr5]}
-                                      disabled={!!confirmingMap[Number(gi.order_detail_app_id)]}
-                                      onPress={async () => {
-                                        const odId = Number(gi.order_detail_app_id);
-                                        if (confirmingMap[odId]) return;
-                                        setConfirmingMap(prev => ({ ...prev, [odId]: true }));
-                                        try {
-                                          await updateOrderStatus({
-                                            order_detail_app_ids: [Number(gi.order_detail_app_id)],
-                                            mem_id: Number(memberInfo?.mem_id),
-                                            order_status: 'PURCHASE_CONFIRM',
-                                          } as any);
-                                          // 지급 포인트가 있는 경우 포인트 적립
-                                          const givePoint = Number(gi?.give_point ?? 0);
-                                          const orderQtyForPoint = Number(gi?.order_quantity ?? 1) || 1;
-                                          const totalGivePoint = Math.max(0, givePoint * orderQtyForPoint);
-                                          const shouldShowPointPopup = totalGivePoint > 0;
-                                          if (shouldShowPointPopup) {
-                                            try {
-                                              await insertMemberPointApp({
-                                                mem_id: Number(memberInfo?.mem_id),
-                                                order_app_id: Number(gi.order_app_id),
-                                                point_status: 'POINT_ADD',
-                                                point_amount: totalGivePoint,
-                                              } as any);
-                                              setGivePoint(totalGivePoint);
-                                              setPointPopupVisible(true);
-                                            } catch (e) {
-                                              // 포인트 적립 실패는 UI 흐름에 영향 주지 않음
-                                            }
-                                          }
-                                          await fetchOrderList();
-                                        } catch (e) {
-                                          // ignore
-                                        } finally {
-                                          setConfirmingMap(prev => {
-                                            const next = { ...prev };
-                                            delete next[odId];
-                                            return next;
-                                          });
+                                <View style={[layoutStyle.rowCenter, commonStyle.mt10]}>
+                                  {gi.order_status === 'PAYMENT_COMPLETE' ? (
+                                    <>
+                                      <TouchableOpacity
+                                        style={[styles.bottomBtnContainer, commonStyle.mr5]}
+                                        onPress={() => {
+                                          setPendingOrderItem({ ...gi, order_status: 'CANCEL_APPLY' });
+                                          setSelectedReturnReason('');
+                                          setReturnReasonDetail('');
+                                          setShowReasonDropdown(false);
+                                          setCancelQuantity('');
+                                          showConfirmPopup('결제를 취소하시겠습니까?', () => {}, () => {});
+                                        }}
+                                      >
+                                        <Text style={styles.bottomBtnText}>결제 취소 접수</Text>
+                                      </TouchableOpacity>
+                                      <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
+                                        const phone = gi?.inquiry_phone_number || '';
+                                        if (phone) {
+                                          Clipboard.setString(String(phone));
                                         }
-                                      }}
-                                    >
-                                      <Text style={styles.bottomBtnText}>구매 확정</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                      style={[styles.bottomBtnContainer, commonStyle.mr5]}
-                                      onPress={() => navigation.navigate('ShoppingReturn' as never, { item: gi, maxQuantity: gi.order_quantity } as never)}
-                                    >
-                                      <Text style={styles.bottomBtnText}>반품/교환 요청</Text>
-                                    </TouchableOpacity>
-                                  </>
-                                ) : gi.order_status === 'PURCHASE_CONFIRM' ? (
-                                  <>
-                                    {isWithinDaysFrom(gi?.purchase_confirm_dt, 3) && (
+                                      }}>
+                                        <Text style={styles.bottomBtnText}>문의하기</Text>
+                                      </TouchableOpacity>
+                                    </>
+                                  ) : gi.order_status === 'SHIPPINGING' ? (
+                                    <>
+                                      <TouchableOpacity
+                                        style={[styles.bottomBtnContainer, commonStyle.mr5]}
+                                        onPress={() => navigation.navigate('ShoppingShipping' as never, { item: gi } as never)}
+                                      >
+                                        <Text style={styles.bottomBtnText}>배송 현황</Text>
+                                      </TouchableOpacity>
+                                      <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
+                                        const phone = gi?.inquiry_phone_number || '';
+                                        if (phone) {
+                                          Clipboard.setString(String(phone));
+                                        }
+                                      }}>
+                                        <Text style={styles.bottomBtnText}>문의하기</Text>
+                                      </TouchableOpacity>
+                                    </>
+                                  ) : gi.order_status === 'SHIPPING_COMPLETE' ? (
+                                    <>
+                                      <TouchableOpacity
+                                        style={[styles.bottomBtnContainer, commonStyle.mr5]}
+                                        disabled={!!confirmingMap[Number(gi.order_detail_app_id)]}
+                                        onPress={async () => {
+                                          const odId = Number(gi.order_detail_app_id);
+                                          if (confirmingMap[odId]) return;
+                                          setConfirmingMap(prev => ({ ...prev, [odId]: true }));
+                                          try {
+                                            await updateOrderStatus({
+                                              order_detail_app_ids: [Number(gi.order_detail_app_id)],
+                                              mem_id: Number(memberInfo?.mem_id),
+                                              order_status: 'PURCHASE_CONFIRM',
+                                            } as any);
+                                            // 지급 포인트가 있는 경우 포인트 적립
+                                            const givePoint = Number(gi?.give_point ?? 0);
+                                            const orderQtyForPoint = Number(gi?.order_quantity ?? 1) || 1;
+                                            const totalGivePoint = Math.max(0, givePoint * orderQtyForPoint);
+                                            const shouldShowPointPopup = totalGivePoint > 0;
+                                            if (shouldShowPointPopup) {
+                                              try {
+                                                await insertMemberPointApp({
+                                                  mem_id: Number(memberInfo?.mem_id),
+                                                  order_detail_app_id: Number(gi.order_detail_app_id),
+                                                  point_status: 'POINT_ADD',
+                                                  point_amount: totalGivePoint,
+                                                } as any);
+                                                setGivePoint(totalGivePoint);
+                                                setPointPopupVisible(true);
+                                              } catch (e) {
+                                                // 포인트 적립 실패는 UI 흐름에 영향 주지 않음
+                                              }
+                                            }
+                                            await fetchOrderList();
+                                          } catch (e) {
+                                            // ignore
+                                          } finally {
+                                            setConfirmingMap(prev => {
+                                              const next = { ...prev };
+                                              delete next[odId];
+                                              return next;
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        <Text style={styles.bottomBtnText}>구매 확정</Text>
+                                      </TouchableOpacity>
                                       <TouchableOpacity
                                         style={[styles.bottomBtnContainer, commonStyle.mr5]}
                                         onPress={() => navigation.navigate('ShoppingReturn' as never, { item: gi, maxQuantity: gi.order_quantity } as never)}
                                       >
                                         <Text style={styles.bottomBtnText}>반품/교환 요청</Text>
-                                        <Text style={[styles.bottomBtnText, {fontSize: scale(10)}]}>(3일 이내 가능)</Text>
                                       </TouchableOpacity>
-                                    )}
-                                    <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
-                                      const phone = gi?.inquiry_phone_number || '';
-                                      if (phone) {
-                                        Clipboard.setString(String(phone));
-                                      }
-                                    }}>
-                                      <Text style={styles.bottomBtnText}>문의하기</Text>
-                                    </TouchableOpacity>
-                                  </>
-                                ) : (gi.order_status === 'RETURN_APPLY' || gi.order_status === 'EXCHANGE_APPLY') ? (
-                                  <>
-                                    <TouchableOpacity
-                                      style={[styles.bottomBtnContainer, commonStyle.mr5]}
-                                      onPress={() => cancelCancelApply(gi)}
-                                    >
-                                      <Text style={styles.bottomBtnText}>{gi.order_status === 'EXCHANGE_APPLY' ? '교환접수 취소' : '반품접수 취소'}</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
-                                      const phone = gi?.inquiry_phone_number || '';
-                                      if (phone) {
-                                        Clipboard.setString(String(phone));
-                                      }
-                                    }}>
-                                      <Text style={styles.bottomBtnText}>문의하기</Text>
-                                    </TouchableOpacity>
-                                  </>
-                                ) : gi.order_status === 'CANCEL_APPLY' ? (
-                                  <>
-                                    <TouchableOpacity
-                                      style={[styles.bottomBtnContainer, commonStyle.mr5]}
-                                      onPress={() => cancelCancelApply(gi)}
-                                    >
-                                      <Text style={styles.bottomBtnText}>결제 취소 접수 철회</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
-                                      const phone = gi?.inquiry_phone_number || '';
-                                      if (phone) {
-                                        Clipboard.setString(String(phone));
-                                      }
-                                    }}>
-                                      <Text style={styles.bottomBtnText}>문의하기</Text>
-                                    </TouchableOpacity>
-                                  </>
-                                ) : (gi.order_status === 'CANCEL_COMPLETE' || gi.order_status === 'RETURN_COMPLETE' || gi.order_status === 'EXCHANGE_COMPLETE') ? (
-                                  <>
-                                    <TouchableOpacity
-                                      style={[styles.bottomBtnContainer, commonStyle.mr5]}
-                                      onPress={() => navigation.navigate('ShoppingReturnHistoryDetail' as never, { item: gi } as never)}
-                                    >
-                                      <Text style={styles.bottomBtnText}>상세 내역</Text>
-                                    </TouchableOpacity>
-                                  </>
-                                ) : (
-                                  <></>
-                                )}
+                                    </>
+                                  ) : gi.order_status === 'PURCHASE_CONFIRM' ? (
+                                    <>
+                                      {isWithinDaysFrom(gi?.purchase_confirm_dt, 3) && (
+                                        <TouchableOpacity
+                                          style={[styles.bottomBtnContainer, commonStyle.mr5]}
+                                          onPress={() => navigation.navigate('ShoppingReturn' as never, { item: gi, maxQuantity: gi.order_quantity } as never)}
+                                        >
+                                          <Text style={styles.bottomBtnText}>반품/교환 요청</Text>
+                                          <Text style={[styles.bottomBtnText, {fontSize: scale(10)}]}>(3일 이내 가능)</Text>
+                                        </TouchableOpacity>
+                                      )}
+                                      <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
+                                        const phone = gi?.inquiry_phone_number || '';
+                                        if (phone) {
+                                          Clipboard.setString(String(phone));
+                                        }
+                                      }}>
+                                        <Text style={styles.bottomBtnText}>문의하기</Text>
+                                      </TouchableOpacity>
+                                    </>
+                                  ) : (gi.order_status === 'RETURN_APPLY' || gi.order_status === 'EXCHANGE_APPLY') ? (
+                                    <>
+                                      <TouchableOpacity
+                                        style={[styles.bottomBtnContainer, commonStyle.mr5]}
+                                        onPress={() => cancelCancelApply(gi)}
+                                      >
+                                        <Text style={styles.bottomBtnText}>{gi.order_status === 'EXCHANGE_APPLY' ? '교환접수 취소' : '반품접수 취소'}</Text>
+                                      </TouchableOpacity>
+                                      <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
+                                        const phone = gi?.inquiry_phone_number || '';
+                                        if (phone) {
+                                          Clipboard.setString(String(phone));
+                                        }
+                                      }}>
+                                        <Text style={styles.bottomBtnText}>문의하기</Text>
+                                      </TouchableOpacity>
+                                    </>
+                                  ) : gi.order_status === 'CANCEL_APPLY' ? (
+                                    <>
+                                      <TouchableOpacity
+                                        style={[styles.bottomBtnContainer, commonStyle.mr5]}
+                                        onPress={() => cancelCancelApply(gi)}
+                                      >
+                                        <Text style={styles.bottomBtnText}>결제 취소 접수 철회</Text>
+                                      </TouchableOpacity>
+                                      <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
+                                        const phone = gi?.inquiry_phone_number || '';
+                                        if (phone) {
+                                          Clipboard.setString(String(phone));
+                                        }
+                                      }}>
+                                        <Text style={styles.bottomBtnText}>문의하기</Text>
+                                      </TouchableOpacity>
+                                    </>
+                                  ) : (gi.order_status === 'CANCEL_COMPLETE' || gi.order_status === 'RETURN_COMPLETE' || gi.order_status === 'EXCHANGE_COMPLETE') ? (
+                                    <>
+                                      <TouchableOpacity
+                                        style={[styles.bottomBtnContainer, commonStyle.mr5]}
+                                        onPress={() => navigation.navigate('ShoppingReturnHistoryDetail' as never, { item: gi } as never)}
+                                      >
+                                        <Text style={styles.bottomBtnText}>상세 내역</Text>
+                                      </TouchableOpacity>
+                                    </>
+                                  ) : (
+                                    <></>
+                                  )}
+                              </View>
                             </View>
-                          </View>
-                        ))}
+                          );
+                        })}
 
                         {/* 그룹 하단 요약 금액 블록 (분할된 경우만) */}
                         {isSplitGroup && (

@@ -20,6 +20,7 @@ interface CommonModalProps {
   onClose: () => void;
   background?: string;
   textColor?: string;
+  textSize?: number;
   children?: React.ReactNode;
 }
 
@@ -31,6 +32,7 @@ const CommonModal: React.FC<CommonModalProps> = ({
   onClose,
   background = '#333333',
   textColor = '#FFFFFF',
+  textSize = scale(14),
   children,
 }) => {
   const pan = React.useRef(new Animated.ValueXY()).current;
@@ -100,14 +102,14 @@ const CommonModal: React.FC<CommonModalProps> = ({
           </View>
           
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: textColor }]}>{title}</Text>
+            <Text style={[styles.modalTitle, { color: textColor, }]}>{title}</Text>
           </View>
           
           <ScrollView style={styles.modalScrollView} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
             {children ? (
               children
             ) : (
-              <Text style={[styles.modalText, { color: textColor }]}>{content}</Text>
+              <Text style={[styles.modalText, { color: textColor, fontSize: textSize }]}>{content}</Text>
             )}
           </ScrollView>
         </Animated.View>
@@ -166,7 +168,6 @@ const styles = StyleSheet.create({
   },
   modalText: {
     color: '#FFFFFF',
-    fontSize: scale(14),
     lineHeight: scale(22),
     paddingBottom: scale(20),
   },

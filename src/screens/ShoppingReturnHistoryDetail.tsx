@@ -123,9 +123,12 @@ const ShoppingReturnHistoryDetail = ({route}: any) => {
                     height={scale(80)}
                   />
                 </View>
-                <View style={[commonStyle.ml10]}>
+                <View style={[commonStyle.ml10, {flex: 1, minWidth: 0}]}> 
+                  
+                  {/* Ensure text can shrink/wrap within the row */}
+                  
                   <Text style={styles.brandName}>{returnDetail?.brand_name}</Text>
-                  <Text style={styles.productName}>{returnDetail?.product_name}</Text>
+                  <Text style={[styles.productName, {flexShrink: 1}]} numberOfLines={1} ellipsizeMode="tail">{returnDetail?.product_name}</Text>
                   <Text style={styles.productOptionName}>
                     {returnDetail?.option_amount ? returnDetail?.option_amount + returnDetail?.option_unit + ' / ' : ''}{returnDetail?.quantity}개
                   </Text>

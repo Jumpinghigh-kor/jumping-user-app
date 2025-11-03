@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useCallback, useMemo} from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, FlatList, ActivityIndicator, Alert} from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, FlatList, ActivityIndicator, Alert, RefreshControl} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -13,6 +13,7 @@ import ProductListItem from '../components/ProductListItem';
 import IMAGES from '../utils/images';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { updateSelectYn } from '../api/services/memberShippingAddressService';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 // Define navigation type
 type RootStackParamList = {
@@ -148,6 +149,15 @@ const ShoppingHome: React.FC = () => {
     }
   };
 
+  const { refreshing, onRefresh } = usePullToRefresh(async () => {
+    setRefreshKey(prev => prev + 1);
+    await Promise.all([
+      resetShippingAddressSelection(),
+      loadMemberInfo(),
+      loadProducts(),
+    ]);
+  }, [selectedCategory]);
+
   // 렌더링 완료 신호 보내기
   useEffect(() => {
     if (!loading && productCategory.length > 0) {
@@ -188,6 +198,15 @@ const ShoppingHome: React.FC = () => {
         style={styles.scrollContainer}
         contentContainerStyle={{paddingBottom: scale(100)}}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#43B546"
+            colors={["#43B546"]}
+            progressBackgroundColor="#FFFFFF"
+          />
+        }
       >
         <View style={styles.bannerContainer}>
           <ShopBannerImgPicker key={refreshKey} style={styles.banner} />

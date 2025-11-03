@@ -20,6 +20,7 @@ import { getTargetMemberShippingAddress, updateDeliveryRequest, updateSelectYn }
 import {getCommonCodeList} from '../api/services/commonCodeService';
 import { getMemberCouponAppList, updateMemberCouponApp } from '../api/services/memberCouponApp';
 import CommonPopup from '../components/CommonPopup';
+import CommonModal from '../components/CommonModal';
 import { usePopup } from '../hooks/usePopup';
 import { toggleCheckbox } from '../utils/commonFunction';
 import Portone from '../components/Portone';
@@ -29,6 +30,8 @@ import { insertMemberOrderAddress } from '../api/services/memberOrderAddressServ
 import { insertMemberPaymentApp } from '../api/services/memberPaymentAppService';
 import { insertMemberPointApp } from '../api/services/memberPointAppService';
 import { isCJRemoteArea } from '../constants/postCodeData';
+import { thirdPrivacyTextFirst, thirdPrivacyTextSecond, thirdPrivacyTextThird } from '../constants/thirdPrivacy';
+import { paymentPrivacyText } from '../constants/paymentPrivacy';
 
 type ShoppingPaymentRouteParams = {
   selectedItems: Array<any>;
@@ -55,10 +58,22 @@ const ShoppingPayment = () => {
   const [isAgreedToThirdParty, setIsAgreedToThirdParty] = useState(false);
   const [isAgreedToPayment, setIsAgreedToPayment] = useState(false);
   const [showPortone, setShowPortone] = useState(false);
+  const [agreementModalVisible, setAgreementModalVisible] = useState(false);
   const [pointInput, setPointInput] = useState('');
+  // 개별 약관 모달
+  const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
+  const [thirdPartyModalVisible, setThirdPartyModalVisible] = useState(false);
+  const [paymentTermsModalVisible, setPaymentTermsModalVisible] = useState(false);
+  const [entrancePwModalVisible, setEntrancePwModalVisible] = useState(false);
+  const [isAgreedToEntrancePw, setIsAgreedToEntrancePw] = useState(false);
   const [couponList, setCouponList] = useState([]);
   const [selectedCoupon, setSelectedCoupon] = useState(null);
   const [isOpenCoupon, setIsOpenCoupon] = useState(false);
+  const totalRows = thirdPrivacyTextThird.length;
+  const entrustRows: string[][] = [
+    ['개인정보 취급 위탁', '업무의 내용', '개인정보 보유 및 이용기간'],
+    ['(주)굿스플로', '배송정보 안내서비스 제공', '위탁 업무 종료시까지'],
+  ];
   
   // 뒤로가기 처리 함수
   const handleBackPress = async () => {
@@ -756,6 +771,7 @@ const ShoppingPayment = () => {
                 setIsAgreedToPrivacy(newState);
                 setIsAgreedToThirdParty(newState);
                 setIsAgreedToPayment(newState);
+                setIsAgreedToEntrancePw(newState);
               }}>
                 <Image source={isAgreedToOrder ? IMAGES.icons.checkboxGreen : IMAGES.icons.checkboxGray} style={styles.checkIcon} />
               </TouchableOpacity>
@@ -765,55 +781,318 @@ const ShoppingPayment = () => {
                 <TouchableOpacity onPress={() => toggleCheckbox(isAgreedToPrivacy, setIsAgreedToPrivacy)}>
                   <Image source={isAgreedToPrivacy ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} style={styles.checkIcon} />
                 </TouchableOpacity>
-              <TouchableOpacity
-                style={[layoutStyle.rowBetween, {flex: 1}]}>
-                <Text style={styles.agreeBtnText}>(필수) 개인정보 수집 · 이용 동의</Text>
-                <Image source={IMAGES.icons.arrowRightGray} style={{width: scale(12), height: scale(12), resizeMode: 'contain'}} />
-              </TouchableOpacity>
-            </View>
-            <View style={[layoutStyle.rowStart, commonStyle.mt15]}>
-                <TouchableOpacity onPress={() => toggleCheckbox(isAgreedToThirdParty, setIsAgreedToThirdParty)}>
-                  <Image source={isAgreedToThirdParty ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} style={styles.checkIcon} />
-                </TouchableOpacity>
-              <TouchableOpacity
-                style={[layoutStyle.rowBetween, {flex: 1}]}>
-                <Text style={styles.agreeBtnText}>(필수) 개인정보 제 3자 정보 제공 동의</Text>
-                <Image source={IMAGES.icons.arrowRightGray} style={{width: scale(12), height: scale(12), resizeMode: 'contain'}} />
-              </TouchableOpacity>
-            </View>
-            <View style={[layoutStyle.rowStart, commonStyle.mt15]}>
-                <TouchableOpacity onPress={() => toggleCheckbox(isAgreedToPayment, setIsAgreedToPayment)}>
-                  <Image source={isAgreedToPayment ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} style={styles.checkIcon} />
-                </TouchableOpacity>
-              <TouchableOpacity
-                style={[layoutStyle.rowBetween, {flex: 1}]}>
-                <Text style={styles.agreeBtnText}>(필수) 결제대행 서비스 이용약관 동의</Text>
-                <Image source={IMAGES.icons.arrowRightGray} style={{width: scale(12), height: scale(12), resizeMode: 'contain'}} />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={[layoutStyle.rowBetween, {flex: 1}]}
+              onPress={() => setPrivacyModalVisible(true)}>
+              <Text style={styles.agreeBtnText}>(필수) 개인정보 수집 · 이용 동의</Text>
+              <Image source={IMAGES.icons.arrowRightGray} style={{width: scale(12), height: scale(12), resizeMode: 'contain'}} />
+            </TouchableOpacity>
           </View>
-        </ScrollView>
-        
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={[
-              styles.paymentButton,
-              (!isAgreedToOrder || !isAgreedToPrivacy || !isAgreedToThirdParty || !isAgreedToPayment) && { backgroundColor: '#D9D9D9' }
-            ]}
-            disabled={!isAgreedToOrder || !isAgreedToPrivacy || !isAgreedToThirdParty || !isAgreedToPayment}
-            onPress={handlePayment}
-          >
-            <Text style={styles.paymentButtonText}>{getFinalPaymentAmount().toLocaleString()}원 결제하기</Text>
-          </TouchableOpacity>
+          <View style={[layoutStyle.rowStart, commonStyle.mt15]}>
+              <TouchableOpacity onPress={() => toggleCheckbox(isAgreedToThirdParty, setIsAgreedToThirdParty)}>
+                <Image source={isAgreedToThirdParty ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} style={styles.checkIcon} />
+              </TouchableOpacity>
+            <TouchableOpacity
+              style={[layoutStyle.rowBetween, {flex: 1}]}
+              onPress={() => setThirdPartyModalVisible(true)}>
+              <Text style={styles.agreeBtnText}>(필수) 개인정보 제 3자 정보 제공 동의</Text>
+              <Image source={IMAGES.icons.arrowRightGray} style={{width: scale(12), height: scale(12), resizeMode: 'contain'}} />
+            </TouchableOpacity>
+          </View>
+          <View style={[layoutStyle.rowStart, commonStyle.mt15]}>
+              <TouchableOpacity onPress={() => toggleCheckbox(isAgreedToPayment, setIsAgreedToPayment)}>
+                <Image source={isAgreedToPayment ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} style={styles.checkIcon} />
+              </TouchableOpacity>
+            <TouchableOpacity
+              style={[layoutStyle.rowBetween, {flex: 1}]}
+              onPress={() => setPaymentTermsModalVisible(true)}>
+              <Text style={styles.agreeBtnText}>(필수) 결제대행 서비스 이용약관 동의</Text>
+              <Image source={IMAGES.icons.arrowRightGray} style={{width: scale(12), height: scale(12), resizeMode: 'contain'}} />
+            </TouchableOpacity>
+          </View>
+          <View style={[layoutStyle.rowStart, commonStyle.mt15]}>
+              <TouchableOpacity onPress={() => toggleCheckbox(isAgreedToEntrancePw, setIsAgreedToEntrancePw)}>
+                <Image source={isAgreedToEntrancePw ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} style={styles.checkIcon} />
+              </TouchableOpacity>
+            <TouchableOpacity
+              style={[layoutStyle.rowBetween, {flex: 1}]}
+              onPress={() => setEntrancePwModalVisible(true)}>
+              <Text style={styles.agreeBtnText}>(필수) 공동현관비밀번호 개인정보 수집ㆍ이용 동의</Text>
+              <Image source={IMAGES.icons.arrowRightGray} style={{width: scale(12), height: scale(12), resizeMode: 'contain'}} />
+            </TouchableOpacity>
+          </View>
         </View>
+      </ScrollView>
+      
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={[
+            styles.paymentButton,
+            (!isAgreedToOrder || !isAgreedToPrivacy || !isAgreedToThirdParty || !isAgreedToPayment) && { backgroundColor: '#D9D9D9' }
+          ]}
+          disabled={!isAgreedToOrder || !isAgreedToPrivacy || !isAgreedToThirdParty || !isAgreedToPayment}
+          onPress={handlePayment}
+        >
+          <Text style={styles.paymentButtonText}>{getFinalPaymentAmount().toLocaleString()}원 결제하기</Text>
+        </TouchableOpacity>
       </View>
 
+      </View>
+
+      {/* 개별 약관 모달 */}
+      <CommonModal
+        visible={privacyModalVisible}
+        title="(필수) 개인정보 수집 · 이용 동의"
+        content=""
+        onClose={() => setPrivacyModalVisible(false)}
+        background="#FFFFFF"
+        textColor="#202020"
+      >
+        {paymentPrivacyText.map((row, rowIdx) => (
+            <View key={`row_${rowIdx}`} style={[styles.tableRow, {flexDirection: 'row'}]}>
+              {row.map((cell, cellIdx) => {
+                const isEmpty = String(cell || '').trim().length === 0;
+                return (
+                  <View
+                    key={`cell_${rowIdx}_${cellIdx}`}
+                    style={[
+                      styles.tableCell,
+                      {
+                        borderLeftWidth: 1,
+                        // keep top border on header row; otherwise hide for empty cells
+                        borderTopWidth: rowIdx === 0 ? 1 : (isEmpty ? 0 : 1),
+                        borderRightWidth: cellIdx === row.length - 1 ? 1 : 0,
+                        borderBottomWidth: rowIdx === paymentPrivacyText.length - 1 ? 1 : 0,
+                        borderColor: '#DDDDDD',
+                      },
+                    ]}
+                  >
+                    <Text style={styles.modalText}>{cell}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          ))}
+          <Text style={[styles.modalText, {marginTop: scale(10), textAlign: 'left'}]}>이용자는 개인정보 수집 및 이용에 동의하지 않을 권리가 있습니다.{'\n'}
+          단, 동의를 거부하실 경우 상품 구매 서비스 이용이 제한될 수 있습니다.</Text>
+      </CommonModal>
+      
+      <CommonModal
+        visible={thirdPartyModalVisible}
+        title="(필수) 개인정보 제 3자 정보 제공 동의"
+        content=""
+        onClose={() => setThirdPartyModalVisible(false)}
+        background="#FFFFFF"
+        textColor="#202020"
+      >
+        <View>
+          <Text>• 서비스 제공을 위해 아래의 정보가 제3자에게 제공됩니다.</Text>
+          <Text>• 이용자는 개인정보 제공에 동의하지 않을 수 있으나, 동의하지 않을 경우 일부 서비스 이용이 제한될 수 있습니다.</Text>
+        </View>
+
+        {(() => {
+          const brandList = Array.from(new Set((selectedItems || []).map((it: any) => String(it?.brand_name || '').trim()).filter(Boolean))).join(', ') || '-';
+          const thirdPartyInfoRows: string[][] = [
+            ['개인정보를 제공받는 자', brandList],
+            ['개인정보 이용 목적', '상품 배송, 반품 및 환불 처리, 고객 문의 및 불만 대응, A/S 및 혜택 제공, 상품 및 판매 관리 등'],
+            ['제공 항목', '수취인 이름, 주소, 우편번호, 휴대전화번호, 배송메모, ID(이메일)'],
+            ['보유 및 이용기간', '서비스 제공 기간 동안 보유하며, 관계 법령에 따라 보존 필요 시 또는 이용자 동의 시 해당 기간까지 보관'],
+          ];
+          return (
+            <View style={[commonStyle.mt15]}>
+              {thirdPartyInfoRows.map((row, rIdx) => (
+                <View key={`tp_row_${rIdx}`} style={[styles.tableRow, {flexDirection: 'row'}]}>
+                  {row.map((cell, cIdx) => (
+                    <View
+                      key={`tp_cell_${rIdx}_${cIdx}`}
+                      style={[
+                        styles.tableCell,
+                        {
+                          flex: cIdx === 0 ? 3 : 7,
+                          borderLeftWidth: 1,
+                          borderTopWidth: 1,
+                          borderRightWidth: cIdx === row.length - 1 ? 1 : 0,
+                          borderBottomWidth: rIdx === thirdPartyInfoRows.length - 1 ? 1 : 0,
+                          borderColor: '#DDDDDD',
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.modalText, {textAlign: cIdx === 0 ? 'center' : 'left'}]}>{cell}</Text>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
+          );
+        })()}
+      </CommonModal>
+
+      <CommonModal
+        visible={paymentTermsModalVisible}
+        title="(필수) 결제대행 서비스 이용약관 동의"
+        content=""
+        onClose={() => setPaymentTermsModalVisible(false)}
+        background="#FFFFFF"
+        textColor="#202020"
+      >
+        <Text style={{fontFamily: 'Pretendard-SemiBold', marginTop: scale(15)}}>
+          1. 전자금융거래 이용약관
+        </Text>
+        <Text>{thirdPrivacyTextFirst}</Text>
+        <Text style={{fontFamily: 'Pretendard-SemiBold', marginTop: scale(15)}}>
+          2. 개인정보 수집 및 이용 동의
+        </Text>
+        <Text style={{fontSize: scale(10), marginVertical: scale(10)}}>
+          * 개인정보 수집 및 이용에 관한 동의 사항은{'\n'}
+          개인정보의 수집·이용 목적, 수집 항목 및 방법, 그리고 보유 및 이용 기간을 각각 구분하여 명확히 안내합니다.
+        </Text>
+        {thirdPrivacyTextSecond.map((row, rowIdx) => (
+          <View key={`row_${rowIdx}`} style={[styles.tableRow, {flexDirection: 'row'}]}>
+            {row.map((cell, cellIdx) => {
+              const isEmpty = String(cell || '').trim().length === 0;
+              return (
+                <View
+                  key={`cell_${rowIdx}_${cellIdx}`}
+                  style={[
+                    styles.tableCell,
+                    {
+                      borderLeftWidth: 1,
+                      // keep top border on header row; otherwise hide for empty cells
+                      borderTopWidth: rowIdx === 0 ? 1 : (isEmpty ? 0 : 1),
+                      borderRightWidth: cellIdx === row.length - 1 ? 1 : 0,
+                      borderBottomWidth: rowIdx === thirdPrivacyTextSecond.length - 1 ? 1 : 0,
+                      borderColor: '#DDDDDD',
+                    },
+                  ]}
+                >
+                  <Text style={styles.modalText}>{cell}</Text>
+                </View>
+              );
+            })}
+          </View>
+        ))}
+        <Text style={[styles.modalText, {marginTop: scale(10), textAlign: 'left'}]}>이용자는 회사의 개인정보 수집 및 이용에 대한 동의를 거부할 수 있습니다.{'\n'}다만, 동의하지 않을 경우 결제 및 서비스 이용이 정상적으로 진행되지 않을 수 있습니다.</Text>
+        <Text style={{fontFamily: 'Pretendard-SemiBold', marginTop: scale(15)}}>
+          3. 개인정보 제3자 제공 동의
+        </Text>
+        <Text style={[styles.modalText, commonStyle.mt10, {textAlign: 'left'}]}>
+          1. 회사는 이용자의 개인정보를 본 개인정보처리방침에서 고지한 범위 내에서 사용하며, 이용자의 사전 동의 없이 본래의 목적 범위를 초과하여 처리하거나 제3자에게 제공하지 않습니다. 다만, 관련 법령에 의하거나, 수사 목적으로 법령에 정해진 절차와 방법에 따라 수사기관 등에 개인정보를 제공하여야 하는 경우는 예외로 합니다. 회사의 서비스 이행을 위하여 개인정보를 제3자에게 제공하고 있는 경우는 다음과 같습니다.
+        </Text>
+        <View style={[commonStyle.mt15]}>
+          {thirdPrivacyTextThird.map((row, rowIdx) => (
+            <View key={`row_${rowIdx}`} style={[styles.tableRow, {flexDirection: 'row'}]}>
+              {row.map((cell, cellIdx) => {
+                const isEmpty = String(cell || '').trim().length === 0;
+                return (
+                  <View
+                    key={`cell_${rowIdx}_${cellIdx}`}
+                    style={[
+                      styles.tableCell,
+                      {
+                        borderLeftWidth: 1,
+                        // keep top border on header row; otherwise hide for empty cells
+                        borderTopWidth: rowIdx === 0 ? 1 : (isEmpty ? 0 : 1),
+                        borderRightWidth: cellIdx === row.length - 1 ? 1 : 0,
+                        borderBottomWidth: rowIdx === totalRows - 1 ? 1 : 0,
+                        borderColor: '#DDDDDD',
+                      },
+                    ]}
+                  >
+                    <Text style={styles.modalText}>{cell}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          ))}
+          <Text style={[styles.modalText, {marginTop: scale(10), textAlign: 'left'}]}>2. 개인정보 처리 위탁을 하는 업무의 내용 및 수탁자{('\n')}회사는 정보주체의 개인정보가 안전하게 처리될 수 있도록 개인정보처리 수탁자를 관리,감독하고 홈페이지에 공개하고 있습니다.</Text>
+          <View style={[commonStyle.mt15]}>
+            {entrustRows.map((row, rIdx) => (
+              <View key={`entrust_row_${rIdx}`} style={[styles.tableRow, {flexDirection: 'row'}]}>
+                {row.map((cell, cIdx) => (
+                  <View
+                    key={`entrust_cell_${rIdx}_${cIdx}`}
+                    style={[
+                      styles.tableCell,
+                      {
+                        borderLeftWidth: 1,
+                        borderTopWidth: 1,
+                        borderRightWidth: cIdx === row.length - 1 ? 1 : 0,
+                        borderBottomWidth: rIdx === entrustRows.length - 1 ? 1 : 0,
+                        borderColor: '#DDDDDD',
+                      },
+                    ]}
+                  >
+                    <Text style={styles.modalText}>{cell}</Text>
+                  </View>
+                ))}
+              </View>
+            ))}
+          </View>
+        </View>
+        <Text style={[styles.modalText, {marginTop: scale(10), textAlign: 'left'}]}>3. 이용자는 회사의 개인정보 수집 및 이용에 대한 동의를 거부할 수 있습니다.{'\n'}다만, 동의하지 않을 경우 결제 및 서비스 이용이 정상적으로 진행되지 않을 수 있습니다.</Text>
+      </CommonModal>
+
+      <CommonModal
+        visible={entrancePwModalVisible}
+        title="(필수) 공동현관비밀번호 개인정보 수집ㆍ이용 동의"
+        content=""
+        onClose={() => setEntrancePwModalVisible(false)}
+        background="#FFFFFF"
+        textColor="#202020"
+      >
+        <View>
+          <Text style={[styles.modalText, {textAlign: 'left'}]}>• 이용자는 개인정보 제공에 동의하지 않을 권리가 있으며, 다만 동의하지 않을 경우 서비스 이용이 제한될 수 있습니다.</Text>
+          <Text style={[styles.modalText, {textAlign: 'left', marginTop: scale(6)}]}>• 공동현관 비밀번호는 당일 배송을 위한 목적에 한해 배송처리사에게만 제공되며, 상품 판매사에는 공유되지 않습니다.</Text>
+        </View>
+
+        {(() => {
+          const rows: string[][] = [
+            ['개인정보 이용목적', '새벽/직진 상품 배송'],
+            ['수집 항목', '공동현관 비밀번호'],
+            ['보유 및 이용 기간', '회원탈퇴 시 파기처리'],
+          ];
+          return (
+            <View style={[commonStyle.mt15]}>
+              {rows.map((row, rIdx) => (
+                <View key={`entrance_pw_row_${rIdx}`} style={[styles.tableRow, {flexDirection: 'row'}]}>
+                  {row.map((cell, cIdx) => (
+                    <View
+                      key={`entrance_pw_cell_${rIdx}_${cIdx}`}
+                      style={[
+                        styles.tableCell,
+                        {
+                          borderLeftWidth: 1,
+                          borderTopWidth: 1,
+                          borderRightWidth: cIdx === row.length - 1 ? 1 : 0,
+                          borderBottomWidth: rIdx === rows.length - 1 ? 1 : 0,
+                          borderColor: '#DDDDDD',
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.modalText, {textAlign: cIdx === 0 ? 'center' : 'left'}]}>{cell}</Text>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
+          );
+        })()}
+      </CommonModal>
       <CommonPopup
         visible={popup.visible}
         message={popup.message}
         backgroundColor="#FFFFFF"
         textColor="#202020"
         type={popup.type}
-        onConfirm={popup.onConfirm}
+        onConfirm={() => {
+          if (popup.onConfirm) {
+            popup.onConfirm();
+          }
+          try {
+            if (popup.message && popup.message.includes('결제가 완료되었습니다')) {
+              navigation.navigate('ShoppingOrderHistory' as never);
+            }
+          } catch {}
+        }}
         onCancel={popup.type === 'confirm' ? popup.onCancel : undefined}
         confirmText="확인"
         cancelText="취소"
@@ -1062,6 +1341,25 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: scale(10),
     borderBottomRightRadius: scale(10),
     overflow: 'hidden'
+  },
+  tableRow: {
+    // flexDirection: 'row',
+    // justifyContent: 'space-between',
+    width: '100%',
+  },
+  tableCell: {
+    flex: 1,
+    borderWidth: 0,
+    paddingHorizontal: scale(4),
+    paddingVertical: scale(8),
+  },
+  borderCell: {
+    borderWidth: 1,
+    borderColor: '#DDDDDD',
+  },
+  modalText: {
+    fontSize: scale(12),
+    textAlign: 'center',
   },
 });
 

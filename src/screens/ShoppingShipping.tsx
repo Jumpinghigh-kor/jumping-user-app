@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Platform, RefreshControl } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import CommonHeader from '../components/CommonHeader';
@@ -10,7 +10,8 @@ import IMAGES from '../utils/images';
 import { ScrollView } from 'react-native-gesture-handler';
 import { commonStyle, layoutStyle } from '../assets/styles/common';
 import { WebView } from 'react-native-webview';
-import { getTrackingInfo } from '../api/services/trackingService';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { axiosInstance } from '../api/config/axiosConfig';
 
 // 네비게이션 타입 정의
 type RootStackParamList = {
@@ -49,11 +50,15 @@ const ShoppingShipping = (props: any) => {
         trackingNumber = orderData?.tracking_number;
       }
 
-      const result = await getTrackingInfo(companyName, trackingNumber);
-      
-      if (result.success) {
-        setTrackingData(result.data);
-      } else if (result.isRateLimit) {
+      const response = await axiosInstance.post('delivery-tracker/getTrackingInfo', {
+        companyName,
+        trackingNumber,
+      });
+      const result = response?.data;
+
+      if (result?.success) {
+        setTrackingData(result?.data);
+      } else if (result?.isRateLimit) {
         setShowRateLimitPopup(true);
       }
     } catch (error) {
@@ -65,6 +70,9 @@ const ShoppingShipping = (props: any) => {
   useFocusEffect(() => {
     fetchTrackingInfo();
   });
+
+  // 당겨서 새로고침
+  const { refreshing, onRefresh } = usePullToRefresh(fetchTrackingInfo, []);
 
   // 프로그레스바 width 계산 함수
   const getProgressWidth = () => {
@@ -85,8 +93,11 @@ const ShoppingShipping = (props: any) => {
         return isAtDestination ? '50%' : '25%';
       case 'OUT_FOR_DELIVERY':
         return '75%';
+      case 'DELIVERED':
+        return '100%';
       default:
-        return '100%'; // 완료 상태
+        // 미정의/UNKNOWN 상태는 꽉 찬 막대를 표시하지 않음
+        return '0%';
     }
   };
   
@@ -103,8 +114,16 @@ const ShoppingShipping = (props: any) => {
       <View style={styles.container}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          alwaysBounceVertical={false}
-          bounces={false}
+          // alwaysBounceVertical={false}
+          // bounces={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#43B546"
+              colors={["#43B546"]}
+            />
+          }
         >
           <View style={styles.barContainer}>
             <View style={styles.barItem}>

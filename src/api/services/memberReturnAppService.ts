@@ -106,6 +106,20 @@ export const updateMemberReturnAppCancelYn = async (params: {
   }
 };
 
+// 회원 반품/취소 접수 취소 API
+export const updateMemberReturnAppApprovalYn = async (params: {
+  order_detail_app_ids: number[];
+  mem_id: number;
+  approval_yn: string;
+}): Promise<MemberReturnResponse> => {
+  try {
+    const response = await axiosInstance.post('/member-return-app/updateMemberReturnAppApprovalYn', params);
+    return response.data;
+  } catch (error: any) {
+    throw error;
+  }
+};
+
 // 회원 반품/교환 업데이트 API (취소접수 상태 해제 등)
 export const updateMemberReturnApp = async (params: {
   order_detail_app_ids: number[];

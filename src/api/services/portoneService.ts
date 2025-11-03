@@ -68,6 +68,6 @@ export const verifyPayment = async (data: VerifyPaymentRequest): Promise<Payment
 
 // 결제 취소
 export const cancelPayment = async (data: CancelPaymentRequest): Promise<PaymentVerificationResponse> => {
-  const response = await axiosInstance.post('/portone/cancel', data);
+  const response = await axiosInstance.post('/portone/refund', data);
   return response.data;
 }; 

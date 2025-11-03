@@ -23,17 +23,19 @@ import { commonStyle, layoutStyle } from '../assets/styles/common';
 import { createModalPanResponder } from '../utils/commonFunction';
 import ReturnImgPicker from '../components/ReturnImgPicker';
 import { Asset } from 'react-native-image-picker';
-import { getMemberReturnAppList, updateMemberReturnApp, updateMemberReturnAppCancelYn } from '../api/services/memberReturnAppService';
+import { getMemberReturnAppList, updateMemberReturnApp, updateMemberReturnAppCancelYn, updateMemberReturnAppApprovalYn } from '../api/services/memberReturnAppService';
 import { getTargetMemberShippingAddress, ShippingAddressItem, updateSelectYn } from '../api/services/memberShippingAddressService';
 import { insertMemberReturnApp } from '../api/services/memberReturnAppService';
 import { updateOrderStatus, insertMemberOrderDetailApp, updateOrderQuantity, getMemberOrderAppList } from '../api/services/memberOrderAppService';
-import { insertMemberOrderAddress, deleteMemberOrderAddress, updateMemberOrderAddress, updateOrderDetailAppId } from '../api/services/memberOrderAddressService';
+import { insertMemberOrderAddress, deleteMemberOrderAddress, updateMemberOrderAddress, updateOrderDetailAppId, updateMemberOrderAddressUseYn } from '../api/services/memberOrderAddressService';
 import { getReturnExchangePolicyList, ReturnExchangePolicy } from '../api/services/returnExchangePolicyService';
+// import Portone from '../components/Portone';
 import CommonPopup from '../components/CommonPopup';
 import CustomToast from '../components/CustomToast';
 import ShoppingThumbnailImg from '../components/ShoppingThumbnailImg';
-import { isCJRemoteArea, CJ_REMOTE_AREA_SHIPPING_FEE } from '../constants/postCodeData';
+import { isCJRemoteArea } from '../constants/postCodeData';
 import CommonModal from '../components/CommonModal';
+import { insertMemberPaymentApp } from '../api/services/memberPaymentAppService';
 
 // 네비게이션 타입 정의
 type RootStackParamList = {
@@ -81,6 +83,9 @@ const ShoppingReturn = ({route}: any) => {
   const [requestConfirmVisible, setRequestConfirmVisible] = useState(false);
   const [returnPolicies, setReturnPolicies] = useState<ReturnExchangePolicy[]>([]);
   const [originalTotalQty, setOriginalTotalQty] = useState<number | undefined>(undefined);
+  const [portoneVisible, setPortoneVisible] = useState(false);
+  const [portonePaymentData, setPortonePaymentData] = useState<any | null>(null);
+  const isEtcReason = (selectedReason === '기타') || /ETC/i.test(String(selectedCommonCode || ''));
 
   // 뒤로가기 처리 함수
   const handleBackPress = async () => {
@@ -135,7 +140,7 @@ const ShoppingReturn = ({route}: any) => {
         try {
           const response = await getCommonCodeList({ group_code: 'RETURN_REASON_TYPE' });
           if (response.success && response.data) {
-            setReturnReasons(response.data.filter((item: any) => item.common_code !== 'QUANTITY_REASON'));
+            setReturnReasons(response.data.filter((item: any) => item.common_code !== 'QUANTITY_REASON' && item.common_code !== 'QUANTITY_SHORTAGE'));
           }
         } catch (error) {
           console.error('반품 사유 API 에러:', error);
@@ -147,7 +152,7 @@ const ShoppingReturn = ({route}: any) => {
           const list = (exRes?.success && Array.isArray(exRes.data) && exRes.data.length > 0)
             ? exRes.data
             : ((await getCommonCodeList({ group_code: 'RETURN_REASON_TYPE' }))?.data || []);
-          setReturnReasons(Array.isArray(list) ? list.filter((it: any) => it?.common_code !== 'QUANTITY_REASON') : []);
+          setReturnReasons(Array.isArray(list) ? list.filter((it: any) => it?.common_code !== 'QUANTITY_REASON' && it?.common_code !== 'QUANTITY_SHORTAGE') : []);
         } catch (error) {
           setReturnReasons([]);
         }
@@ -229,11 +234,20 @@ const ShoppingReturn = ({route}: any) => {
       return;
     }
 
-    // 교환 사유 상세 입력 필수
+    // 교환: 상세 사유 입력 필수
     if (selectedType === 'exchange') {
       const reasonText = (customReason || '').trim();
       if (!reasonText) {
         showPopup('교환 사유를 입력해주세요.', 'warning');
+        return;
+      }
+    }
+
+    // 반품: 기타 사유 선택 시 상세 사유 입력 필수
+    if (selectedType === 'return' && isEtcReason) {
+      const reasonText = (customReason || '').trim();
+      if (!reasonText) {
+        showPopup('상세 사유를 입력해주세요.', 'warning');
         return;
       }
     }
@@ -316,6 +330,18 @@ const ShoppingReturn = ({route}: any) => {
         delivery_request: shippingAddress?.delivery_request,
       } as any);
       orderAddressIdToUse = Number((insertAddrRes && (insertAddrRes.data?.order_address_id ?? insertAddrRes.order_address_id)) || undefined);
+
+      // 기존 주문 배송지 use_yn = 'N' 처리 (있을 경우)
+      try {
+        const prevOrderAddressId = Number((item as any)?.order_address_id);
+        if (Number.isFinite(prevOrderAddressId) && prevOrderAddressId > 0) {
+          await updateMemberOrderAddressUseYn({
+            order_address_id: prevOrderAddressId,
+            mem_id: Number(memberInfo?.mem_id),
+            use_yn: 'N',
+          } as any);
+        }
+      } catch (e) {}
     
       // 최신 반품/교환 데이터 확인 후 분기 (기록이 하나라도 있으면 업데이트 경로)
       let hasAnyReturnRecord = false;
@@ -329,6 +355,12 @@ const ShoppingReturn = ({route}: any) => {
 
       let response;
       if (hasAnyReturnRecord) {
+        // 반품/교환 접수 취소: approval_yn = null
+        await updateMemberReturnAppApprovalYn({
+          order_detail_app_ids: [Number(item?.order_detail_app_id)],
+          mem_id: Number(memberInfo?.mem_id),
+          approval_yn: (null as unknown) as any,
+        } as any);
         // 취소 접수 해제: cancel_yn = 'N'
         await updateMemberReturnAppCancelYn({
           order_detail_app_ids: [Number(item?.order_detail_app_id)],
@@ -377,6 +409,16 @@ const ShoppingReturn = ({route}: any) => {
       setIsSubmitting(false);
     }
   };
+
+  const getPrepayAmount = useCallback(() => {
+    const base = Number(item?.return_delivery_fee ?? 0) * (selectedType === 'exchange' ? 2 : 1);
+    const remoteUnit = Number(item?.remote_delivery_fee ?? 0);
+    const remote = (shippingAddress?.zip_code && isCJRemoteArea(shippingAddress.zip_code))
+      ? remoteUnit * (selectedType === 'exchange' ? 2 : 1)
+      : 0;
+    const total = Math.max(0, Number(base) + Number(remote));
+    return total;
+  }, [item?.return_delivery_fee, item?.remote_delivery_fee, selectedType, shippingAddress?.zip_code]);
   console.log('item', item);
   return (
     <>
@@ -543,7 +585,7 @@ const ShoppingReturn = ({route}: any) => {
                     
                     <TextInput
                       style={styles.customReasonInput}
-                      placeholder="사유를 입력해주세요(선택)"
+                      placeholder={`사유를 입력해주세요${isEtcReason ? '(필수)' : '(선택)'}`}
                       placeholderTextColor="#848484"
                       value={customReason}
                       onChangeText={setCustomReason}
@@ -587,7 +629,7 @@ const ShoppingReturn = ({route}: any) => {
 
                     <TextInput
                       style={styles.customReasonInput}
-                      placeholder={'교환 사유를 입력해주세요 (예: 사이즈 M→L, 색상 변경, 불량 위치, 구성품 누락)'}
+                      placeholder={isEtcReason ? '교환 사유를 입력해주세요 (필수)' : '교환 사유를 입력해주세요 (예: 사이즈 M→L, 색상 변경, 불량 위치, 구성품 누락)'}
                       placeholderTextColor="#848484"
                       value={customReason}
                       onChangeText={setCustomReason}
@@ -703,7 +745,7 @@ const ShoppingReturn = ({route}: any) => {
                 {shippingAddress?.zip_code && isCJRemoteArea(shippingAddress.zip_code) && (
                   <View style={[layoutStyle.rowBetween, {marginBottom: scale(10)}]}>
                     <Text style={styles.refundText}>도서산간 배송비</Text>
-                    <Text style={styles.refundText}>{Number(CJ_REMOTE_AREA_SHIPPING_FEE * (selectedType === 'return' ? 1 : 2)).toLocaleString()}원</Text>
+                    <Text style={styles.refundText}>{Number((item?.remote_delivery_fee || 0) * (selectedType === 'return' ? 1 : 2)).toLocaleString()}원</Text>
                   </View>
                 )}
               </View>
@@ -737,9 +779,23 @@ const ShoppingReturn = ({route}: any) => {
 
               <View style={styles.requestContainer}>
                 <TouchableOpacity 
-                  style={[styles.requestBtn, isSubmitting && styles.disabledBtn]} 
+                  style={[
+                    styles.requestBtn,
+                    (isSubmitting
+                      || ((selectedType === 'return' || selectedType === 'exchange') && !selectedReason)
+                      || (selectedType === 'exchange' && !(customReason || '').trim())
+                      || (selectedType === 'return' && isEtcReason && !(customReason || '').trim())
+                      || !shippingAddress
+                    ) && styles.disabledBtn
+                  ]}
                   onPress={() => setRequestConfirmVisible(true)}
-                  disabled={isSubmitting}
+                  disabled={
+                    isSubmitting
+                    || ((selectedType === 'return' || selectedType === 'exchange') && !selectedReason)
+                    || (selectedType === 'exchange' && !(customReason || '').trim())
+                    || (selectedType === 'return' && isEtcReason && !(customReason || '').trim())
+                    || !shippingAddress
+                  }
                 >
                   {isSubmitting ? (
                     <ActivityIndicator size="small" color="#FFFFFF" />
@@ -764,10 +820,30 @@ const ShoppingReturn = ({route}: any) => {
         backgroundColor="#FFFFFF"
         textColor="#202020"
         visible={requestConfirmVisible}
-        message={`${selectedType === 'return' ? '반품' : '교환'}을 신청하시겠습니까?`}
+        message={`선결제 금액은 ${getPrepayAmount().toLocaleString()}원입니다.\n${selectedType === 'return' ? '반품' : '교환'}을 신청하시겠습니까?`}
         onConfirm={async () => {
-          setRequestConfirmVisible(false);
-          await handleReturnRequest();
+          try {
+            setRequestConfirmVisible(false);
+            const amount = getPrepayAmount();
+            const merchantOrderId = `${selectedType}_prepay_${Number(item?.order_detail_app_id)}_${Date.now()}`;
+            const impUid = `test_imp_${Date.now()}`;
+            // 테스트: 결제창 생략하고 결제 저장만 수행 (ShoppingPayment.tsx 형식과 동일 필드 포함)
+            await insertMemberPaymentApp({
+              order_app_id: Number(item?.order_app_id) as any,
+              mem_id: Number(memberInfo?.mem_id),
+              payment_status: 'PAYMENT_COMPLETE' as any,
+              payment_type: 'DELIVERY_FEE' as any,
+              payment_method: 'card',
+              payment_amount: amount,
+              portone_imp_uid: impUid,
+              portone_merchant_uid: merchantOrderId,
+              portone_status: 'SUCCESS',
+              card_name: 'TEST_CARD',
+            } as any);
+            await handleReturnRequest();
+          } catch (e) {
+            showToast('결제 처리 중 오류가 발생했습니다.', 'error');
+          }
         }}
         onCancel={() => setRequestConfirmVisible(false)}
         confirmText="확인"
@@ -810,6 +886,42 @@ const ShoppingReturn = ({route}: any) => {
           </Text>
         )}
       </CommonModal>
+
+      {/* <Modal
+        visible={portoneVisible}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent
+        onRequestClose={() => {
+          setPortoneVisible(false);
+          setPortonePaymentData(null);
+        }}
+      >
+        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+          <Portone
+            visible={true}
+            paymentData={portonePaymentData || { amount: 0, currency: 'KRW', merchantOrderId: '', customerName: '', customerEmail: '', customerPhone: '' }}
+            onPaymentSuccess={async () => {
+              try {
+                await handleReturnRequest();
+              } finally {
+                setPortoneVisible(false);
+                setPortonePaymentData(null);
+              }
+            }}
+            onPaymentFailure={() => {
+              setPortoneVisible(false);
+              setPortonePaymentData(null);
+              showToast('결제가 실패했습니다. 다시 시도해주세요.', 'error');
+            }}
+            onCancel={() => {
+              setPortoneVisible(false);
+              setPortonePaymentData(null);
+              showToast('결제를 취소했습니다.', 'error');
+            }}
+          />
+        </View>
+      </Modal> */}
     </>
   );
 };
@@ -1046,7 +1158,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   disabledBtn: {
-    opacity: 0.6,
+    backgroundColor: '#848484',
   },
   customReasonInput: {
     marginTop: scale(10),

@@ -7,6 +7,7 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import IMAGES from '../utils/images';
@@ -16,6 +17,7 @@ import { scale } from '../utils/responsive';
 import { getMemberPointAppList, MemberPointApp } from '../api/services/memberPointAppService';
 import { commonStyle, layoutStyle } from '../assets/styles/common';
 import { useAuth } from '../hooks/useAuth';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 
 const ShoppingPoint = () => {
@@ -80,6 +82,25 @@ const ShoppingPoint = () => {
       loadMemberInfo();
     }, [])
   );
+
+  // 당겨서 새로고침 (로딩 오버레이 없이 목록만 갱신)
+  const refreshPoints = React.useCallback(async () => {
+    if (!memberInfo?.mem_id) return;
+    try {
+      const yearMonth = formatYearMonth(currentDate);
+      const response = await getMemberPointAppList({ 
+        mem_id: memberInfo.mem_id,
+        reg_ym: yearMonth
+      });
+      if (response.success) {
+        setPointList(response.data);
+      }
+    } catch (error) {
+      // ignore
+    }
+  }, [memberInfo?.mem_id, currentDate]);
+
+  const { refreshing, onRefresh } = usePullToRefresh(refreshPoints, [memberInfo?.mem_id, currentDate]);
   
   return (
     <>
@@ -103,7 +124,21 @@ const ShoppingPoint = () => {
             <Image source={IMAGES.icons.arrowRightGray} style={styles.dateButtonIcon} />
           </TouchableOpacity>
         </View>
-        <ScrollView style={styles.pointList}>
+        <ScrollView
+          style={styles.pointList}
+          scrollEnabled={true}
+          alwaysBounceVertical={true}
+          bounces={true}
+          refreshControl={
+            <RefreshControl
+              refreshing={!!refreshing}
+              onRefresh={onRefresh}
+              tintColor="#40B649"
+              colors={["#40B649"]}
+              progressBackgroundColor="#FFFFFF"
+            />
+          }
+        >
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#40B649" />
@@ -113,7 +148,13 @@ const ShoppingPoint = () => {
               <View key={index} style={styles.pointItem}>
                 <View>
                   <Text style={styles.brandNameText}>{item.brand_name}</Text>
-                  <Text style={styles.pointItemText}>{item.product_name} {item.option_amount}{item.option_unit} {item.option_gender ? item.option_gender === 'M' ? '남성 ' : '여성 ' : ''}{item.order_quantity}개</Text>
+                  <Text
+                    style={styles.pointItemText}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {item.product_name}{item.option_amount ? ' ' + item.option_amount : ''}{item.option_unit !== 'NONE_UNIT' ? item.option_unit : ''}{item.option_gender ? item.option_gender === 'M' ? ' 남성 ' : item.option_gender === 'W' ? ' 여성 ' : ' 공용 ' : ''}{item.order_quantity}개
+                  </Text>
                   <Text style={styles.regDtText}>{item.reg_dt}</Text>
                 </View>
                 <View style={[layoutStyle.alignEnd]}>
@@ -200,6 +241,7 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     color: '#202020',
     marginVertical: scale(2),
+    maxWidth: '80%',
   },
   regDtText: {
     fontSize: scale(12),
