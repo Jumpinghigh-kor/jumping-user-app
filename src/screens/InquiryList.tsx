@@ -735,6 +735,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D9D9D9',
     maxHeight: scale(200),
+    marginTop: -scale(5),
   },
   typeDropdownItem: {
     paddingVertical: scale(12),

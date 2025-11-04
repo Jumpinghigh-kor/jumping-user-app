@@ -33,6 +33,7 @@ const InquiryAppDetail = () => {
   const route = useRoute<InquiryAppDetailRouteProp>();
   const inquiry = route.params.inquiry as Inquiry;
   const memberInfo = useAppSelector(state => state.member.memberInfo);
+  const isAnswered = !!inquiry?.answer;
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [inquiryType, setInquiryType] = useState('선택');
@@ -243,8 +244,13 @@ const InquiryAppDetail = () => {
         <View style={styles.inputContainer}>
           <Text style={styles.label}>문의 유형<Text style={{color: '#FF0000'}}> *</Text></Text>
           <TouchableOpacity 
-            style={[styles.typeSelectorContainer, {borderBottomWidth: showTypeSelector ? 0 : 1, borderBottomLeftRadius : showTypeSelector ? 0 : 8, borderBottomRightRadius: showTypeSelector ? 0 : 8}]}
+            style={[
+              styles.typeSelectorContainer,
+              {borderBottomWidth: showTypeSelector ? 0 : 1, borderBottomLeftRadius : showTypeSelector ? 0 : 8, borderBottomRightRadius: showTypeSelector ? 0 : 8},
+              isAnswered && styles.disabledOpacity
+            ]}
             onPress={() => setShowTypeSelector(!showTypeSelector)}
+            disabled={isAnswered}
           >
             <Text style={styles.typeSelectorText}>{getTypeLabel(inquiryType)}</Text>
             <Image 
@@ -253,7 +259,7 @@ const InquiryAppDetail = () => {
             />
           </TouchableOpacity>
           
-          {showTypeSelector && (
+          {showTypeSelector && !isAnswered && (
             <View style={styles.typeDropdown}>
               {inquiryTypes.map((type, index) => (
                 <TouchableOpacity
@@ -285,7 +291,7 @@ const InquiryAppDetail = () => {
             <Text style={styles.label}>문의 제목<Text style={{color: '#FF0000'}}> *</Text></Text>
             <Text style={styles.dateText}>{formatDateYYYYMMDDHHII(inquiry.reg_dt)}</Text>
           </View>
-          <View style={styles.titleInputContainer}>
+          <View style={[styles.titleInputContainer, isAnswered && styles.disabledOpacity]}>
             <TextInput
               style={styles.titleInput}
               value={title}
@@ -293,6 +299,7 @@ const InquiryAppDetail = () => {
               placeholder="제목을 입력해주세요 (20자 이내)"
               placeholderTextColor="#717171"
               maxLength={MAX_TITLE_LENGTH}
+              editable={!isAnswered}
             />
             <Text style={styles.titleCounter}>
               <Text style={{color: '#4C78E0'}}>{title.length}</Text> / {MAX_TITLE_LENGTH}
@@ -303,7 +310,7 @@ const InquiryAppDetail = () => {
         <View style={styles.inputContainer}>
           <Text style={styles.label}>문의 내용<Text style={{color: '#FF0000'}}> *</Text></Text>
           <TextInput
-            style={styles.contentInput}
+            style={[styles.contentInput, isAnswered && styles.disabledOpacity]}
             value={content}
             onChangeText={(text) => {
               if (text.length <= MAX_CONTENT_LENGTH) {
@@ -315,6 +322,7 @@ const InquiryAppDetail = () => {
             multiline
             textAlignVertical="top"
             maxLength={MAX_CONTENT_LENGTH}
+            editable={!isAnswered}
           />
           <Text style={styles.counter}>
             <Text style={{color: '#4C78E0'}}>{content.length}</Text> / {MAX_CONTENT_LENGTH}
@@ -684,6 +692,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D9D9D9',
     maxHeight: scale(200),
+    marginTop: -scale(5),
   },
   typeDropdownItem: {
     paddingVertical: scale(12),
@@ -707,6 +716,9 @@ const styles = StyleSheet.create({
   typeDropdownTextSelected: {
     fontWeight: 'bold',
     color: '#43B546',
+  },
+  disabledOpacity: {
+    opacity: 0.5,
   },
 });
 
