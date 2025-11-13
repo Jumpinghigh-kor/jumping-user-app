@@ -301,7 +301,7 @@ const CustomPurchaseModal = ({ visible, onClose, product }) => {
                             onPress={() => handleOptionSelect(option)}
                           >
                             <Text style={styles.optionText}>
-                              {option.product_name} {option.option_gender && (option.option_gender === 'W' ? '여성' : option.option_gender === 'M' ? '남성' : '공용')} {option.option_unit !== 'NONE_UNIT' ? option.option_amount : ''} {option.option_unit !== 'NONE_UNIT' ? displayUnit(option.option_unit) : ''}
+                              {option.product_name} {option.option_gender && (option.option_gender === 'W' ? '여성' : option.option_gender === 'M' ? '남자' : option.option_gender === 'A' ? '공용' : '')} {option.option_unit !== 'NONE_UNIT' ? option.option_amount : ''} {option.option_unit !== 'NONE_UNIT' ? displayUnit(option.option_unit) : ''}
                             </Text>
                           </TouchableOpacity>
                         ))
@@ -323,7 +323,7 @@ const CustomPurchaseModal = ({ visible, onClose, product }) => {
                       <View style={styles.selectedProductBox}>
                         <View style={styles.selectedProductInfo}>
                           <Text style={styles.selectedProductText}>
-                            {selectedOption.product_name} {selectedOption.option_gender ? (selectedOption.option_gender === 'W' ? '여성' : selectedOption.option_gender === 'M' ? '남성' : '공용') : ''} {selectedOption.option_unit !== 'NONE_UNIT' ? selectedOption.option_amount : ''} {selectedOption.option_unit !== 'NONE_UNIT' ? displayUnit(selectedOption.option_unit) : ''}
+                            {selectedOption.product_name} {selectedOption.option_gender ? (selectedOption.option_gender === 'W' ? '여성' : selectedOption.option_gender === 'M' ? '남성' : selectedOption.option_gender === 'A' ? '공용' : '') : ''} {selectedOption.option_unit !== 'NONE_UNIT' ? selectedOption.option_amount : ''} {selectedOption.option_unit !== 'NONE_UNIT' ? displayUnit(selectedOption.option_unit) : ''}
                           </Text>
                         </View>
                         <TouchableOpacity 

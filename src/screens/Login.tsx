@@ -130,8 +130,7 @@ const Login = () => {
           });
         }
       } else {
-        console.error(response);
-        const message = response?.data?.message || '로그인에 실패했습니다.';
+        const message = response?.message || '로그인에 실패했습니다.';
         setError(message);
         setErrorPopup(true);
       }

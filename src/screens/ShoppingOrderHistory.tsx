@@ -845,7 +845,7 @@ const ShoppingOrderHistory = () => {
                                     <View style={[layoutStyle.rowStart, {alignItems: 'center'}]}>
                                       <Text style={styles.productTitle} numberOfLines={2} ellipsizeMode="tail">{gi.product_title}</Text>
                                     </View>
-                                    <Text style={styles.productInfo}>{gi.option_amount ? gi.option_amount : ''}{gi.option_unit !== 'NONE_UNIT' ? displayUnit(gi.option_unit) + ' ' : ''}{gi.option_gender ? (gi.option_gender == 'W' ? '여성' : gi.option_gender == 'M' ? '남성' : '공용') : ''} / {gi.order_quantity}개</Text>
+                                    <Text style={styles.productInfo}>{gi.option_amount ? gi.option_amount : ''}{gi.option_unit !== 'NONE_UNIT' ? displayUnit(gi.option_unit) + ' ' : ''}{gi.option_gender ? (gi.option_gender == 'W' ? '여성' : gi.option_gender == 'M' ? '남성' : gi.option_gender == 'A' ? '공용' : '') : ''} / {gi.order_quantity}개</Text>
                                   </View>
                                 </TouchableOpacity>
                                 </View>

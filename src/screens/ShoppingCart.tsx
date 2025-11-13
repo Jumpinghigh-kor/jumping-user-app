@@ -40,6 +40,7 @@ const ShoppingCart = () => {
   const { popup, showWarningPopup, showConfirmPopup } = usePopup();
   const { loadMemberInfo } = useAuth();
 
+  
   const fetchCartList = async () => {
     try {
       const response = await getMemberCartAppList({
@@ -81,14 +82,27 @@ const ShoppingCart = () => {
     }
   }, [selectedItems, cartList]);
 
-  // 상품별로 그룹화
-  const groupedByProductId = cartList.reduce((acc, item) => {
-    if (!acc[item.product_app_id]) {
-      acc[item.product_app_id] = [];
+  // 브랜드별로 그룹화 (같은 브랜드끼리는 나누지 않음)
+  const groupedByBrand = cartList.reduce((acc, item) => {
+    const brandKey = String(item?.brand_name ?? '기타');
+    if (!acc[brandKey]) {
+      acc[brandKey] = [];
     }
-    acc[item.product_app_id].push(item);
+    acc[brandKey].push(item);
     return acc;
-  }, {} as Record<string | number, any[]>);
+  }, {} as Record<string, any[]>);
+
+  const toggleSelectBrandGroup = (brandName: string) => {
+    try {
+      const groupItems = cartList.filter(it => String(it?.brand_name) === String(brandName) && it?.product_quantity !== 0);
+      const areAllSelected = groupItems.length > 0 && groupItems.every(it => selectedItems[it.cart_app_id]);
+      const next = { ...selectedItems };
+      groupItems.forEach(it => {
+        next[it.cart_app_id] = !areAllSelected;
+      });
+      setSelectedItems(next);
+    } catch {}
+  };
 
   // x아이콘 버튼 삭제
   const handleDeletePress = (productAppId) => {
@@ -213,7 +227,7 @@ const ShoppingCart = () => {
       fetchCartList();
     }
   };
-
+  
   const displayUnit = (unit: any) => {
     try {
       const u = String(unit ?? '');
@@ -244,12 +258,12 @@ const ShoppingCart = () => {
             <View style={[layoutStyle.rowBetween, commonStyle.ph16, commonStyle.mt15, commonStyle.pb25, {borderBottomWidth: 2, borderBottomColor: '#EEEEEE'}]}>
               <View style={[layoutStyle.rowStart]}>
                 <TouchableOpacity 
-                  style={[commonStyle.mr10]} 
+                  style={[commonStyle.mr10, layoutStyle.rowStart]} 
                   onPress={() => toggleSelectAll(cartList, selectedItems, setSelectedItems, setAllSelected)}
                 >
                   <Image source={allSelected ? IMAGES.icons.checkboxGreen : IMAGES.icons.checkboxGray} style={styles.allCheckIcon} />
+                  <Text style={styles.allCheckText}>전체 선택 ({getSelectedCount(cartList, selectedItems)}/{getTotalUniqueProductCount(cartList)})</Text>
                 </TouchableOpacity>
-                <Text style={styles.allCheckText}>전체 선택 ({getSelectedCount(cartList, selectedItems)}/{getTotalUniqueProductCount(cartList)})</Text>
               </View>
               <TouchableOpacity onPress={handleSelectDeletePress}>
                 <Text style={styles.allDeleteText}>선택삭제</Text>
@@ -258,34 +272,37 @@ const ShoppingCart = () => {
             <ScrollView
               showsVerticalScrollIndicator={false}
             >
-              {Object.entries(groupedByProductId).map(([productAppId, items]) => {
-                const item = items[0];
-                const isProductGroupSelected = (items as any[])
+              {Object.entries(groupedByBrand).map(([brandKey, items]) => {
+                const item = (items as any[])[0];
+                const isBrandGroupSelected = (items as any[])
                   .filter(cartItem => cartItem?.product_quantity !== 0)
                   .every(cartItem => selectedItems[cartItem.cart_app_id]);
                 
                 return (
                   <View
-                    key={`product-${productAppId}`}
+                    key={`brand-${brandKey}`}
                     style={[commonStyle.pv25, {borderBottomWidth: 5, borderBottomColor: '#EEEEEE', position: 'relative'}]}
                   >
                     <View style={[layoutStyle.rowBetween, commonStyle.ph16]}>
                       <View style={[layoutStyle.rowStart, commonStyle.mb10]}>
                         <TouchableOpacity 
                           style={[commonStyle.mr10]} 
-                          onPress={() => toggleSelectProductGroup(productAppId, cartList, selectedItems, setSelectedItems)}
+                          onPress={() => toggleSelectBrandGroup(String(brandKey))}
                         >
                           <Image 
-                            source={isProductGroupSelected ? IMAGES.icons.checkboxGreen : IMAGES.icons.checkboxGray} 
+                            source={isBrandGroupSelected ? IMAGES.icons.checkboxGreen : IMAGES.icons.checkboxGray} 
                             style={styles.allCheckIcon} 
                           />
                         </TouchableOpacity>
-                        <Text style={styles.brandName}>{item?.brand_name}</Text>
+                        <Text style={styles.brandName}>{String(brandKey)}</Text>
                       </View>
                     </View>
                     
                     {/* 각 항목별 옵션과 수량 UI - 개별적으로 표시 */}
                     {(items as any[]).map((cartItem, index) => {
+                      const optionsForProduct = (productDetailData[cartItem.product_app_id] as any[]) || [];
+                      const validOptions = optionsForProduct.filter(opt => opt && opt.quantity > 0);
+                      const isDropdownOpen = !!(showOptions[cartItem.cart_app_id] && validOptions.length > 1);
                       return (
                         <View key={cartItem.cart_app_id}>
                           {/* 각 카트 아이템마다 썸네일과 제목 표시 */}
@@ -306,7 +323,7 @@ const ShoppingCart = () => {
                                 />
                               </TouchableOpacity>
                               <TouchableOpacity
-                                onPress={() => navigation.navigate('ShoppingDetail' as never, { productParams: cartItem } as never)}
+                                onPress={() => (navigation as any).navigate('ShoppingDetail', { productParams: cartItem })}
                               >
                                 <ShoppingThumbnailImg 
                                   productAppId={cartItem.product_app_id}
@@ -319,7 +336,7 @@ const ShoppingCart = () => {
                             </View>
                             <TouchableOpacity
                               style={{marginLeft: scale(10), width: '55%'}}
-                              onPress={() => navigation.navigate('ShoppingDetail' as never, { productParams: cartItem } as never)}
+                              onPress={() => (navigation as any).navigate('ShoppingDetail', { productParams: cartItem })}
                             >
                               <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">{cartItem.title}</Text>
                             </TouchableOpacity>
@@ -335,12 +352,12 @@ const ShoppingCart = () => {
                                 style={[
                                   styles.selectBox,
                                   {
-                                    borderRadius: showOptions[cartItem.cart_app_id] ? 0 : scale(10),
+                                    borderRadius: isDropdownOpen ? 0 : scale(10),
                                     borderTopLeftRadius: scale(10),
                                     borderTopRightRadius: scale(10),
-                                    borderBottomLeftRadius: showOptions[cartItem.cart_app_id] ? 0 : scale(10),
-                                    borderBottomRightRadius: showOptions[cartItem.cart_app_id] ? 0 : scale(10),
-                                    borderBottomWidth: showOptions[cartItem.cart_app_id] ? 0 : 1,
+                                    borderBottomLeftRadius: isDropdownOpen ? 0 : scale(10),
+                                    borderBottomRightRadius: isDropdownOpen ? 0 : scale(10),
+                                    borderBottomWidth: isDropdownOpen ? 0 : 1,
                                     backgroundColor: cartItem?.product_quantity === 0 ? '#EEEEEE' : '#FFFFFF'
                                   }
                                 ]}
@@ -353,10 +370,10 @@ const ShoppingCart = () => {
                                 }}
                               >
                                 <Text style={styles.selectBoxText}>
-                                  {selectedOptions[cartItem.cart_app_id]?.option_gender && (selectedOptions[cartItem.cart_app_id]?.option_gender === 'W' ? '여성' : selectedOptions[cartItem.cart_app_id]?.option_gender === 'M' ? '남성' : '공용')} {selectedOptions[cartItem.cart_app_id]?.option_unit !== 'NONE_UNIT' ? selectedOptions[cartItem.cart_app_id]?.option_amount : ''} {selectedOptions[cartItem.cart_app_id]?.option_unit !== 'NONE_UNIT' ? displayUnit(selectedOptions[cartItem.cart_app_id]?.option_unit) : ''}
+                                  {selectedOptions[cartItem.cart_app_id]?.option_gender && (selectedOptions[cartItem.cart_app_id]?.option_gender === 'W' ? '여성' : selectedOptions[cartItem.cart_app_id]?.option_gender === 'M' ? '남성' : selectedOptions[cartItem.cart_app_id]?.option_gender === 'A' ? '공용' : '')} {selectedOptions[cartItem.cart_app_id]?.option_unit !== 'NONE_UNIT' ? selectedOptions[cartItem.cart_app_id]?.option_amount : ''}{selectedOptions[cartItem.cart_app_id]?.option_unit !== 'NONE_UNIT' ? displayUnit(selectedOptions[cartItem.cart_app_id]?.option_unit) : ''}
                                 </Text>
                                 <Image 
-                                  source={showOptions[cartItem.cart_app_id] ? IMAGES.icons.arrowUpGray : IMAGES.icons.arrowDownGray} 
+                                  source={showOptions[cartItem.cart_app_id] && validOptions.length > 1 ? IMAGES.icons.arrowUpGray : IMAGES.icons.arrowDownGray} 
                                   style={styles.arrowDownIcon} 
                                 />
                               </TouchableOpacity>
@@ -367,7 +384,7 @@ const ShoppingCart = () => {
                           </View>
                           
                           {/* Move options dropdown outside the selectContainer */}
-                          {showOptions[cartItem.cart_app_id] && (
+                          {showOptions[cartItem.cart_app_id] && validOptions.length > 1 && (
                             <View style={[
                               commonStyle.ph16,
                               {
@@ -390,13 +407,13 @@ const ShoppingCart = () => {
                                   style={{maxHeight: scale(150)}}
                                   nestedScrollEnabled={true}
                                 >
-                                  {(productDetailData[cartItem.product_app_id] as any[])?.length > 0 && (
-                                    (productDetailData[cartItem.product_app_id] as any[]).map((option, index) => (
+                                  {validOptions.length > 0 && (
+                                    validOptions.map((option, index) => (
                                       <TouchableOpacity 
                                         key={option.product_detail_app_id}
                                         style={[
                                           styles.optionItem,
-                                          index === productDetailData[cartItem.product_app_id].length - 1 && { borderBottomWidth: 0 },
+                                          index === validOptions.length - 1 && { borderBottomWidth: 0 },
                                           option.quantity === 0 && { backgroundColor: '#EEEEEE' }
                                         ]}
                                         disabled={option.quantity === 0}
@@ -419,7 +436,7 @@ const ShoppingCart = () => {
                                         }}
                                       >
                                         <Text style={styles.optionText}>
-                                          {option?.option_gender && (option?.option_gender === 'W' ? '여성' : '남성')} {option?.option_amount}{displayUnit(option?.option_unit)}
+                                          {option?.option_gender && (option?.option_gender === 'W' ? '여성' : option?.option_gender === 'M' ? '남성' : option?.option_gender === 'A' ? '공용' : '')} {option?.option_amount}{displayUnit(option?.option_unit)}
                                         </Text>
                                       </TouchableOpacity>
                                     ))
@@ -499,6 +516,23 @@ const ShoppingCart = () => {
                     return acc + discountAmount;
                   }, 0)).toLocaleString()}원</Text>
                 </View>
+                <View style={[layoutStyle.rowBetween, commonStyle.pt10]}>
+                  <Text style={styles.priceTitle}>배송비</Text>
+                  <Text style={styles.priceText}>
+                    {(() => {
+                      const s = cartList.filter(it => selectedItems[it.cart_app_id]);
+                      const num = (v: any) => Number(String(v ?? 0).replace(/[^0-9]/g, '')) || 0;
+                      const base = s.reduce((acc, it: any) => acc + (num(it?.price) * Number(it?.quantity || 0)), 0);
+                      const threshold = s.reduce((m, it: any) => Math.max(m, num(it?.free_shipping_amount)), 0);
+                      if (threshold > 0 && base >= threshold) {
+                        return '무료배송';
+                      }
+                      const maxN = s.reduce((m, it) => String((it as any)?.consignment_yn) === 'N' ? Math.max(m, num((it as any)?.delivery_fee)) : m, 0);
+                      const maxAny = maxN || s.reduce((m, it) => Math.max(m, num((it as any)?.delivery_fee)), 0);
+                      return `${maxAny.toLocaleString()}원`;
+                    })()}
+                  </Text>
+                </View>
                 <View style={styles.itemDivider} />
                 <View style={[layoutStyle.rowBetween]}>
                   <Text style={styles.priceTitle}>총 결제금액</Text>
@@ -509,7 +543,7 @@ const ShoppingCart = () => {
               <TouchableOpacity
                 style={[styles.paymentButton, layoutStyle.rowCenter, {backgroundColor: !getSelectedCount(cartList, selectedItems) ? '#CBCBCB' : '#40B649'}]} 
                 disabled={!getSelectedCount(cartList, selectedItems)}
-                onPress={() => navigation.navigate('ShoppingPayment', {
+                onPress={() => (navigation as any).navigate('ShoppingPayment', {
                   selectedItems: cartList.filter(item => selectedItems[item.cart_app_id])
                 })}
               >
@@ -553,6 +587,7 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     fontFamily: 'Pretendard-Medium',
     color: '#202020',
+    marginLeft: scale(10),
   },
   allDeleteText: {
     fontSize: scale(14),

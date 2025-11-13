@@ -567,7 +567,7 @@ const ShoppingDetail = ({route, navigation}) => {
                     `
                   }}
                   style={{ 
-                    height: showMoreDetailImages ? Math.max(webViewHeight, screenHeight) : scale(400), 
+                    height: showMoreDetailImages ? webViewHeight : scale(400), 
                     width: '100%' 
                   }}
                   javaScriptEnabled={true}
@@ -1000,12 +1000,20 @@ const ShoppingDetail = ({route, navigation}) => {
               <Text style={styles.deliveryTitle}>배송</Text>
               <View>
                 <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                  <Text style={styles.deliveryText}>{productDetailData[0]?.delivery_fee}원</Text>
-                  {(productDetailData[0]?.free_shipping_amount && productDetailData[0]?.free_shipping_amount !== "0") && <Text>({productDetailData[0]?.free_shipping_amount}원 이상 구매 시 무료배송)</Text>}
+                  <Text style={styles.deliveryText}>
+                    {parseInt(productDetailData[0]?.delivery_fee?.toString().replace(/,/g, '') || '0') === 0
+                      ? '무료배송'
+                      : `${productDetailData[0]?.delivery_fee}원`}
+                  </Text>
+                  {parseInt(productDetailData[0]?.free_shipping_amount?.toString().replace(/,/g, '') || '0') > 0 && (
+                    <Text>({productDetailData[0]?.free_shipping_amount}원 이상 구매 시 무료배송)</Text>
+                  )}
                 </View>
-                <View>
-                  <Text style={{fontSize: scale(12), color: '#848484', fontFamily: 'Pretendard-Regular'}}>제주 및 도서지역 추가 {parseInt(productDetailData[0]?.remote_delivery_fee?.toString().replace(/,/g, '') || '0').toLocaleString()}원</Text>
-                </View>
+                {parseInt(productDetailData[0]?.remote_delivery_fee?.toString().replace(/,/g, '') || '0') > 0 && (
+                  <View>
+                    <Text style={{fontSize: scale(12), color: '#848484', fontFamily: 'Pretendard-Regular'}}>제주 및 도서지역 추가 {parseInt(productDetailData[0]?.remote_delivery_fee?.toString().replace(/,/g, '') || '0').toLocaleString()}원</Text>
+                  </View>
+                )}
                 <Text style={styles.deliveryDate}>
                   {productDetailData[0]?.today_send_yn === 'Y' ? (
                     <Text style={{fontWeight: '500'}}>오늘 {productDetailData[0]?.today_send_time}까지 결제 시 당일 발송</Text>

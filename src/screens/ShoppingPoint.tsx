@@ -164,7 +164,7 @@ const ShoppingPoint = () => {
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
-                    {item.product_name}{item.option_amount ? ' ' + item.option_amount : ''}{item.option_unit !== 'NONE_UNIT' ? displayUnit(item.option_unit) : ''}{item.option_gender ? item.option_gender === 'M' ? ' 남성 ' : item.option_gender === 'W' ? ' 여성 ' : ' 공용 ' : ''}{item.order_quantity}개
+                    {item.product_name}{item.option_amount ? ' ' + item.option_amount : ''}{item.option_unit !== 'NONE_UNIT' ? displayUnit(item.option_unit) : ''}{item.option_gender ? item.option_gender === 'M' ? ' 남성 ' : item.option_gender === 'W' ? ' 여성 ' : item.option_gender === 'A' ? ' 공용 ' : ' ' : ''}{item.order_quantity}개
                   </Text>
                   <Text style={styles.regDtText}>{item.reg_dt}</Text>
                 </View>

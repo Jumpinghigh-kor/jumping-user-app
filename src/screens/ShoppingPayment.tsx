@@ -157,36 +157,109 @@ const ShoppingPayment = () => {
 
   // 총 주문 금액 계산
   const getTotalAmount = () => {
-    return selectedItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+    try {
+      return (selectedItems || []).reduce((sum: number, it: any) => {
+        const original = parseInt(String(it?.original_price ?? '0').replace(/,/g, ''), 10) || 0;
+        const qty = Number(it?.quantity || 0);
+        return sum + (original * qty);
+      }, 0);
+    } catch {
+      return 0;
+    }
+  };
+
+  // 장바구니와 동일 정책: consignment_yn === 'N' 중 최대 배송비, 없으면 전체 중 최대
+  const getMaxDeliveryFee = () => {
+    try {
+      const toNum = (v: any) => Number(String(v ?? 0).replace(/[^0-9]/g, '')) || 0;
+      return (selectedItems || [])
+        .filter((it: any) => String(it?.consignment_yn) === 'N')
+        .reduce((max: number, it: any) => {
+          const fee = toNum(it?.delivery_fee);
+          return fee > max ? fee : max;
+        }, 0);
+    } catch {
+      return 0;
+    }
+  };
+
+  // 도서산간 추가 배송비 (consignment_yn === 'N' 중 최대)
+  const getMaxRemoteDeliveryFee = () => {
+    try {
+      const toNum = (v: any) => Number(String(v ?? 0).replace(/[^0-9]/g, '')) || 0;
+      return (selectedItems || [])
+        .filter((it: any) => String(it?.consignment_yn) === 'N')
+        .reduce((max: number, it: any) => {
+          const fee = toNum(it?.remote_delivery_fee);
+          return fee > max ? fee : max;
+        }, 0);
+    } catch {
+      return 0;
+    }
+  };
+
+  // 상품 할인(선할인) 표시에 사용할 price 총합
+  const getTotalPriceSum = () => {
+    try {
+      return (selectedItems || []).reduce((sum: number, it: any) => {
+        const price = parseInt(String(it?.price ?? '0').replace(/,/g, ''), 10) || 0;
+        const qty = Number(it?.quantity || 0);
+        return sum + (price * qty);
+      }, 0);
+    } catch {
+      return 0;
+    }
+  };
+
+  // 쿠폰 할인 금액: 특정 상품 쿠폰이면 해당 상품 price 합만, 전체 쿠폰이면 전체 price 합에서 계산
+  const getCouponDiscountAmount = () => {
+    try {
+      if (!selectedCoupon) return 0;
+      const toNum = (v: any) => parseInt(String(v ?? '0').replace(/,/g, ''), 10) || 0;
+      const targetProductId = Number(selectedCoupon?.product_app_id || 0);
+      const base = (selectedItems || [])
+        .filter((it: any) => !targetProductId || Number(it?.product_app_id) === targetProductId)
+        .reduce((sum: number, it: any) => sum + (toNum(it?.price) * Number(it?.quantity || 0)), 0);
+      const discType = String(selectedCoupon?.discount_type || '').toUpperCase();
+      const discAmt = Number(selectedCoupon?.discount_amount || 0);
+      let discount = 0;
+      if (discType === 'PERCENT') {
+        discount = Math.floor(base * (discAmt / 100));
+      } else {
+        discount = Math.min(base, discAmt);
+      }
+      return Math.max(0, discount);
+    } catch {
+      return 0;
+    }
+  };
+
+  // 선택된 상품들 중 무료배송 기준의 최대값
+  const getMaxFreeShippingThreshold = () => {
+    try {
+      const toNum = (v: any) => Number(String(v ?? 0).replace(/[^0-9]/g, '')) || 0;
+      return (selectedItems || []).reduce((max: number, it: any) => {
+        const th = toNum(it?.free_shipping_amount);
+        return th > max ? th : max;
+      }, 0);
+    } catch {
+      return 0;
+    }
   };
 
   // 최종 결제 금액 계산 (쿠폰, 포인트 할인 적용)
   const getFinalPaymentAmount = () => {
-    let totalAmount = getTotalAmount(); // 상품금액
-    
-    // 쿠폰 할인 적용 (상품금액에만)
-    if (selectedCoupon) {
-      if (selectedCoupon.discount_type === 'PERCENT') {
-        totalAmount = totalAmount - (totalAmount * selectedCoupon.discount_amount / 100);
-      } else {
-        totalAmount = totalAmount - selectedCoupon.discount_amount;
-      }
+    try {
+      const pointVal = parseInt(String(pointInput || '0').replace(/[^0-9]/g, ''), 10) || 0;
+      const couponVal = getCouponDiscountAmount();
+      const base = Math.max(0, getTotalPriceSum() - pointVal - couponVal);
+      const threshold = getMaxFreeShippingThreshold();
+      const shippingFee = (threshold > 0 && base >= threshold) ? 0 : getMaxDeliveryFee();
+      const remoteFee = (selectedAddress?.zip_code && isCJRemoteArea(selectedAddress.zip_code)) ? getMaxRemoteDeliveryFee() : 0;
+      return Math.max(0, base + shippingFee + remoteFee);
+    } catch {
+      return 0;
     }
-    
-    // 배송비 추가 (10만원 이상 무료배송)
-    const shippingFee = getTotalAmount() >= parseInt(selectedItems[0]?.free_shipping_amount?.toString().replace(/,/g, '') || '0') ? 0 : parseInt(selectedItems[0]?.delivery_fee?.toString().replace(/,/g, '') || '0');
-    totalAmount = totalAmount + shippingFee;
-    
-    // 포인트 할인 적용
-    if (pointInput) {
-      totalAmount = totalAmount - parseInt(pointInput);
-    }
-
-    if (selectedAddress?.zip_code && isCJRemoteArea(selectedAddress.zip_code)) {
-      totalAmount = totalAmount + parseInt(selectedItems[0]?.remote_delivery_fee?.toString().replace(/,/g, '') || '0');
-    }
-    
-    return Math.max(0, totalAmount); // 음수 방지
   };
 
   const displayUnit = (unit: any) => {
@@ -356,7 +429,7 @@ const ShoppingPayment = () => {
       setShowPortone(false);
       setSuccessPopupVisible(true);
     } catch (error: any) {
-      const errMsg = error?.response?.data?.message || error?.message || 'Unknown error';
+      const errMsg = error?.response?.message || error?.message || 'Unknown error';
       console.error('결제 처리 실패:', errMsg);
       setShowPortone(false);
       showWarningPopup('결제 처리 중 오류가 발생했습니다.\n고객센터에 문의해주세요');
@@ -589,7 +662,7 @@ const ShoppingPayment = () => {
                       </View>
                       <View style={styles.optionContainer}>
                           <Text style={styles.optionText}>
-                          {item.product_name} {item.option_gender && (item.option_gender === 'W' ? '여성' : '남성')} {item.option_amount ? ' ' + item.option_amount : ''}{item.option_unit !== 'NONE_UNIT' ? displayUnit(item.option_unit) : ''} 수량 {item.quantity}개
+                          {item.product_name} {item.option_gender && (item.option_gender === 'W' ? '여성' : item.option_gender === 'M' ? '남성' : item.option_gender === 'A' ? '공용' : '')} {item.option_amount}{item.option_unit !== 'NONE_UNIT' ? displayUnit(item.option_unit) + ' ' : ''}수량 {item.quantity}개
                         </Text>
                       </View>
                     </View>
@@ -634,7 +707,10 @@ const ShoppingPayment = () => {
                     {couponList.map((item, index) => {
                       const totalAmount = getTotalAmount();
                       const minOrderAmount = item.min_order_amount || 0;
-                      const isUsable = totalAmount >= minOrderAmount;
+                      const isUsableByAmount = totalAmount >= minOrderAmount;
+                      const targetProductId = Number(item?.product_app_id || 0);
+                      const hasTargetProduct = targetProductId === 0 || (selectedItems || []).some((si: any) => Number(si?.product_app_id) === targetProductId);
+                      const isUsable = isUsableByAmount && hasTargetProduct;
                       
                       return (
                         <TouchableOpacity 
@@ -657,13 +733,18 @@ const ShoppingPayment = () => {
                         }}
                         disabled={!isUsable}
                         >
-                          <View>
+                          <View style={[layoutStyle.rowStart]}>
                             <Text numberOfLines={1} style={[styles.requestText]}>
                               {item.discount_amount}{item.discount_type === 'PERCENT' ? '%' : '원'} 할인 {item.description}
                             </Text>
-                            {!isUsable && (
-                              <Text style={[styles.requestText, {color: '#FF0000', fontSize: scale(10), fontFamily: 'Pretendard-Regular', marginTop: scale(2)}]}>
+                            {!isUsableByAmount && (
+                              <Text style={[styles.requestText, commonStyle.ml5, {color: '#FF0000', fontSize: scale(10), fontFamily: 'Pretendard-Regular', marginTop: scale(2)}]}>
                                 {minOrderAmount.toLocaleString()}원 이상 사용 가능
+                              </Text>
+                            )}
+                            {isUsableByAmount && !hasTargetProduct && (
+                              <Text style={[styles.requestText, commonStyle.ml5, {color: '#FF0000', fontSize: scale(10), fontFamily: 'Pretendard-Regular', marginTop: scale(2)}]}>
+                                해당 상품에 적용 불가
                               </Text>
                             )}
                           </View>
@@ -713,68 +794,78 @@ const ShoppingPayment = () => {
           </View>
           
           <View style={styles.paymentContainer}>
-            <Text style={styles.paymentTitle}>결제 금액</Text>
-              <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
-                <Text style={styles.amountLabel}>상품 금액</Text>
-                <Text style={styles.deliveryFee}>{selectedItems.reduce((acc, item) => acc + (parseInt(item.original_price?.toString().replace(/,/g, '')) * item.quantity), 0).toLocaleString()} 원</Text>
-              </View>
-            {!!selectedItems[0]?.discount && (
-              <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
-                <Text style={styles.amountLabel}>상품 할인
-                  <Text style={{fontSize: scale(10), color: '#F04D4D', fontFamily: 'Pretendard-Regular'}}> (선할인)</Text></Text>
-                <Text style={styles.deliveryFee}>
-                  -{
-                    Math.floor(
-                      (parseInt((selectedItems[0]?.original_price || '0').toString().replace(/,/g, ''), 10) || 0)
-                      * ((Number(selectedItems[0]?.discount) || 0) / 100) * selectedItems[0]?.quantity
-                    ).toLocaleString()
-                  } 원
-                </Text>
-              </View>
-            )}
+            <Text style={styles.paymentTitle}>예상 결제금액</Text>
+            <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
+              <Text style={styles.amountLabel}>총 상품금액</Text>
+              <Text style={styles.deliveryFee}>{getTotalAmount().toLocaleString()} 원</Text>
+            </View>
+            <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
+              <Text style={styles.amountLabel}>상품 할인
+                <Text style={{fontSize: scale(10), color: '#F04D4D', fontFamily: 'Pretendard-Regular'}}> 선할인</Text>
+              </Text>
+              <Text style={styles.deliveryFee}>{getTotalPriceSum().toLocaleString()} 원</Text>
+            </View>
             {selectedCoupon && (
               <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
                 <Text style={styles.amountLabel}>쿠폰 할인</Text>
-                <Text style={styles.deliveryFee}>{selectedCoupon?.discount_type === 'PERCENT' ? '-' + ((selectedItems[0]?.price) * (selectedCoupon.discount_amount / 100)).toLocaleString() : '-' + selectedCoupon.discount_amount.toLocaleString()} 원</Text>
+                <Text style={styles.deliveryFee}>{getCouponDiscountAmount() > 0 ? `-${getCouponDiscountAmount().toLocaleString()} 원` : '0 원'}</Text>
               </View>
             )}
-            {pointInput && (
+            {(() => {
+              const v = parseInt(String(pointInput || '0').replace(/[^0-9]/g, ''), 10) || 0;
+              if (v <= 0) return null;
+              return (
+                <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
+                  <Text style={styles.amountLabel}>포인트 할인</Text>
+                  <Text style={styles.deliveryFee}>-{v.toLocaleString()} 원</Text>
+                </View>
+              );
+            })()}
+            {selectedAddress?.zip_code && isCJRemoteArea(selectedAddress.zip_code) && getMaxRemoteDeliveryFee() > 0 && (
               <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
-                <Text style={styles.amountLabel}>포인트</Text>
-                <Text style={styles.deliveryFee}>-{parseInt(pointInput).toLocaleString()} 원</Text>
+                <Text style={styles.amountLabel}>도서산간 배송비</Text>
+                <Text style={styles.deliveryFee}>{getMaxRemoteDeliveryFee().toLocaleString()} 원</Text>
               </View>
             )}
             <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
               <Text style={styles.amountLabel}>배송비</Text>
-              <Text style={styles.deliveryFee}>{getTotalAmount() >= parseInt(selectedItems[0]?.free_shipping_amount?.toString().replace(/,/g, '') || '0') ? '무료' : `${selectedItems[0]?.delivery_fee} 원`}</Text>
+              <Text style={styles.deliveryFee}>
+                {(() => {
+                  const pointVal = parseInt(String(pointInput || '0').replace(/[^0-9]/g, ''), 10) || 0;
+                  const couponVal = getCouponDiscountAmount();
+                  const base = Math.max(0, getTotalPriceSum() - pointVal - couponVal);
+                  const threshold = getMaxFreeShippingThreshold();
+                  if (threshold > 0 && base >= threshold) {
+                    return '무료배송';
+                  }
+                  const fee = getMaxDeliveryFee();
+                  return fee > 0 ? `${fee.toLocaleString()} 원` : '무료배송';
+                })()}
+              </Text>
             </View>
-            {selectedAddress?.zip_code && isCJRemoteArea(selectedAddress.zip_code) && (
-              <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
-                <Text style={styles.amountLabel}>도서산간 배송비</Text>
-                <Text style={styles.deliveryFee}>{parseInt(selectedItems[0]?.remote_delivery_fee?.toString().replace(/,/g, '') || '0').toLocaleString()}원</Text>
-              </View>
-            )}
-            <View style={[layoutStyle.rowBetween, commonStyle.mt20]}>
-              <Text style={styles.amountLabel}>총 결제 금액</Text>
+            <View style={styles.summaryDivider} />
+            <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
+              <Text style={styles.amountLabel}>총 {selectedItems.length}개 주문금액</Text>
               <Text style={styles.amountValue}>{getFinalPaymentAmount().toLocaleString()}원</Text>
             </View>
           </View>
 
           <View style={styles.agreeContainer}>
-            <View style={[layoutStyle.rowStart]}>
-              <TouchableOpacity onPress={() => {
-                toggleCheckbox(isAgreedToOrder, setIsAgreedToOrder);
-                // 주문 동의 시 필수 3개 항목도 함께 토글
-                const newState = !isAgreedToOrder;
-                setIsAgreedToPrivacy(newState);
-                setIsAgreedToThirdParty(newState);
-                setIsAgreedToPayment(newState);
-                setIsAgreedToEntrancePw(newState);
-              }}>
-                <Image source={isAgreedToOrder ? IMAGES.icons.checkboxGreen : IMAGES.icons.checkboxGray} style={styles.checkIcon} />
-              </TouchableOpacity>
-              <Text style={styles.agreeBtnText}>주문내용 확인 및 결제 동의</Text>
-            </View>
+            <TouchableOpacity
+              style={[layoutStyle.rowStart]}
+              onPress={() => {
+              toggleCheckbox(isAgreedToOrder, setIsAgreedToOrder);
+              // 주문 동의 시 필수 3개 항목도 함께 토글
+              const newState = !isAgreedToOrder;
+              setIsAgreedToPrivacy(newState);
+              setIsAgreedToThirdParty(newState);
+              setIsAgreedToPayment(newState);
+              setIsAgreedToEntrancePw(newState);
+            }}>
+              <Image source={isAgreedToOrder ? IMAGES.icons.checkboxGreen : IMAGES.icons.checkboxGray} style={styles.checkIcon} />
+              <Text style={[styles.agreeBtnText]}>주문내용 확인 및 결제 동의</Text>
+            </TouchableOpacity>
+
             <View style={[layoutStyle.rowStart, commonStyle.mt15]}>
                 <TouchableOpacity onPress={() => toggleCheckbox(isAgreedToPrivacy, setIsAgreedToPrivacy)}>
                   <Image source={isAgreedToPrivacy ? IMAGES.icons.checkGreen : IMAGES.icons.checkGray} style={styles.checkIcon} />
@@ -830,7 +921,7 @@ const ShoppingPayment = () => {
           disabled={!isAgreedToOrder || !isAgreedToPrivacy || !isAgreedToThirdParty || !isAgreedToPayment}
           onPress={handlePayment}
         >
-          <Text style={styles.paymentButtonText}>{getFinalPaymentAmount().toLocaleString()}원 결제하기</Text>
+          <Text style={styles.paymentButtonText}>결제하기</Text>
         </TouchableOpacity>
       </View>
 
@@ -962,7 +1053,7 @@ const ShoppingPayment = () => {
                     },
                   ]}
                 >
-                  <Text style={styles.modalText, {fontFamily: 'Pretendard-Regular'}}>{cell}</Text>
+                    <Text style={[styles.modalText, {fontFamily: 'Pretendard-Regular'}]}>{cell}</Text>
                 </View>
               );
             })}
@@ -1308,7 +1399,7 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: scale(14),
-    fontFamily: 'Pretendard-Regular',
+    fontFamily: 'Pretendard-Medium',
     color: '#848484'
   },
   amountValue: {
@@ -1318,8 +1409,14 @@ const styles = StyleSheet.create({
   },
   deliveryFee: {
     fontSize: scale(16),
-    fontFamily: 'Pretendard-Regular',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020'
+  },
+  summaryDivider: {
+    height: scale(1),
+    backgroundColor: '#EEEEEE',
+    marginTop: scale(20),
+    marginHorizontal: -scale(16),
   },
   agreeContainer: {
     padding: scale(16),
