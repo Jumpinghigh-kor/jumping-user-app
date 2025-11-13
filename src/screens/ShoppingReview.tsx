@@ -153,6 +153,9 @@ const ShoppingReview: React.FC = () => {
     displayedItems: displayedWrite,
     loadingMore: loadingMoreWrite,
     handleLoadMore: handleLoadMoreWrite,
+    footerStyle: footerStyleWrite,
+    contentContainerStyleEnhancer: contentContainerStyleWrite,
+    handleScroll: handleScrollWrite,
   } = useInfiniteScroll<MemberOrderAppItem>({
     items: memberOrderAppList,
     pageSize: 5,
@@ -164,6 +167,9 @@ const ShoppingReview: React.FC = () => {
     displayedItems: displayedReview,
     loadingMore: loadingMoreReview,
     handleLoadMore: handleLoadMoreReview,
+    footerStyle: footerStyleReview,
+    contentContainerStyleEnhancer: contentContainerStyleReview,
+    handleScroll: handleScrollReview,
   } = useInfiniteScroll<Review>({
     items: memberReviewAppList,
     pageSize: 5,
@@ -214,20 +220,34 @@ const ShoppingReview: React.FC = () => {
         <View style={styles.contentContainer}>
           {activeTab === 'write' ? (
             <View style={styles.writeReviewContainer}>
-              {loading ? (
-                <ActivityIndicator size="large" color="#43B546" style={styles.loader} />
-              ) : !memberOrderAppList || memberOrderAppList.length === 0 ? (
-                <View style={styles.emptyContainer}>
+              {!memberOrderAppList || memberOrderAppList.length === 0 ? (
+                <ScrollView
+                  contentContainerStyle={styles.emptyContainer}
+                  showsVerticalScrollIndicator={false}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={refreshingWrite}
+                      onRefresh={onRefreshWrite}
+                      tintColor="#43B546"
+                      colors={["#43B546"]}
+                      progressBackgroundColor="#FFFFFF"
+                    />
+                  }
+                >
                   <Image source={IMAGES.icons.reviewGray} style={styles.emptyIcon} />
                   <Text style={styles.emptyText}>리뷰할 상품이 없어요</Text>
-                </View>
+                </ScrollView>
               ) : (
                 <FlatList
                   data={displayedWrite}
                   keyExtractor={(item, index) => `${item.product_app_id}`}
+                  contentContainerStyle={contentContainerStyleWrite}
                   showsVerticalScrollIndicator={false}
                   bounces={true}
                   alwaysBounceVertical={true}
+                  ListFooterComponentStyle={footerStyleWrite}
+                  onScroll={handleScrollWrite}
+                  scrollEventThrottle={16}
                   refreshControl={
                     <RefreshControl
                       refreshing={refreshingWrite}
@@ -267,10 +287,12 @@ const ShoppingReview: React.FC = () => {
                   onEndReachedThreshold={0.2}
                   onEndReached={() => handleLoadMoreWrite()}
                   ListFooterComponent={
-                    (loadingMoreWrite && (displayedWrite.length < (memberOrderAppList?.length || 0))) ? (
-                      <View style={styles.loadMoreContainer}>
+                    (displayedWrite.length < (memberOrderAppList?.length || 0)) ? (
+                      loadingMoreWrite ? (
                         <ActivityIndicator size="small" color="#43B546" />
-                      </View>
+                      ) : (
+                        <View />
+                      )
                     ) : null
                   }
                 />
@@ -278,20 +300,34 @@ const ShoppingReview: React.FC = () => {
             </View>
           ) : (
             <View style={styles.reviewListContainer}>
-              {loading ? (
-                <ActivityIndicator size="large" color="#43B546" style={styles.loader} />
-              ) : !memberReviewAppList || memberReviewAppList.length === 0 ? (
-                <View style={styles.emptyContainer}>
+              {memberReviewAppList || memberReviewAppList.length === 0 ? (
+                <ScrollView
+                  contentContainerStyle={styles.emptyContainer}
+                  showsVerticalScrollIndicator={false}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={refreshingReview}
+                      onRefresh={onRefreshReview}
+                      tintColor="#43B546"
+                      colors={["#43B546"]}
+                      progressBackgroundColor="#FFFFFF"
+                    />
+                  }
+               >
                   <Image source={IMAGES.icons.reviewGray} style={styles.emptyIcon} />
                   <Text style={styles.emptyText}>내가 쓴 리뷰가 없어요</Text>
-                </View>
+                </ScrollView>
               ) : (
                 <FlatList
                   data={displayedReview}
                   keyExtractor={(item) => item.review_app_id.toString()}
+                  contentContainerStyle={contentContainerStyleReview}
                   showsVerticalScrollIndicator={false}
                   bounces={true}
                   alwaysBounceVertical={true}
+                  ListFooterComponentStyle={footerStyleReview}
+                  onScroll={handleScrollReview}
+                  scrollEventThrottle={16}
                   refreshControl={
                     <RefreshControl
                       refreshing={refreshingReview}
@@ -351,10 +387,12 @@ const ShoppingReview: React.FC = () => {
                   onEndReachedThreshold={0.2}
                   onEndReached={() => handleLoadMoreReview()}
                   ListFooterComponent={
-                    (loadingMoreReview && (displayedReview.length < (memberReviewAppList?.length || 0))) ? (
-                      <View style={styles.loadMoreContainer}>
+                    (displayedReview.length < (memberReviewAppList?.length || 0)) ? (
+                      loadingMoreReview ? (
                         <ActivityIndicator size="small" color="#43B546" />
-                      </View>
+                      ) : (
+                        <View />
+                      )
                     ) : null
                   }
                 />
@@ -399,11 +437,12 @@ const styles = StyleSheet.create({
   },
   tabButtonText: {
     fontSize: scale(16),
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
   },
   activeTabButtonText: {
     color: '#202020',
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     fontSize: scale(16),
   },
   loader: {
@@ -427,7 +466,7 @@ const styles = StyleSheet.create({
   },
   reviewTitle: {
     fontSize: scale(16),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
   },
   reviewContent: {
@@ -450,21 +489,24 @@ const styles = StyleSheet.create({
   },
   reviewDate: {
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
     color: '#D9D9D9',
     marginLeft: scale(4),
   },
   productName: {
     fontSize: scale(12),
     color: '#202020',
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
   },
   productTitle: {
     fontSize: scale(12),
     color: '#202020',
+    fontFamily: 'Pretendard-Regular',
   },
   productInfo: {
     fontSize: scale(12),
     color: '#848484',
+    fontFamily: 'Pretendard-Regular',
   },
   editBtn: {
     backgroundColor: '#202020',
@@ -474,6 +516,7 @@ const styles = StyleSheet.create({
   },
   editBtnText: {
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
     color: '#FFFFFF',
   },
   emptyContainer: {
@@ -489,7 +532,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: scale(16),
     color: '#CBCBCB',
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginTop: scale(10),
   },
   orderItem: {
@@ -503,6 +546,7 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     color: '#202020',
     marginBottom: scale(12),
+    fontFamily: 'Pretendard-Regular',
   },
   writeReviewBtn: {
     borderColor: '#43B546',
@@ -515,12 +559,13 @@ const styles = StyleSheet.create({
   writeReviewBtnText: {
     fontSize: scale(12),
     color: '#43B546',
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
   },
   adminText: {
     fontSize: scale(12),
     color: '#848484',
     marginTop: scale(10),
+    fontFamily: 'Pretendard-Regular',
   },
   loadMoreContainer: {
     paddingVertical: scale(12),

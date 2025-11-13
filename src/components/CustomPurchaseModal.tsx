@@ -213,6 +213,17 @@ const CustomPurchaseModal = ({ visible, onClose, product }) => {
     setShowPopup(false);
   };
 
+  const displayUnit = (unit: any) => {
+    try {
+      const u = String(unit ?? '');
+      if (!u || u === 'NONE_UNIT') return '';
+      if (u.startsWith('SIZE_')) return u.replace(/^SIZE_/, '');
+      return u;
+    } catch {
+      return String(unit ?? '');
+    }
+  };
+
   return (
     <>
       <Modal
@@ -290,7 +301,7 @@ const CustomPurchaseModal = ({ visible, onClose, product }) => {
                             onPress={() => handleOptionSelect(option)}
                           >
                             <Text style={styles.optionText}>
-                              {option.product_name} {option.option_gender && (option.option_gender === 'W' ? '여성' : '남성')} {option.option_amount} {option.option_unit}
+                              {option.product_name} {option.option_gender && (option.option_gender === 'W' ? '여성' : option.option_gender === 'M' ? '남성' : '공용')} {option.option_unit !== 'NONE_UNIT' ? option.option_amount : ''} {option.option_unit !== 'NONE_UNIT' ? displayUnit(option.option_unit) : ''}
                             </Text>
                           </TouchableOpacity>
                         ))
@@ -312,7 +323,7 @@ const CustomPurchaseModal = ({ visible, onClose, product }) => {
                       <View style={styles.selectedProductBox}>
                         <View style={styles.selectedProductInfo}>
                           <Text style={styles.selectedProductText}>
-                            {selectedOption.product_name} {selectedOption.option_gender ? (selectedOption.option_gender === 'W' ? '여성' : '남성') : ''} {selectedOption.option_amount} {selectedOption.option_unit}
+                            {selectedOption.product_name} {selectedOption.option_gender ? (selectedOption.option_gender === 'W' ? '여성' : selectedOption.option_gender === 'M' ? '남성' : '공용') : ''} {selectedOption.option_unit !== 'NONE_UNIT' ? selectedOption.option_amount : ''} {selectedOption.option_unit !== 'NONE_UNIT' ? displayUnit(selectedOption.option_unit) : ''}
                           </Text>
                         </View>
                         <TouchableOpacity 
@@ -508,19 +519,6 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 10,
   },
-  productInfoContainer: {
-    marginBottom: scale(20),
-  },
-  productName: {
-    fontSize: scale(16),
-    marginBottom: scale(10),
-    color: '#202020',
-  },
-  productPrice: {
-    fontSize: scale(18),
-    fontWeight: 'bold',
-    color: '#202020',
-  },
   priceContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -544,19 +542,19 @@ const styles = StyleSheet.create({
   confirmButton: {
     backgroundColor: '#43B546',
     borderRadius: scale(30),
-    paddingVertical: scale(15),
+    paddingVertical: scale(14),
     alignItems: 'center',
     width: '48%',
   },
   confirmButtonText: {
     color: '#FFFFFF',
     fontSize: scale(16),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   cartButton: {
     backgroundColor: '#D9D9D9',
     borderRadius: scale(30),
-    paddingVertical: scale(15),
+    paddingVertical: scale(14),
     alignItems: 'center',
     width: '48%',
   },
@@ -566,7 +564,7 @@ const styles = StyleSheet.create({
   cartButtonText: {
     color: '#71717',
     fontSize: scale(16),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   selectBox: {
     flexDirection: 'row',
@@ -577,8 +575,9 @@ const styles = StyleSheet.create({
     padding: scale(10),
   },
   selectBoxText: {
-    fontSize: scale(14),
+    fontSize: scale(12),
     color: '#717171',
+    fontFamily: 'Pretendard-Regular',
   },
   arrowDownIcon: {
     width: scale(16),
@@ -599,7 +598,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#EEEEEE',
   },
   optionText: {
-    fontSize: scale(14),
+    fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
   },
   noOptionsContainer: {
@@ -607,7 +607,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   noOptionsText: {
-    fontSize: scale(14),
+    fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
     color: '#848484',
   },
   selectedProductContainer: {
@@ -625,9 +626,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   selectedProductText: {
-    fontSize: scale(14),
+    fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
-    fontWeight: '500',
   },
   removeButton: {
     padding: scale(5),
@@ -652,7 +653,8 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   quantityText: {
-    fontSize: scale(14),
+    fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
     marginHorizontal: scale(10),
     textAlign: 'center',
@@ -664,14 +666,14 @@ const styles = StyleSheet.create({
     minWidth: scale(45),
   },
   priceText: {
-    fontSize: scale(14),
+    fontSize: scale(12),
     color: '#848484',
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   totalPriceText: {
-    fontSize: scale(16),
+    fontSize: scale(14),
+    fontFamily: 'Pretendard-Medium',
     color: '#848484',
-    fontWeight: '500',
   },
 });
 

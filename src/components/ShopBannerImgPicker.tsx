@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   pageIndicatorText: {
     color: '#FFFFFF',
     fontSize: scale(10),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   arrowIcon: {
     width: scale(7),
@@ -245,6 +245,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: scale(14),
     textAlign: 'center',
+    fontFamily: 'Pretendard-Medium',
   },
   loadingContainer: {
     width: '100%',

@@ -7,6 +7,8 @@ interface UseInfiniteScrollOptions<T> {
   resetDeps?: any[];
   nearEndPadding?: number; // px
   delayMs?: number; // show spinner briefly
+  footerPaddingVertical?: number; // px for ListFooterComponentStyle to show spinner fully on Android
+  contentPaddingBottom?: number; // extra bottom padding for contentContainerStyle
 }
 
 export function useInfiniteScroll<T>({
@@ -16,6 +18,8 @@ export function useInfiniteScroll<T>({
   resetDeps = [],
   nearEndPadding = 50,
   delayMs = 400,
+  footerPaddingVertical = 12,
+  contentPaddingBottom,
 }: UseInfiniteScrollOptions<T>) {
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -47,7 +51,10 @@ export function useInfiniteScroll<T>({
     } catch {}
   }, [nearEndPadding, handleLoadMore]);
 
-  return { page, loadingMore, displayedItems, handleLoadMore, handleScroll, setPage } as const;
+  const footerStyle = { paddingVertical: footerPaddingVertical, minHeight: 36, alignItems: 'center', justifyContent: 'center' } as const;
+  const contentContainerStyleEnhancer = { paddingBottom: contentPaddingBottom ?? footerPaddingVertical } as const;
+
+  return { page, loadingMore, displayedItems, handleLoadMore, handleScroll, setPage, footerStyle, contentContainerStyleEnhancer } as const;
 }
 
 

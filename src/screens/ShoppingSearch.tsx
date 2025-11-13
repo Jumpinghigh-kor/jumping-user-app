@@ -502,6 +502,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
     color: '#333',
     padding: 0,
   },
@@ -515,10 +516,12 @@ const styles = StyleSheet.create({
   searchHeaderTitle: {
     fontSize: scale(12),
     color: '#848484',
+    fontFamily: 'Pretendard-Regular',
   },
   clearText: {
     fontSize: scale(12),
     color: '#848484',
+    fontFamily: 'Pretendard-Regular',
   },
   searchItem: {
     flexDirection: 'row',
@@ -533,6 +536,7 @@ const styles = StyleSheet.create({
   searchItemText: {
     fontSize: scale(16),
     color: '#333',
+    fontFamily: 'Pretendard-Regular',
   },
   deleteButton: {
     padding: scale(4),
@@ -550,12 +554,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: scale(16),
     color: '#CBCBCB',
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginTop: scale(10),
   },
   closeText: {
     color: '#333',
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
   },
   deleteIcon: {
     width: scale(10),
@@ -574,6 +579,7 @@ const styles = StyleSheet.create({
   },
   filterText: {
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
     color: '#848484',
   },
   filterIcon: {
@@ -597,6 +603,7 @@ const styles = StyleSheet.create({
     fontSize: scale(12),
     color: '#202020',
     marginBottom: scale(2),
+    fontFamily: 'Pretendard-Regular',
   },
   priceContainer: {
     flexDirection: 'row',
@@ -606,17 +613,18 @@ const styles = StyleSheet.create({
   discountText: {
     fontSize: scale(14),
     color: '#F04D4D',
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     marginRight: scale(8),
   },
   originalPriceText: {
     fontSize: scale(14),
     color: '#CBCBCB',
     textDecorationLine: 'line-through',
+    fontFamily: 'Pretendard-Regular',
   },
   priceText: {
     fontSize: scale(16),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
     marginBottom: scale(2),
   },
@@ -624,6 +632,7 @@ const styles = StyleSheet.create({
     fontSize: scale(12),
     color: '#202020',
     marginBottom: scale(2),
+    fontFamily: 'Pretendard-Regular',
   },
   noResultContainer: {
     justifyContent: 'center',
@@ -633,7 +642,7 @@ const styles = StyleSheet.create({
   noResultText: {
     fontSize: scale(16),
     color: '#CBCBCB',
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginTop: scale(10),
   },
   loadingContainer: {
@@ -645,6 +654,7 @@ const styles = StyleSheet.create({
     marginTop: scale(10),
     fontSize: scale(14),
     color: '#666',
+    fontFamily: 'Pretendard-Regular',
   },
   sortModalOverlay: {
     flex: 1,
@@ -681,6 +691,7 @@ const styles = StyleSheet.create({
     fontSize: scale(16),
     color: '#202020',
     textAlign: 'center',
+    fontFamily: 'Pretendard-Regular',
   },
 });
 

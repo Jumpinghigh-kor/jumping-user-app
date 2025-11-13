@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: scale(16),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
     marginBottom: scale(10),
   },
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
   uploadText: {
     fontSize: scale(12),
     color: '#D9D9D9',
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     marginTop: scale(8),
   },
   previewImage: {
@@ -515,6 +515,7 @@ const styles = StyleSheet.create({
     fontSize: scale(12),
     color: '#FFFFFF',
     marginLeft: scale(10),
+    fontFamily: 'Pretendard-Medium',
   },
   bottomModalOptionImage: {
     width: scale(14),

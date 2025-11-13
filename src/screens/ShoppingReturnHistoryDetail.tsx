@@ -204,7 +204,7 @@ const ShoppingReturnHistoryDetail = ({route}: any) => {
                 <View style={[layoutStyle.rowBetween, commonStyle.pt15]}>
                   <View style={[{position: 'relative'}]}>
                     <Text style={styles.contentLabel}>반품 배송비</Text>
-                    <Text style={[styles.absolute, styles.contentDesc, {fontSize: scale(10), color: '#B8B8B8'}]}>{returnDetail?.is_admin_fault === 'Y' ? '판매자 귀책' : '구매자 귀책'}</Text>
+                    <Text style={[styles.absolute, styles.contentDesc, {fontSize: scale(10), fontFamily: 'Pretendard-Regular', color: '#B8B8B8'}]}>{returnDetail?.is_admin_fault === 'Y' ? '판매자 귀책' : '구매자 귀책'}</Text>
                   </View>
                   <Text style={styles.refundDesc}>{(returnDetail?.return_delivery_fee && (returnDetail?.return_delivery_fee - (returnDetail?.extra_shipping_area_cnt > 0 ? returnDetail?.remote_delivery_fee : 0))?.toLocaleString()+'원')}</Text>
                 </View>
@@ -213,7 +213,7 @@ const ShoppingReturnHistoryDetail = ({route}: any) => {
                 <View style={[layoutStyle.rowBetween, commonStyle.pt15]}>
                   <View style={[{position: 'relative'}]}>
                     <Text style={styles.contentLabel}>도서산간 배송비</Text>
-                    <Text style={[styles.absolute, styles.contentDesc, {fontSize: scale(10), color: '#B8B8B8', left: scale(78)}]}>{returnDetail?.return_delivery_fee > 0 ? '판매자 귀책' : '구매자 귀책'}</Text>
+                    <Text style={[styles.absolute, styles.contentDesc, {fontSize: scale(10), fontFamily: 'Pretendard-Regular', color: '#B8B8B8', left: scale(78)}]}>{returnDetail?.return_delivery_fee > 0 ? '판매자 귀책' : '구매자 귀책'}</Text>
                   </View>
                   <Text style={styles.refundDesc}>{(returnDetail?.extra_shipping_area_cnt > 0 && returnDetail?.remote_delivery_fee?.toLocaleString()+'원')}</Text>
                 </View>

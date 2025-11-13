@@ -60,6 +60,7 @@ const ShoppingPayment = () => {
   const [showPortone, setShowPortone] = useState(false);
   const [agreementModalVisible, setAgreementModalVisible] = useState(false);
   const [pointInput, setPointInput] = useState('');
+  const [successPopupVisible, setSuccessPopupVisible] = useState(false);
   // 개별 약관 모달
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
   const [thirdPartyModalVisible, setThirdPartyModalVisible] = useState(false);
@@ -188,6 +189,17 @@ const ShoppingPayment = () => {
     return Math.max(0, totalAmount); // 음수 방지
   };
 
+  const displayUnit = (unit: any) => {
+    try {
+      const u = String(unit ?? '');
+      if (!u || u === 'NONE_UNIT') return '';
+      if (u.startsWith('SIZE_')) return u.replace(/^SIZE_/, '');
+      return u;
+    } catch {
+      return String(unit ?? '');
+    }
+  };
+
   // 배송지 변경 함수
   const handleUpdateDeliveryRequest = async () => {
     if (!selectedAddress) {
@@ -249,11 +261,6 @@ const ShoppingPayment = () => {
       return;
     }
 
-    if (TEST_MODE) {
-      handlePortonePaymentSuccess(mockPortoneResult);
-      return;
-    }
-
     setShowPortone(true);
   };
 
@@ -261,28 +268,19 @@ const ShoppingPayment = () => {
   const paymentData = {
     amount: getFinalPaymentAmount(),
     currency: 'KRW',
-    merchantOrderId: `jid_${Date.now()}`,
+    merchantOrderId: `jhp_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`,
     customerName: memberInfo?.mem_name || '',
-    customerEmail: memberInfo?.mem_email_id || '',
+    customerEmail: memberInfo?.mem_app_id || '',
     customerPhone: memberInfo?.mem_phone || '',
     description: '점핑하이 쇼핑몰 상품 주문'
   };
 
-  // TEST ONLY: 포트원 우회용 테스트 플래그 및 더미 결과
-  const TEST_MODE = __DEV__ && true;
-  const mockPortoneResult = {
-    imp_uid: 'imp_test_123',
-    pay_method: 'card',
-    status: 'paid',
-    card_name: 'TEST'
-  };
+  
 
   const handlePortonePaymentSuccess = async (result: any) => {
     try {
-      // 1) 서버 결제 검증 (테스트 모드에서는 스킵)
-      if (!TEST_MODE) {
-        await verifyPayment({ imp_uid: result.imp_uid });
-      }
+      // 1) 서버 결제 검증
+      await verifyPayment({ imp_uid: result.imp_uid });
 
       // 2) 주문 생성 (order_app)
       const orderAppRes = await insertMemberOrderApp({
@@ -327,7 +325,7 @@ const ShoppingPayment = () => {
         mem_id: Number(memberInfo?.mem_id),
         payment_status: 'PAYMENT_COMPLETE',
         payment_type: 'PRODUCT_BUY',
-        payment_method: result.pay_method || 'PORTONE',
+        payment_method: result?.pay_method || 'card',
         payment_amount: getFinalPaymentAmount(),
         portone_imp_uid: result.imp_uid,
         portone_merchant_uid: paymentData.merchantOrderId,
@@ -356,7 +354,7 @@ const ShoppingPayment = () => {
       }
 
       setShowPortone(false);
-      showWarningPopup('결제가 완료되었습니다');
+      setSuccessPopupVisible(true);
     } catch (error: any) {
       const errMsg = error?.response?.data?.message || error?.message || 'Unknown error';
       console.error('결제 처리 실패:', errMsg);
@@ -590,8 +588,8 @@ const ShoppingPayment = () => {
                         </View>
                       </View>
                       <View style={styles.optionContainer}>
-                        <Text style={styles.optionText}>
-                          {item.product_name} {item.option_gender && (item.option_gender === 'W' ? '여성' : '남성')} {item.option_amount}{item.option_unit} 수량 {item.quantity}개
+                          <Text style={styles.optionText}>
+                          {item.product_name} {item.option_gender && (item.option_gender === 'W' ? '여성' : '남성')} {item.option_amount ? ' ' + item.option_amount : ''}{item.option_unit !== 'NONE_UNIT' ? displayUnit(item.option_unit) : ''} 수량 {item.quantity}개
                         </Text>
                       </View>
                     </View>
@@ -664,7 +662,7 @@ const ShoppingPayment = () => {
                               {item.discount_amount}{item.discount_type === 'PERCENT' ? '%' : '원'} 할인 {item.description}
                             </Text>
                             {!isUsable && (
-                              <Text style={[styles.requestText, {color: '#FF0000', fontSize: scale(10), marginTop: scale(2)}]}>
+                              <Text style={[styles.requestText, {color: '#FF0000', fontSize: scale(10), fontFamily: 'Pretendard-Regular', marginTop: scale(2)}]}>
                                 {minOrderAmount.toLocaleString()}원 이상 사용 가능
                               </Text>
                             )}
@@ -723,7 +721,7 @@ const ShoppingPayment = () => {
             {!!selectedItems[0]?.discount && (
               <View style={[layoutStyle.rowBetween, commonStyle.mt15]}>
                 <Text style={styles.amountLabel}>상품 할인
-                  <Text style={{fontSize: scale(10), color: '#F04D4D'}}> (선할인)</Text></Text>
+                  <Text style={{fontSize: scale(10), color: '#F04D4D', fontFamily: 'Pretendard-Regular'}}> (선할인)</Text></Text>
                 <Text style={styles.deliveryFee}>
                   -{
                     Math.floor(
@@ -894,7 +892,7 @@ const ShoppingPayment = () => {
           const thirdPartyInfoRows: string[][] = [
             ['개인정보를 제공받는 자', brandList],
             ['개인정보 이용 목적', '상품 배송, 반품 및 환불 처리, 고객 문의 및 불만 대응, A/S 및 혜택 제공, 상품 및 판매 관리 등'],
-            ['제공 항목', '수취인 이름, 주소, 우편번호, 휴대전화번호, 배송메모, ID(이메일)'],
+            ['제공 항목', '수취인 이름, 주소, 우편번호, 휴대전화번호, 배송메모, ID'],
             ['보유 및 이용기간', '서비스 제공 기간 동안 보유하며, 관계 법령에 따라 보존 필요 시 또는 이용자 동의 시 해당 기간까지 보관'],
           ];
           return (
@@ -941,7 +939,7 @@ const ShoppingPayment = () => {
         <Text style={{fontFamily: 'Pretendard-SemiBold', marginTop: scale(15)}}>
           2. 개인정보 수집 및 이용 동의
         </Text>
-        <Text style={{fontSize: scale(10), marginVertical: scale(10)}}>
+        <Text style={{fontSize: scale(10), marginVertical: scale(10), fontFamily: 'Pretendard-Regular'}}>
           * 개인정보 수집 및 이용에 관한 동의 사항은{'\n'}
           개인정보의 수집·이용 목적, 수집 항목 및 방법, 그리고 보유 및 이용 기간을 각각 구분하여 명확히 안내합니다.
         </Text>
@@ -964,7 +962,7 @@ const ShoppingPayment = () => {
                     },
                   ]}
                 >
-                  <Text style={styles.modalText}>{cell}</Text>
+                  <Text style={styles.modalText, {fontFamily: 'Pretendard-Regular'}}>{cell}</Text>
                 </View>
               );
             })}
@@ -1087,15 +1085,23 @@ const ShoppingPayment = () => {
           if (popup.onConfirm) {
             popup.onConfirm();
           }
-          try {
-            if (popup.message && popup.message.includes('결제가 완료되었습니다')) {
-              navigation.navigate('ShoppingOrderHistory' as never);
-            }
-          } catch {}
         }}
         onCancel={popup.type === 'confirm' ? popup.onCancel : undefined}
         confirmText="확인"
         cancelText="취소"
+      />
+      <CommonPopup
+        visible={successPopupVisible}
+        message="결제가 완료되었습니다"
+        backgroundColor="#FFFFFF"
+        textColor="#202020"
+        onConfirm={() => {
+          setSuccessPopupVisible(false);
+          try {
+            navigation.navigate('ShoppingOrderHistory' as never);
+          } catch {}
+        }}
+        confirmText="확인"
       />
     </>
   );
@@ -1113,7 +1119,7 @@ const styles = StyleSheet.create({
   },
   addressTitle: {
     fontSize: scale(16),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
   },
   addressChangeBtn: {
@@ -1125,24 +1131,28 @@ const styles = StyleSheet.create({
   },
   addressChangeBtnText: {
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
     color: '#5588FF'
   },
   addressName: {
     fontSize: scale(14),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020'
   },
   editText: {
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
     color: '#5588FF'
   },
   receiverInfo: {
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
     color: '#848484',
     marginTop: scale(10)
   },
   addressText: {
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
     marginTop: scale(10)
   },
@@ -1154,6 +1164,7 @@ const styles = StyleSheet.create({
   },
   requestText: {
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
   },
   addressAddBtn: {
@@ -1167,6 +1178,7 @@ const styles = StyleSheet.create({
   },
   addressBtnText: {
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
     color: '#5588FF'
   },
   orderContainer: {
@@ -1176,7 +1188,7 @@ const styles = StyleSheet.create({
   },
   orderTitle: {
     fontSize: scale(16),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
   },
   arrowDown: {
@@ -1203,17 +1215,18 @@ const styles = StyleSheet.create({
   },
   brandName: {
     fontSize: scale(12),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#848484'
   },
   productTitle: {
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
     marginVertical: scale(4)
   },
   priceText: {
     fontSize: scale(14),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020'
   },
   optionContainer: {
@@ -1224,6 +1237,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
     color: '#848484',
   },
   discountContainer: {
@@ -1233,11 +1247,12 @@ const styles = StyleSheet.create({
   },
   discountTitle: {
     fontSize: scale(16),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
   },
   discountText: {
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
   },
   couponBtn: {
@@ -1264,6 +1279,7 @@ const styles = StyleSheet.create({
   havePointText: {
     width: '50%',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
     color: '#848484',
     textAlign: 'right',
   },
@@ -1277,6 +1293,7 @@ const styles = StyleSheet.create({
   },
   totalPointText: {
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
     color: '#5588FF',
   },
   paymentContainer: {
@@ -1286,20 +1303,22 @@ const styles = StyleSheet.create({
   },
   paymentTitle: {
     fontSize: scale(16),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
   },
   amountLabel: {
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
     color: '#848484'
   },
   amountValue: {
     fontSize: scale(16),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#F04D4D'
   },
   deliveryFee: {
     fontSize: scale(16),
+    fontFamily: 'Pretendard-Regular',
     color: '#202020'
   },
   agreeContainer: {
@@ -1311,9 +1330,10 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   agreeBtnText: {
-    fontSize: scale(14),
+    fontSize: scale(12),
     color: '#202020',
-    marginLeft: scale(10)
+    marginLeft: scale(10),
+    fontFamily: 'Pretendard-Regular'
   },
   buttonContainer: {
     padding: scale(16),
@@ -1326,7 +1346,7 @@ const styles = StyleSheet.create({
   },
   paymentButtonText: {
     fontSize: scale(16),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#FFFFFF'
   },
   selectContainer: {
@@ -1360,6 +1380,7 @@ const styles = StyleSheet.create({
   modalText: {
     fontSize: scale(12),
     textAlign: 'center',
+    fontFamily: 'Pretendard-Regular',
   },
 });
 

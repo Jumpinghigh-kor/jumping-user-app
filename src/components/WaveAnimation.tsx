@@ -146,7 +146,7 @@ const WaveAnimation: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    height: scale(120),
+    height: scale(100),
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -140,6 +140,7 @@ const styles = StyleSheet.create({
   },
   noImageText: {
     fontSize: scale(8),
+    fontFamily: 'Pretendard-Medium',
     color: '#848484',
     marginTop: scale(10),
   },
@@ -155,6 +156,7 @@ const styles = StyleSheet.create({
   },
   soldOutText: {
     fontSize: scale(14),
+    fontFamily: 'Pretendard-SemiBold',
     color: '#FFFFFF',
   },
 });

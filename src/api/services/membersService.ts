@@ -8,7 +8,7 @@ export interface MemberInfo {
   mem_phone: string;
   email: string;
   mem_nickname: string;
-  mem_email_id: string;
+  mem_app_id: string;
   center_id: number;
   center_name: string;
   sch_time: string
@@ -190,7 +190,7 @@ export const updateChangeNickname = async (memId: string, nickname: string) => {
 export const findPassword = async (id: string, name: string, phone: string) => {
   try {
     const response = await axiosInstance.post('/members/findPassword', {
-      mem_email_id: id,
+      mem_app_id: id,
       mem_name: name,
       mem_phone: phone,
     });

@@ -95,21 +95,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: scale(25),
-    paddingHorizontal: scale(20),
+    paddingHorizontal: scale(8),
   },
   iconContainer: {
-    marginRight: scale(8),
+    marginRight: scale(4),
   },
   warningIcon: {
-    width: scale(20),
-    height: scale(20),
+    width: scale(18),
+    height: scale(18),
     // marginRight: scale(3),
     resizeMode: 'contain',
   },
   message: {
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
     textAlign: 'center',
     color: '#FFFFFF',
+    flexShrink: 1,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -130,12 +132,12 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: '#FFFFFF',
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     fontSize: scale(14),
   },
   confirmButtonText: {
     color: '#FFFFFF',
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     fontSize: scale(14),
   },
 });

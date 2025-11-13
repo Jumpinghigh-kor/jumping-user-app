@@ -405,8 +405,8 @@ const Reservation: React.FC = () => {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{paddingBottom: scale(110)}}
               keyboardShouldPersistTaps="handled"
-              onStartShouldSetResponderCapture={() => true}
-              onMoveShouldSetResponderCapture={() => true}
+              onStartShouldSetResponderCapture={() => false}
+              onMoveShouldSetResponderCapture={() => false}
             >
               <Text style={styles.sectionTitle}>안내</Text>
               <Text style={styles.memberSchInfo}>
@@ -507,7 +507,7 @@ const Reservation: React.FC = () => {
                                     state.selectedTime === timeOption.sch_time && styles.selectedOptionItemText,
                                     (memberInfo?.mem_sch_id === timeOption.sch_id || isPastTime) && styles.disabledOptionText
                                   ]}>
-                                    {formatTimeToKorean(timeOption.sch_time)} {timeOption.sch_time === memberInfo?.sch_time && <Text style={{color: '#43B546', fontSize: scale(12)}}> 기본 시간표</Text>}
+                                    {formatTimeToKorean(timeOption.sch_time)} {timeOption.sch_time === memberInfo?.sch_time && <Text style={{color: '#43B546', fontSize: scale(12), fontFamily: 'Pretendard-Medium'}}> 기본 시간표</Text>}
                                   </Text>
                                 </View>
                               </View>
@@ -667,7 +667,7 @@ const Reservation: React.FC = () => {
                             <Text style={[styles.scheduleDateTime, {color: '#FFFFFF', marginLeft: scale(14)}]}>{formattedDate} {weekday} {formattedTime}</Text>
                           </View>
                           <View style={[{backgroundColor: statusBg, borderRadius: scale(5), alignSelf: 'flex-end', paddingHorizontal: scale(12), paddingVertical: scale(4), marginTop: scale(8)}]}>
-                            <Text style={[{color: '#FFFFFF', fontSize: scale(12)}]}>{statusText}</Text>
+                            <Text style={[{color: '#FFFFFF', fontSize: scale(12), fontFamily: 'Pretendard-Medium'}]}>{statusText}</Text>
                           </View>
                         </View>
                       </TouchableOpacity>
@@ -819,7 +819,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: scale(24),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#FFFFFF',
   },
   tabContainer: {
@@ -838,7 +838,7 @@ const styles = StyleSheet.create({
   tabButtonText: {
     color: '#717171',
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   activeTabButtonText: {
     color: '#FFFFFF',
@@ -874,7 +874,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginTop: scale(20),
     marginBottom: scale(12),
   },
@@ -895,6 +895,7 @@ const styles = StyleSheet.create({
   selectBoxText: {
     color: '#717171',
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Medium',
   },
   selectArrow: {
     width: scale(16),
@@ -927,16 +928,19 @@ const styles = StyleSheet.create({
   optionText: {
     color: '#ACACAC',
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Medium',
   },
   optionInfoText: {
     color: '#717171',
     fontSize: scale(12),
     marginLeft: scale(8),
+    fontFamily: 'Pretendard-Medium',
   },
   personText: {
     color: '#717171',
     fontSize: scale(12),
     marginLeft: scale(8),
+    fontFamily: 'Pretendard-Medium',
   },
   buttonContainer: {
     marginTop: scale(20),
@@ -951,7 +955,7 @@ const styles = StyleSheet.create({
   reserveButtonText: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   loadingContainer: {
     padding: scale(12),
@@ -1025,7 +1029,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     color: '#FFFFFF',
     fontSize: scale(18),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   modalBody: {
     flex: 1,
@@ -1033,11 +1037,13 @@ const styles = StyleSheet.create({
   modalText: {
     color: '#D9D9D9',
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Medium',
   },
   modalWarningText: {
     color: '#F04D4D',
     fontSize: scale(12),
     marginBottom: scale(20),
+    fontFamily: 'Pretendard-Medium',
   },
   reservationDetailContainer: {
     flexDirection: 'row',
@@ -1062,6 +1068,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: scale(14),
     fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   modalFooter: {
     marginTop: scale(20),
@@ -1089,17 +1096,17 @@ const styles = StyleSheet.create({
   modalCancelButtonText: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   modalConfirmButtonText: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   lateText: {
     color: '#D9D9D9',
     fontSize: scale(12),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     textAlign: 'center',
   },
   historyContainer: {
@@ -1114,6 +1121,7 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#848484',
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Medium',
   },
   scheduleItem: {
     backgroundColor: '#373737',
@@ -1148,6 +1156,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: scale(12),
     paddingVertical: Platform.OS === 'ios' ? scale(3) : scale(2),
+    fontFamily: 'Pretendard-Medium',
   },
   checkCircle: {
     width: scale(22),
@@ -1171,12 +1180,13 @@ const styles = StyleSheet.create({
   centerName: {
     color: '#FFFFFF',
     fontSize: scale(16),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginBottom: scale(8),
   },
   scheduleDateTime: {
     color: '#D9D9D9',
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Medium',
   },
   speechIcon: {
     width: scale(40),
@@ -1187,7 +1197,7 @@ const styles = StyleSheet.create({
   membershipErrorText: {
     color: '#F04D4D',
     fontSize: scale(12),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     textAlign: 'center',
   },
 });

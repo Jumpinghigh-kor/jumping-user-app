@@ -62,7 +62,7 @@ const ShoppingShipping = (props: any) => {
         setShowRateLimitPopup(true);
       }
     } catch (error) {
-      console.error('배송 추적 오류:', error);
+      console.error('배송 추적 오류:', error.response.data.message);
     } finally {
     }
   };
@@ -261,13 +261,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   barText: {  
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: scale(16),
+    fontFamily: 'Pretendard-SemiBold',
     color: '#000000',
   },
   barTitle: {
     fontSize: scale(16),
-    fontWeight: '400',
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
     marginBottom: scale(20),
   },
@@ -309,12 +309,12 @@ const styles = StyleSheet.create({
   },  
   infoTitle: {
     fontSize: scale(16),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
   },
   infoPhone: {  
     fontSize: scale(12),
-    fontWeight: '400',
+    fontFamily: 'Pretendard-Regular',
     color: '#FFFFFF',
     backgroundColor: '#000000',
     paddingHorizontal: scale(10),
@@ -330,13 +330,13 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: scale(14),
-    fontWeight: '300',
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
     width: scale(100),
   },
   infoValue: {
     fontSize: scale(14),
-    fontWeight: '400',
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
   },
   statusContainer: {
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   },
   statusTitle: {
     fontSize: scale(16),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
     marginBottom: scale(15),
   },
@@ -361,27 +361,27 @@ const styles = StyleSheet.create({
   },
   statusDate: { 
     fontSize: scale(12),
-    fontWeight: '300',
+    fontFamily: 'Pretendard-Regular',
     color: '#848484',
   },
   statusTime: {
     fontSize: scale(12),
-    fontWeight: '300',
+    fontFamily: 'Pretendard-Regular',
     color: '#848484',
   },
   statusAddress: {
     fontSize: scale(12),
-    fontWeight: '400',
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
   },
   statusStatus: {
     fontSize: scale(12),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
   },
   loadingText: {
     fontSize: scale(14),
-    fontWeight: '400',
+    fontFamily: 'Pretendard-Regular',
     color: '#848484',
   },
   deliveryGif: {

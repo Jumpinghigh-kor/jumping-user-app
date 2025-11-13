@@ -444,6 +444,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
     color: '#848484',
     marginHorizontal: scale(5),
   },
@@ -472,28 +473,32 @@ const styles = StyleSheet.create({
     padding: scale(2),
   },
   dayText: {
-    fontSize: scale(14),
+    fontSize: scale(13),
+    fontFamily: 'Pretendard-Medium',
     color: '#FFFFFF',
   },
   otherMonthDay: {
     opacity: 0.3,
   },
   otherMonthText: {
+    fontFamily: 'Pretendard-Medium',
     color: '#999999',
   },
   sundayText: {
+    fontFamily: 'Pretendard-Medium',
     color: '#FF5F5F',
   },
   saturdayText: {
+    fontFamily: 'Pretendard-Medium',
     color: '#50ABFF',
   },
   checkedInDay: {
     position: 'relative',
   },
   checkedInText: {
+    fontFamily: 'Pretendard-SemiBold',
     color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: scale(14),
+    fontSize: scale(13),
   },
   attendanceButton: {
     backgroundColor: '#40B649',
@@ -502,9 +507,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   attendanceButtonText: {
+    fontFamily: 'Pretendard-SemiBold',
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: '600',
   },
   calendarContainer: {
     backgroundColor: '#2A2A2A',
@@ -514,8 +519,8 @@ const styles = StyleSheet.create({
     paddingTop: scale(20),
   },
   checkedInCircle: {
-    width: scale(23),
-    height: scale(23),
+    width: scale(25),
+    height: scale(25),
     borderRadius: scale(30),
     backgroundColor: '#43B546',
     justifyContent: 'center',

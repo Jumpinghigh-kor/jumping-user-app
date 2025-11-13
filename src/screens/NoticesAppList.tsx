@@ -44,7 +44,7 @@ const NoticesAppList = () => {
   });
   const [refreshing, setRefreshing] = useState(false);
 
-  const { displayedItems, loadingMore, handleLoadMore, handleScroll, setPage } = useInfiniteScroll<Notice>({
+  const { displayedItems, loadingMore, handleLoadMore, handleScroll, setPage, footerStyle, contentContainerStyleEnhancer } = useInfiniteScroll<Notice>({
     items: notices,
     pageSize: 10,
     isLoading: loading,
@@ -173,7 +173,8 @@ const NoticesAppList = () => {
             data={displayedItems}
             renderItem={renderNoticeItem}
             keyExtractor={(item) => item.notices_app_id.toString()}
-            contentContainerStyle={styles.listContainer}
+            contentContainerStyle={[styles.listContainer, contentContainerStyleEnhancer]}
+            ListFooterComponentStyle={footerStyle}
             refreshing={refreshing}
             onRefresh={onRefresh}
             onScroll={(e) => {
@@ -192,13 +193,16 @@ const NoticesAppList = () => {
                   }
                 }
               } catch {}
+              handleScroll(e);
             }}
             scrollEventThrottle={16}
             ListFooterComponent={
-              loadingMore && displayedItems.length < notices.length ? (
-                <View style={{ paddingVertical: scale(12), alignItems: 'center' }}>
+              (displayedItems.length < notices.length) ? (
+                loadingMore ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
-                </View>
+                ) : (
+                  <View />
+                )
               ) : null
             }
             refreshControl={
@@ -289,12 +293,13 @@ const styles = StyleSheet.create({
   noticeTitle: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginVertical: scale(5),
   },
   noticeDate: {
     color: '#999999',
     fontSize: scale(10),
+    fontFamily: 'Pretendard-Medium',
   },
   speechIcon: {
     width: scale(30),
@@ -310,7 +315,7 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#999999',
     fontSize: scale(14),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-Medium',
   },
   modalOverlay: {
     flex: 1,
@@ -336,7 +341,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     color: '#FFFFFF',
     fontSize: scale(18),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     flex: 1,
     paddingRight: scale(10),
   },
@@ -346,6 +351,7 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: '#FFFFFF',
     fontSize: scale(20),
+    fontFamily: 'Pretendard-Medium',
   },
   titleDivider: {
     height: 1,
@@ -361,10 +367,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: scale(14),
     lineHeight: scale(20),
+    fontFamily: 'Pretendard-Medium',
   },
   modalDate: {
     color: '#999999',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
   },
   modalFooter: {
     marginTop: scale(20),

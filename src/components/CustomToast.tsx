@@ -115,8 +115,8 @@ const styles = StyleSheet.create({
   message: {
     color: '#FFFFFF',
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Medium',
     textAlign: 'center',
-    fontWeight: '500',
   },
 });
 

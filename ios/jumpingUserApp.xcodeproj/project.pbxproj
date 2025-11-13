@@ -139,9 +139,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		13B07F861A680F5B00A75B9A /* jumpingUserApp */ = {
+		13B07F861A680F5B00A75B9A /* jumpingHighPlus */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "jumpingUserApp" */;
+			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "jumpingHighPlus" */;
 			buildPhases = (
 				C38B50BA6285516D6DCD4F65 /* [CP] Check Pods Manifest.lock */,
 				13B07F871A680F5B00A75B9A /* Sources */,
@@ -156,7 +156,7 @@
 			);
 			dependencies = (
 			);
-			name = jumpingUserApp;
+			name = jumpingHighPlus;
 			productName = jumpingUserApp;
 			productReference = 13B07F961A680F5B00A75B9A /* jumpingUserApp.app */;
 			productType = "com.apple.product-type.application";
@@ -187,7 +187,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				13B07F861A680F5B00A75B9A /* jumpingUserApp */,
+				13B07F861A680F5B00A75B9A /* jumpingHighPlus */,
 			);
 		};
 /* End PBXProject section */
@@ -325,19 +325,19 @@
 				DEVELOPMENT_TEAM = Q9QTY4WWR5;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = jumpingUserApp/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.jumpinghigh.jumpingUserApp;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.jumpinghigh.jumpingHighPlus;
 				PRODUCT_NAME = jumpingUserApp;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -354,19 +354,19 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Q9QTY4WWR5;
 				INFOPLIST_FILE = jumpingUserApp/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.jumpinghigh.jumpingUserApp;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.jumpinghigh.jumpingHighPlus;
 				PRODUCT_NAME = jumpingUserApp;
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -544,7 +544,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "jumpingUserApp" */ = {
+		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "jumpingHighPlus" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				13B07F941A680F5B00A75B9A /* Debug */,

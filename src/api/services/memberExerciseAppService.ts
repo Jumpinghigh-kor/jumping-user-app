@@ -39,15 +39,12 @@ interface MemberExerciseAppInfoResponse {
 interface UpdateMemberExerciseAppRequest {
   exercise_app_id: number;
   mem_id: number;
-  exercise_dt: string;
   jumping_exercise_time: string;
   jumping_intensity_level: string;
   jumping_heart_rate: string | null;
-  other_exercise_time: string;
   other_exercise_type: string;
+  other_exercise_time: string;
   other_exercise_calory: number;
-  mod_dt: string;
-  mod_id: number;
 }
 
 interface UpdateMemberExerciseAppResponse {

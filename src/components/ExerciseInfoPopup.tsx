@@ -93,7 +93,7 @@ const TimeSelector = ({
 
           {showHoursSelect && (
             <View style={styles.selectOptionsContainer}>
-              <ScrollView style={styles.selectOptionsScroll}>
+              <ScrollView style={styles.selectOptionsScroll} nestedScrollEnabled={true}>
                 {hoursOptions.map(hour => (
                   <SelectOption
                     key={`hour-${hour}`}
@@ -129,7 +129,7 @@ const TimeSelector = ({
 
           {showMinutesSelect && (
             <View style={styles.selectOptionsContainer}>
-              <ScrollView style={styles.selectOptionsScroll}>
+              <ScrollView style={styles.selectOptionsScroll} nestedScrollEnabled={true}>
                 {minutesOptions.map(minute => (
                   <SelectOption
                     key={`minute-${minute}`}
@@ -486,7 +486,9 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
         setErrMsg({ msg: '기타 운동 시간을 입력해주세요', type: 'otherExerciseHours' });
         return;
       }
-      if (other.exerciseCalory === '0') {
+      const calStr = (other.exerciseCalory || '').trim();
+      const calNum = Number(calStr);
+      if (!calStr || !Number.isFinite(calNum) || calNum <= 0) {
         setErrMsg({ msg: '소모 칼로리를 입력해주세요', type: 'otherExerciseCalory' });
         return;
       }
@@ -525,8 +527,6 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
         response = await updateMemberExerciseApp({
           exercise_app_id: exerciseId,
           ...commonExerciseData,
-          mod_dt: formattedDate,
-          mod_id: Number(memberInfo.mem_id),
         });
       } else {
         response = await insertMemberExerciseApp({
@@ -569,6 +569,24 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
       setErrMsg({ msg: '', type: '' });
     }
   }, [formData.jumping.exerciseHours, formData.jumping.exerciseMinutes]);
+
+  // 칼로리 입력 시 유효해지면 에러 문구만 자동 해제 (사전 노출 방지)
+  useEffect(() => {
+    if (errMsg.type === 'otherExerciseCalory') {
+      const calStr = (formData.other.exerciseCalory || '').trim();
+      const calNum = Number(calStr);
+      if (calStr && Number.isFinite(calNum) && calNum > 0) {
+        setErrMsg({ msg: '', type: '' });
+      }
+    }
+  }, [formData.other.exerciseCalory, errMsg.type]);
+
+  // 팝업 열릴 때 에러 메시지 초기화
+  useEffect(() => {
+    if (visible) {
+      setErrMsg({ msg: '', type: '' });
+    }
+  }, [visible]);
 
   // 팝업 표시 함수
   const showPopup = (
@@ -649,7 +667,9 @@ const ExerciseInfoPopup: React.FC<ExerciseInfoPopupProps> = ({
             <ScrollView
               style={styles.container}
               showsVerticalScrollIndicator={true}
-              contentContainerStyle={{paddingBottom: scale(50)}}>
+              contentContainerStyle={{paddingBottom: scale(50)}}
+              nestedScrollEnabled={true}
+            >
               <View style={styles.header}>
                 <View style={styles.titleContainer}>
                   <Text style={styles.title}>유산소 운동 정보</Text>
@@ -894,20 +914,20 @@ const styles = StyleSheet.create({
   title: {
     color: '#FFFFFF',
     fontSize: scale(18),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginRight: scale(10),
   },
   headerDate: {
     color: '#CCCCCC',
-    fontSize: scale(14),
+    fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
   },
   closeButton: {
     padding: scale(5),
   },
   closeButtonText: {
-    color: '#FFFFFF',
+    color: '#D9D9D9',
     fontSize: scale(24),
-    fontWeight: 'bold',
   },
   content: {
     width: '100%',
@@ -919,12 +939,12 @@ const styles = StyleSheet.create({
   contentTitleText: {
     color: '#FFFFFF',
     fontSize: scale(16),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   sectionTitleText: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginBottom: scale(10),
   },
   intensityContainer: {
@@ -944,10 +964,11 @@ const styles = StyleSheet.create({
   selectButtonText: {
     color: '#FFFFFF',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
     textAlign: 'center',
   },
   selectedText: {
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   timeInputRow: {
     flexDirection: 'row',
@@ -958,22 +979,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  timeInput: {
-    backgroundColor: '#242527',
-    borderRadius: scale(8),
-    paddingVertical: scale(10),
-    paddingHorizontal: scale(15),
-    color: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#444444',
-    width: scale(60),
-    textAlign: 'center',
-  },
-  timeLabel: {
-    color: '#FFFFFF',
-    marginLeft: scale(5),
-    fontSize: scale(14),
-  },
   selectContainer: {
     position: 'relative',
     width: scale(70),
@@ -983,19 +988,19 @@ const styles = StyleSheet.create({
     borderRadius: scale(8),
     paddingVertical: scale(10),
     paddingHorizontal: scale(15),
-    borderWidth: 1,
-    borderColor: '#444444',
     alignItems: 'center',
     justifyContent: 'center',
     width: scale(60),
   },
   selectTimeText: {
-    color: '#FFFFFF',
+    color: '#D9D9D9',
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Medium',
   },
   selectButtonUnit: {
-    color: '#CCCCCC',
+    color: '#D9D9D9',
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Medium',
   },
   selectOptionsContainer: {
     position: 'absolute',
@@ -1005,8 +1010,6 @@ const styles = StyleSheet.create({
     width: scale(60),
     backgroundColor: '#242527',
     borderRadius: scale(8),
-    borderWidth: 1,
-    borderColor: '#444444',
     zIndex: 10,
     maxHeight: scale(150),
     overflow: 'hidden',
@@ -1023,11 +1026,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#43B549',
   },
   selectOptionText: {
-    color: '#FFFFFF',
+    color: '#D9D9D9',
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Medium',
   },
   selectedOptionText: {
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   heartRateContainer: {
     flexDirection: 'row',
@@ -1038,27 +1042,27 @@ const styles = StyleSheet.create({
     marginRight: scale(10),
     justifyContent: 'center',
     alignItems: 'center',
-    borderBottomColor: '#999999',
-    borderBottomWidth: 1,
     minWidth: scale(100),
   },
   heartRateDisabled: {
     opacity: 0.5,
   },
   heartRateInput: {
-    color: '#FFFFFF',
+    color: '#D9D9D9',
     fontSize: scale(16),
     textAlign: 'right',
     minWidth: scale(50),
+    fontFamily: 'Pretendard-Medium',
   },
   bpmText: {
-    color: '#999999',
+    color: '#D9D9D9',
     fontSize: scale(16),
     marginBottom: scale(2),
     marginLeft: scale(5),
+    fontFamily: 'Pretendard-Medium',
   },
   skipButton: {
-    backgroundColor: '#444444',
+    backgroundColor: '#5C5C5C',
     paddingVertical: scale(10),
     paddingHorizontal: scale(15),
     borderRadius: scale(8),
@@ -1068,7 +1072,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#43B549',
   },
   skipButtonText: {
-    color: '#FFFFFF',
+    color: '#D9D9D9',
+    fontFamily: 'Pretendard-Medium',
     fontSize: scale(12),
   },
   heartRateText: {
@@ -1100,16 +1105,18 @@ const styles = StyleSheet.create({
     minWidth: scale(100),
   },
   burnCaloriesInput: {
-    color: '#FFFFFF',
+    color: '#D9D9D9',
     fontSize: scale(16),
+    fontFamily: 'Pretendard-Medium',
     textAlign: 'right',
     minWidth: scale(50),
   },
   burnCaloriesText: {
-    color: '#999999',
+    color: '#D9D9D9',
     fontSize: scale(16),
     marginLeft: scale(5),
     marginBottom: scale(2),
+    fontFamily: 'Pretendard-Medium',
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -1118,7 +1125,7 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#444444',
+    backgroundColor: '#5C5C5C',
     paddingVertical: scale(12),
     borderRadius: scale(25),
     alignItems: 'center',
@@ -1137,14 +1144,14 @@ const styles = StyleSheet.create({
     opacity: 0.2,
   },
   cancelButtonText: {
-    color: '#FFFFFF',
+    color: '#D9D9D9',
     fontSize: scale(16),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   confirmButtonText: {
     color: '#FFFFFF',
     fontSize: scale(16),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   timeItem: {
     flexDirection: 'row',
@@ -1155,10 +1162,12 @@ const styles = StyleSheet.create({
     fontSize: scale(12),
     marginLeft: scale(2),
     marginRight: scale(18),
+    fontFamily: 'Pretendard-Medium',
   },
   errorText: {
     color: '#F04D4D',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
     marginBottom: scale(5),
     marginLeft: scale(5),
   },

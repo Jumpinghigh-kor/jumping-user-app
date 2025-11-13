@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   },
   tabButtonText: {
     fontSize: scale(16),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#848484',
   },
   activeTabButtonText: {
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   },
   testButtonText: {
     fontSize: scale(16),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#FFFFFF',
   },
   emptyContainer: {
@@ -320,6 +320,7 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     color: '#CBCBCB',
     marginTop: scale(10),
+    fontFamily: 'Pretendard-Medium',
   },
   tabContentContainer: {
     justifyContent: 'center',

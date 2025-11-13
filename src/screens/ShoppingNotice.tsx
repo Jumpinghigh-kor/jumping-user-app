@@ -79,7 +79,7 @@ const ShoppingNotice = () => {
   }, []);
 
   // 무한 스크롤(8개씩)
-  const { displayedItems, loadingMore, handleLoadMore } = useInfiniteScroll<NoticeShoppingApp>({
+  const { displayedItems, loadingMore, handleLoadMore, footerStyle, contentContainerStyleEnhancer, handleScroll } = useInfiniteScroll<NoticeShoppingApp>({
     items: notices,
     pageSize: 8,
     isLoading: loading,
@@ -115,8 +115,11 @@ const ShoppingNotice = () => {
           <FlatList
             data={displayedItems}
             keyExtractor={(item) => String(item.notices_shopping_app_id)}
-            contentContainerStyle={styles.listContainer}
+            contentContainerStyle={[styles.listContainer, contentContainerStyleEnhancer]}
             showsVerticalScrollIndicator={false}
+            ListFooterComponentStyle={footerStyle}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -144,10 +147,12 @@ const ShoppingNotice = () => {
             onEndReachedThreshold={0.2}
             onEndReached={() => handleLoadMore()}
             ListFooterComponent={
-              loadingMore ? (
-                <View style={styles.loadingContainer}>
+              (displayedItems.length < notices.length) ? (
+                loadingMore ? (
                   <ActivityIndicator size="small" color="#40B649" />
-                </View>
+                ) : (
+                  <View />
+                )
               ) : null
             }
           />
@@ -250,6 +255,7 @@ const styles = StyleSheet.create({
   },
   filterText: {
     fontSize: scale(13),
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
     marginLeft: scale(4),
   },
@@ -274,18 +280,19 @@ const styles = StyleSheet.create({
   },
   noticeType: {
     fontSize: scale(12),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     marginBottom: scale(8),
   },
   noticeContent: {
     fontSize: scale(14),
-    fontWeight: '400',
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
     marginBottom: scale(8),
   },
   noticeDate: {
     fontSize: scale(12),
     color: '#848484',
+    fontFamily: 'Pretendard-Regular',
   },
   emptyContainer: {
     marginTop: scale(80),
@@ -295,7 +302,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: scale(14),
     color: '#CBCBCB',
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   emptyIcon: {
     width: scale(30),
@@ -330,7 +337,7 @@ const styles = StyleSheet.create({
   filterOptionText: {
     fontSize: scale(14),
     color: '#202020',
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
 });
 

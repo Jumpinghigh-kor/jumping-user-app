@@ -86,6 +86,7 @@ const Home = () => {
   const [customToastMessage, setCustomToastMessage] = useState('');
   const [bannerKey, setBannerKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [exerciseGraphKey, setExerciseGraphKey] = useState(0);
 
   // 푸시 토큰 가져와서 서버에 전송
   const initializePushToken = async () => {
@@ -749,6 +750,7 @@ const Home = () => {
           <View style={styles.card}>
             {/* 막대그래프 */}
             <ExerciseGraph
+              key={exerciseGraphKey}
               selectedPeriod={selectedPeriod}
               activeCategory={activeCategory}
               onPeriodChange={setSelectedPeriod}
@@ -783,9 +785,9 @@ const Home = () => {
                   <Text style={styles.exerciseSummaryTitle}>심박수</Text>
                 </View>
                 <WaveAnimation />
-                <View style={{flexDirection: 'row', alignItems: 'flex-end'}}>
-                  <Text style={styles.exerciseSummaryValue}>{todayExerciseData.todayHeartRate}</Text>
-                  <Text style={{fontSize: scale(16), color: '#FFFFFF'}}> Bpm</Text>
+                <View style={[{flexDirection: 'row', alignItems: 'flex-end', marginBottom: scale(20)}]}>
+                  <Text style={[styles.exerciseSummaryValue, {marginTop: scale(0)}]}>{todayExerciseData.todayHeartRate}</Text>
+                  <Text style={{fontSize: scale(16), color: '#FFFFFF', fontFamily: 'Pretendard-Medium'}}> Bpm</Text>
                 </View>
               </View>
             </View>
@@ -795,59 +797,59 @@ const Home = () => {
               {/* 오른쪽 위 박스 */}
 
               {/* 필요 휴식 시간 박스 */}
-              <View style={styles.exerciseSummaryBoxSmall}>
+              <View style={[styles.exerciseSummaryBoxSmall, {height: scale(85)}]}>
                 <View style={{flexDirection: 'column', justifyContent: 'space-between'}}>
-                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                  <View style={{flexDirection: 'row', alignItems: 'flex-start'}}>
                     <View style={styles.iconCircle}>
                       <Image 
                         source={IMAGES.icons.plusGreen}
                         style={styles.exerciseSummaryIcon}
                       />
                     </View>
-                    <Text style={styles.exerciseSummaryTitle}>필요 휴식 시간</Text>
-                  </View>
-                  <View style={{flexDirection: 'row', alignItems: 'flex-end'}}>
-                    <Text style={styles.exerciseSummaryValue}>
-                      {(() => {
-                        const totalMinutes = Math.round(((todayExerciseData.todayCalories / 1000) * 120) * 0.75);
-                        const hours = Math.floor(totalMinutes / 60);
-                        const minutes = totalMinutes % 60;
-                        
-                        if (totalMinutes === 0) return "0분";
-                        if (hours === 0) return `${minutes}분`;
-                        if (minutes === 0) return `${hours}시간`;
-                        return `${hours}시간 ${minutes}분`;
-                      })()}
-                    </Text>
+                    <View style={styles.exerciseSummaryTextCont}>
+                      <Text style={styles.exerciseSummaryTitle}>필요 휴식 시간</Text>
+                      <Text style={styles.exerciseSummaryValue}>
+                        {(() => {
+                          const totalMinutes = Math.round(((todayExerciseData.todayCalories / 1000) * 120) * 0.75);
+                          const hours = Math.floor(totalMinutes / 60);
+                          const minutes = totalMinutes % 60;
+                          
+                          if (totalMinutes === 0) return "0분";
+                          if (hours === 0) return `${minutes}분`;
+                          if (minutes === 0) return `${hours}시간`;
+                          return `${hours}시간 ${minutes}분`;
+                        })()}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               </View>
 
               {/* 필요 수면 시간 박스 */}
-              <View style={styles.exerciseSummaryBoxSmall}>
+              <View style={[styles.exerciseSummaryBoxSmall, {height: scale(85)}]}>
                 <View style={{flexDirection: 'column', justifyContent: 'space-between'}}>
-                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                  <View style={{flexDirection: 'row', alignItems: 'flex-start'}}>
                     <View style={styles.iconCircle}>
                       <Image 
                         source={IMAGES.icons.moonYellow}
                         style={styles.exerciseSummaryIcon}
                       />
                     </View>
-                    <Text style={styles.exerciseSummaryTitle}>필요 수면 시간</Text>
-                  </View>
-                  <View style={{flexDirection: 'row', alignItems: 'flex-end'}}>
-                    <Text style={styles.exerciseSummaryValue}>
-                      {(() => {
-                        const totalMinutes = Math.round(8 * 60 + (todayExerciseData.todayCalories / 500) * 20);
-                        const hours = Math.floor(totalMinutes / 60);
-                        const minutes = totalMinutes % 60;
-                        
-                        if (totalMinutes === 0) return "0분";
-                        if (hours === 0) return `${minutes}분`;
-                        if (minutes === 0) return `${hours}시간`;
-                        return `${hours}시간 ${minutes}분`;
-                      })()}
-                    </Text>
+                    <View style={styles.exerciseSummaryTextCont}>
+                      <Text style={styles.exerciseSummaryTitle}>필요 수면 시간</Text>
+                      <Text style={styles.exerciseSummaryValue}>
+                        {(() => {
+                          const totalMinutes = Math.round(8 * 60 + (todayExerciseData.todayCalories / 500) * 20);
+                          const hours = Math.floor(totalMinutes / 60);
+                          const minutes = totalMinutes % 60;
+                          
+                          if (totalMinutes === 0) return "0분";
+                          if (hours === 0) return `${minutes}분`;
+                          if (minutes === 0) return `${hours}시간`;
+                          return `${hours}시간 ${minutes}분`;
+                        })()}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               </View>
@@ -855,7 +857,7 @@ const Home = () => {
           </View>
 
           {/* 총 소모 칼로리 박스 */}
-          <View style={[styles.exerciseSummaryBoxSmall, commonStyle.mt15]}>
+          <View style={[styles.exerciseSummaryBoxSmall, commonStyle.mt15, commonStyle.mb15]}>
             <View style={{flexDirection: 'column', justifyContent: 'space-between'}}>
               <View style={{flexDirection: 'row', alignItems: 'center'}}>
                 <View style={styles.iconCircle}>
@@ -867,8 +869,8 @@ const Home = () => {
                 <Text style={styles.exerciseSummaryTitle}>총 소모 칼로리</Text>
 
                 <View style={{flexDirection: 'row', alignItems: 'center', marginLeft: scale(5)}}>
-                  <Text style={[{fontSize: scale(18), color: '#FFFFFF'}]}>{todayExerciseData.todayCalories.toLocaleString()}</Text>
-                  <Text style={{fontSize: scale(18), color: '#848484'}}> Kcal</Text>
+                  <Text style={[{fontSize: scale(18), color: '#FFFFFF', fontFamily: 'Pretendard-Medium'}]}>{todayExerciseData.todayCalories.toLocaleString()}</Text>
+                  <Text style={{fontSize: scale(18), color: '#848484', fontFamily: 'Pretendard-Medium'}}> Kcal</Text>
                 </View>
               </View>
 
@@ -876,13 +878,13 @@ const Home = () => {
                 <View style={{flexDirection: 'row', justifyContent: 'space-between', width: '100%'}}>
                   <View style={{flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: scale(20)}}>
                     <Image source={IMAGES.icons.trampolineWhite} style={{width: scale(40), height: scale(40), resizeMode: 'contain'}} />
-                    <Text style={[commonStyle.mv10, {fontSize: scale(12), color: '#FFFFFF'}]}>점핑 소모칼로리</Text>
-                    <Text style={{fontSize: scale(16), color: '#FFFFFF'}}> {todayExerciseData.todayJumpingCalories.toLocaleString()} <Text style={{fontSize: scale(16), color: '#848484'}}>Kcal</Text></Text>
+                    <Text style={[commonStyle.mv10, {fontSize: scale(12), color: '#FFFFFF', fontFamily: 'Pretendard-Medium'}]}>점핑 소모칼로리</Text>
+                    <Text style={{fontSize: scale(16), color: '#FFFFFF', fontFamily: 'Pretendard-Medium'}}> {todayExerciseData.todayJumpingCalories.toLocaleString()} <Text style={{fontSize: scale(16), color: '#848484', fontFamily: 'Pretendard-Medium'}}>Kcal</Text></Text>
                   </View>
                   <View style={{flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: scale(20)}}>
                     <Image source={IMAGES.icons.runWhite} style={{width: scale(40), height: scale(40), resizeMode: 'contain'}} />
-                    <Text style={[commonStyle.mv10, {fontSize: scale(12), color: '#FFFFFF'}]}>기타 소모칼로리</Text>
-                    <Text style={{fontSize: scale(16), color: '#FFFFFF'}}> {todayExerciseData.todayOtherCalories.toLocaleString()} <Text style={{fontSize: scale(16), color: '#848484'}}>Kcal</Text></Text>
+                    <Text style={[commonStyle.mv10, {fontSize: scale(12), color: '#FFFFFF', fontFamily: 'Pretendard-Medium'}]}>기타 소모칼로리</Text>
+                    <Text style={{fontSize: scale(16), color: '#FFFFFF', fontFamily: 'Pretendard-Medium'}}> {todayExerciseData.todayOtherCalories.toLocaleString()} <Text style={{fontSize: scale(16), color: '#848484', fontFamily: 'Pretendard-Medium'}}>Kcal</Text></Text>
                   </View>
                 </View>
               </View>
@@ -911,6 +913,7 @@ const Home = () => {
         onExerciseInfoUpdated={() => {
           fetchExerciseData();
           getTodayExerciseData();
+          setExerciseGraphKey(prev => prev + 1);
         }}
       />
 
@@ -1083,7 +1086,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: '#FFFFFF',
     fontSize: scale(18),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   sectionTitleContainer: {
     flexDirection: 'row',
@@ -1099,6 +1102,7 @@ const styles = StyleSheet.create({
   yearMonthText: {
     color: '#999999',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
     marginLeft: scale(8),
     alignSelf: 'flex-end',
   },
@@ -1109,6 +1113,7 @@ const styles = StyleSheet.create({
   viewAllText: {
     color: '#999999',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
     marginRight: scale(2),
   },
   card: {
@@ -1148,15 +1153,18 @@ const styles = StyleSheet.create({
   },
   dateDay: {
     color: '#999999',
-    fontSize: scale(12),
+    fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
   },
   dateNumber: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-Regular',
   },
   todayText: {
     color: '#FFFFFF',
+    fontFamily: 'Pretendard-Regular',
+    fontSize: scale(14),
   },
   attendanceMark: {
     width: scale(6),
@@ -1180,14 +1188,6 @@ const styles = StyleSheet.create({
   categoryButtonActive: {
     backgroundColor: '#43B546',
   },
-  categoryButtonText: {
-    color: '#FFFFFF',
-    fontSize: scale(12),
-  },
-  categoryButtonTextActive: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
   categoryButtonIcon: {
     width: scale(12),
     height: scale(12),
@@ -1202,15 +1202,6 @@ const styles = StyleSheet.create({
   totalSummary: {
     flexDirection: 'column',
   },
-  summaryLabel: {
-    color: '#FFFFFF',
-    fontSize: scale(12),
-    fontWeight: 'bold',
-  },
-  summaryValue: {
-    color: '#FFFFFF',
-    fontSize: scale(14),
-  },
   periodSelectorContainer: {
     position: 'relative',
     flexDirection: 'row',
@@ -1218,11 +1209,6 @@ const styles = StyleSheet.create({
   periodSelectorButton: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  periodSelectorText: {
-    color: '#FFFFFF',
-    fontSize: scale(12),
-    marginRight: scale(5),
   },
   iconImage: {
     width: scale(8),
@@ -1249,10 +1235,6 @@ const styles = StyleSheet.create({
   periodDropdownItem: {
     paddingVertical: scale(8),
     paddingHorizontal: scale(10),
-  },
-  periodDropdownText: {
-    color: '#FFFFFF',
-    fontSize: scale(12),
   },
   bellIcon: {
     width: scale(24),
@@ -1281,17 +1263,17 @@ const styles = StyleSheet.create({
     padding: scale(15),
     justifyContent: 'space-between',
     flexDirection: 'row',
-    maxHeight: scale(200),
+    height: scale(180),
   },
   exerciseSummaryTitle: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-Medium',
   },
   exerciseSummaryValue: {
     color: '#FFFFFF',
     fontSize: scale(18),
-    marginTop: scale(14),
+    fontFamily: 'Pretendard-Medium',
   },
   exerciseSummaryIcon: {
     width: scale(12),
@@ -1300,19 +1282,20 @@ const styles = StyleSheet.create({
   },
   exerciseSummaryRightContainer: {
     width: '48%', 
-    height: scale(150),
+    height: scale(180),
+    flexDirection: 'column',
     justifyContent: 'space-between',
   },
   exerciseSummaryBoxSmall: {
-    marginBottom: scale(10),
     backgroundColor: '#444444',
     borderRadius: scale(15),
-    padding: scale(10),
+    padding: scale(15),
+  },
+  exerciseSummaryTextCont: {
+    flexDirection: 'column',
     justifyContent: 'space-between',
-    flexDirection: 'row',
-    minHeight: scale(95),
-    paddingVertical: scale(18),
-    paddingHorizontal: scale(15),
+    alignItems: 'flex-start',
+    height: '100%',
   },
   iconCircle: {
     width: scale(20),
@@ -1373,7 +1356,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-Medium',
     marginBottom: scale(20),
   },
   goalInputContainer: {

@@ -40,6 +40,17 @@ const ShoppingPoint = () => {
     return `${year}년 ${month}월`;
   };
 
+  const displayUnit = (unit: any) => {
+    try {
+      const u = String(unit ?? '');
+      if (!u || u === 'NONE_UNIT') return '';
+      if (u.startsWith('SIZE_')) return u.replace(/^SIZE_/, '');
+      return u;
+    } catch {
+      return String(unit ?? '');
+    }
+  };
+
   const handlePrevMonth = () => {
     const newDate = new Date(currentDate);
     newDate.setMonth(newDate.getMonth() - 1);
@@ -153,7 +164,7 @@ const ShoppingPoint = () => {
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
-                    {item.product_name}{item.option_amount ? ' ' + item.option_amount : ''}{item.option_unit !== 'NONE_UNIT' ? item.option_unit : ''}{item.option_gender ? item.option_gender === 'M' ? ' 남성 ' : item.option_gender === 'W' ? ' 여성 ' : ' 공용 ' : ''}{item.order_quantity}개
+                    {item.product_name}{item.option_amount ? ' ' + item.option_amount : ''}{item.option_unit !== 'NONE_UNIT' ? displayUnit(item.option_unit) : ''}{item.option_gender ? item.option_gender === 'M' ? ' 남성 ' : item.option_gender === 'W' ? ' 여성 ' : ' 공용 ' : ''}{item.order_quantity}개
                   </Text>
                   <Text style={styles.regDtText}>{item.reg_dt}</Text>
                 </View>
@@ -194,12 +205,12 @@ const styles = StyleSheet.create({
   },
   pointHeaderText: {
     fontSize: scale(12),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#FFFFFF',
   },
   pointHeaderValue: {
     fontSize: scale(24),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#FFFFFF',
     marginTop: scale(10),
   },
@@ -220,6 +231,7 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: scale(12),
     color: '#848484',
+    fontFamily: 'Pretendard-Regular',
   },
   pointList: {
     flex: 1,
@@ -236,20 +248,23 @@ const styles = StyleSheet.create({
   brandNameText: {
     fontSize: scale(12),
     color: '#202020',
+    fontFamily: 'Pretendard-Regular',
   },
   pointItemText: {
     fontSize: scale(14),
     color: '#202020',
     marginVertical: scale(2),
     maxWidth: '80%',
+    fontFamily: 'Pretendard-Regular',
   },
   regDtText: {
     fontSize: scale(12),
     color: '#848484',
+    fontFamily: 'Pretendard-Regular',
   },
   pointItemValue: {
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#F04D4D',
   },
   emptyContainer: {
@@ -266,7 +281,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: scale(16),
     color: '#CBCBCB',
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginTop: scale(10),
   },
   loadingContainer: {
@@ -278,6 +293,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: scale(16),
     color: '#848484',
+    fontFamily: 'Pretendard-Regular',
   },
 });
 

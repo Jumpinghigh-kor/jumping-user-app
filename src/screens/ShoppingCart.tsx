@@ -214,6 +214,17 @@ const ShoppingCart = () => {
     }
   };
 
+  const displayUnit = (unit: any) => {
+    try {
+      const u = String(unit ?? '');
+      if (!u || u === 'NONE_UNIT') return '';
+      if (u.startsWith('SIZE_')) return u.replace(/^SIZE_/, '');
+      return u;
+    } catch {
+      return String(unit ?? '');
+    }
+  };
+
   return (
     <>
       <CommonHeader 
@@ -342,7 +353,7 @@ const ShoppingCart = () => {
                                 }}
                               >
                                 <Text style={styles.selectBoxText}>
-                                  {selectedOptions[cartItem.cart_app_id]?.option_gender && (selectedOptions[cartItem.cart_app_id]?.option_gender === 'W' ? '여성' : '남성')} {selectedOptions[cartItem.cart_app_id]?.option_amount}{selectedOptions[cartItem.cart_app_id]?.option_unit}
+                                  {selectedOptions[cartItem.cart_app_id]?.option_gender && (selectedOptions[cartItem.cart_app_id]?.option_gender === 'W' ? '여성' : selectedOptions[cartItem.cart_app_id]?.option_gender === 'M' ? '남성' : '공용')} {selectedOptions[cartItem.cart_app_id]?.option_unit !== 'NONE_UNIT' ? selectedOptions[cartItem.cart_app_id]?.option_amount : ''} {selectedOptions[cartItem.cart_app_id]?.option_unit !== 'NONE_UNIT' ? displayUnit(selectedOptions[cartItem.cart_app_id]?.option_unit) : ''}
                                 </Text>
                                 <Image 
                                   source={showOptions[cartItem.cart_app_id] ? IMAGES.icons.arrowUpGray : IMAGES.icons.arrowDownGray} 
@@ -350,7 +361,7 @@ const ShoppingCart = () => {
                                 />
                               </TouchableOpacity>
                               <View style={[commonStyle.mt5]}>
-                                {cartItem?.product_quantity === 0 && <Text style={{color: '#848484', fontSize: scale(10)}}>선택한 제품이 품절되었습니다</Text>}
+                                {cartItem?.product_quantity === 0 && <Text style={{color: '#848484', fontSize: scale(10), fontFamily: 'Pretendard-Medium'}}>선택한 제품이 품절되었습니다</Text>}
                               </View>
                             </View>
                           </View>
@@ -408,7 +419,7 @@ const ShoppingCart = () => {
                                         }}
                                       >
                                         <Text style={styles.optionText}>
-                                          {option?.option_gender && (option?.option_gender === 'W' ? '여성' : '남성')} {option?.option_amount}{option?.option_unit}
+                                          {option?.option_gender && (option?.option_gender === 'W' ? '여성' : '남성')} {option?.option_amount}{displayUnit(option?.option_unit)}
                                         </Text>
                                       </TouchableOpacity>
                                     ))
@@ -491,7 +502,7 @@ const ShoppingCart = () => {
                 <View style={styles.itemDivider} />
                 <View style={[layoutStyle.rowBetween]}>
                   <Text style={styles.priceTitle}>총 결제금액</Text>
-                  <Text style={{fontSize: scale(16), fontWeight: '600', color: '#F04D4D'}}>{(cartList.filter(item => selectedItems[item.cart_app_id]).reduce((acc, item) => acc + (item.price * item.quantity), 0)).toLocaleString()}원</Text>
+                  <Text style={{fontSize: scale(16), fontFamily: 'Pretendard-SemiBold', color: '#F04D4D'}}>{(cartList.filter(item => selectedItems[item.cart_app_id]).reduce((acc, item) => acc + (item.price * item.quantity), 0)).toLocaleString()}원</Text>
                 </View>
               </View>
 
@@ -502,9 +513,9 @@ const ShoppingCart = () => {
                   selectedItems: cartList.filter(item => selectedItems[item.cart_app_id])
                 })}
               >
-                <Text style={{fontSize: scale(16), fontWeight: '600', color: '#FFFFFF'}}>{(cartList.filter(item => selectedItems[item.cart_app_id]).reduce((acc, item) => acc + (item.price * item.quantity), 0)).toLocaleString()}원 결제하기</Text>
+                <Text style={{fontSize: scale(16), fontFamily: 'Pretendard-SemiBold', color: '#FFFFFF'}}>{(cartList.filter(item => selectedItems[item.cart_app_id]).reduce((acc, item) => acc + (item.price * item.quantity), 0)).toLocaleString()}원 결제하기</Text>
                 <View style={styles.circle}>
-                  <Text style={{fontSize: scale(12), fontWeight: '600', color: !getSelectedCount(cartList, selectedItems) ? '#CBCBCB' : '#40B649'}}>{getSelectedCount(cartList, selectedItems)}</Text> 
+                  <Text style={{fontSize: scale(12), fontFamily: 'Pretendard-SemiBold', color: !getSelectedCount(cartList, selectedItems) ? '#CBCBCB' : '#40B649'}}>{getSelectedCount(cartList, selectedItems)}</Text> 
                 </View>
               </TouchableOpacity>
             </ScrollView>
@@ -540,17 +551,17 @@ const styles = StyleSheet.create({
   },
   allCheckText: {
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
   },
   allDeleteText: {
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
   },
   brandName: {
     fontSize: scale(16),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
   },
   deleteIcon: {
@@ -565,7 +576,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
   },
   selectContainer: {
@@ -608,20 +619,20 @@ const styles = StyleSheet.create({
   },
   originalPriceText: {
     fontSize: scale(14),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#CBCBCB',
     marginRight: scale(8),
     textDecorationLine: 'line-through',
   },
   discountText: {
     fontSize: scale(14),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#F04D4D',
     marginRight: scale(8),
   },
   priceText: {
     fontSize: scale(14),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
   },
   selectBox: {
@@ -655,7 +666,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: scale(16),
     color: '#CBCBCB',
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginTop: scale(10),
   },
   emptyIcon: {
@@ -670,13 +681,13 @@ const styles = StyleSheet.create({
   },
   totalPriceTitle: {
     fontSize: scale(16),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
     marginBottom: scale(10),
   },
   priceTitle: {
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#848484',
   },
   paymentButton: {

@@ -10,7 +10,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import {NavigationContainer, NavigationContainerRef} from '@react-navigation/native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
-import {SafeAreaView, StyleSheet, Text, TextInput, View, Alert} from 'react-native';
+import {SafeAreaView, StyleSheet, Text, TextInput, View, Alert, BackHandler} from 'react-native';
 import {Provider} from 'react-redux';
 import store from './src/store';
 import AuthStackNavigator from './src/navigation/AuthStackNavigator';
@@ -25,6 +25,7 @@ const App = () => {
   console.log('📱 현재 시간:', new Date().toLocaleString());
   
   const navigationRef = useRef<NavigationContainerRef<any>>(null);
+  const lastBackPressRef = useRef<number>(0);
   // 세션 만료 팝업 상태
   const [sessionPopup, setSessionPopup] = useState({
     visible: false,
@@ -87,6 +88,35 @@ const App = () => {
 
   // 현재 화면에 따른 배경색 결정
   const backgroundColor = isShoppingScreen(currentRoute) ? '#FFFFFF' : '#202020';
+
+  // 안드로이드 하드웨어 뒤로가기 처리: 2초 내 연속 두 번 누르면 앱 종료
+  useEffect(() => {
+    const onBackPress = () => {
+      const now = Date.now();
+      if (lastBackPressRef.current && now - lastBackPressRef.current < 2000) {
+        BackHandler.exitApp();
+        return true;
+      }
+      lastBackPressRef.current = now;
+
+      // 기본 뒤로가기 동작 우선 처리
+      if (navigationRef.current?.canGoBack()) {
+        navigationRef.current.goBack();
+        return true;
+      }
+
+      const tabRoutes = new Set(['Attendance', 'Reservation', 'Home', 'Shopping', 'MyPage']);
+      if (tabRoutes.has(currentRoute) && currentRoute !== 'Home') {
+        navigationRef.current?.navigate('MainTab', { screen: 'Home' });
+        return true;
+      }
+      // 루트(Home)에서는 첫 번째 누름만 기록하고 대기
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [currentRoute]);
 
   // 푸시 알림 초기화 함수
   const initializePushNotifications = async () => {

@@ -236,6 +236,7 @@ const MainTabNavigator = () => {
   return (
     <Tab.Navigator
       initialRouteName="Home"
+      backBehavior="initialRoute"
       tabBar={props => <CustomTabBar {...props} />}
       screenOptions={{
         headerStyle: {
@@ -336,7 +337,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#333333',
     borderRadius: 10,
-    height: 60,
+    height: 65,
     width: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -370,7 +371,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    top: -25,
+    top: -30,
     zIndex: 1,
   },
   homeIconBackground: {

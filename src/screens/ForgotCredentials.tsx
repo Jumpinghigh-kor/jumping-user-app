@@ -96,10 +96,10 @@ const FindIDScreen = () => {
             <View />
             <View style={{width: '50%'}}>
               <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
-                <Text style={[styles.idText]}>아이디 : {idInfo.mem_email_id}</Text>
+                <Text style={[styles.idText]}>아이디 : {idInfo.mem_app_id}</Text>
                 <TouchableOpacity onPress={() => {
-                  Clipboard.setString(idInfo.mem_email_id);
-                  setCustomToastMessage(idInfo.mem_email_id + '가 복사되었습니다');
+                  Clipboard.setString(idInfo.mem_app_id);
+                  setCustomToastMessage(idInfo.mem_app_id + '가 복사되었습니다');
                   setShowCustomToast(true);
                 }}>
                   <Image source={IMAGES.icons.copyWhite} style={[styles.copyIcon, {marginLeft: scale(10)}]} />
@@ -300,7 +300,7 @@ const ForgotCredentials = ({ route }) => {
           tabBarInactiveTintColor: '#FFFFFF',
           tabBarIndicatorStyle: {
             backgroundColor: '#40B649',
-            height: 3,
+            height: scale(3),
             width: screenWidth / 2,
           },
           tabBarStyle: {
@@ -309,8 +309,8 @@ const ForgotCredentials = ({ route }) => {
             backgroundColor: '#202020',
           },
           tabBarLabelStyle: {
-            fontSize: 16,
-            fontWeight: '600',
+            fontSize: scale(16),
+            fontFamily: 'Pretendard-SemiBold',
             textTransform: 'none',
           },
           tabBarItemStyle: {
@@ -355,6 +355,7 @@ const styles = StyleSheet.create({
     padding: scale(15),
     marginBottom: scale(15),
     fontSize: scale(16),
+    fontFamily: 'Pretendard-Medium',
   },
   button: {
     backgroundColor: '#40B649',
@@ -369,7 +370,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#ffffff',
     fontSize: scale(14),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
   },
   inputField: {
     marginBottom: scale(20),
@@ -397,6 +398,7 @@ const styles = StyleSheet.create({
   idText: {
     color: '#FFFFFF',
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Medium',
   },
   pwdContainer: {
     width: '100%',
@@ -413,6 +415,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: scale(14),
     marginRight: scale(10),
+    fontFamily: 'Pretendard-Medium',
   },
   copyIcon: {
     width: scale(20),
@@ -423,6 +426,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: scale(12),
     marginTop: scale(10),
+    fontFamily: 'Pretendard-Medium',
   },
 });
 

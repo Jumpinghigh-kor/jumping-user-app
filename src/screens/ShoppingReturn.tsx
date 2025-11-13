@@ -29,7 +29,7 @@ import { insertMemberReturnApp } from '../api/services/memberReturnAppService';
 import { updateOrderStatus, insertMemberOrderDetailApp, updateOrderQuantity, getMemberOrderAppList } from '../api/services/memberOrderAppService';
 import { insertMemberOrderAddress, deleteMemberOrderAddress, updateMemberOrderAddress, updateOrderDetailAppId, updateMemberOrderAddressUseYn } from '../api/services/memberOrderAddressService';
 import { getReturnExchangePolicyList, ReturnExchangePolicy } from '../api/services/returnExchangePolicyService';
-// import Portone from '../components/Portone';
+import Portone from '../components/Portone';
 import CommonPopup from '../components/CommonPopup';
 import CustomToast from '../components/CustomToast';
 import ShoppingThumbnailImg from '../components/ShoppingThumbnailImg';
@@ -825,22 +825,18 @@ const ShoppingReturn = ({route}: any) => {
           try {
             setRequestConfirmVisible(false);
             const amount = getPrepayAmount();
-            const merchantOrderId = `${selectedType}_prepay_${Number(item?.order_detail_app_id)}_${Date.now()}`;
-            const impUid = `test_imp_${Date.now()}`;
-            // 테스트: 결제창 생략하고 결제 저장만 수행 (ShoppingPayment.tsx 형식과 동일 필드 포함)
-            await insertMemberPaymentApp({
-              order_app_id: Number(item?.order_app_id) as any,
-              mem_id: Number(memberInfo?.mem_id),
-              payment_status: 'PAYMENT_COMPLETE' as any,
-              payment_type: 'DELIVERY_FEE' as any,
-              payment_method: 'card',
-              payment_amount: amount,
-              portone_imp_uid: impUid,
-              portone_merchant_uid: merchantOrderId,
-              portone_status: 'SUCCESS',
-              card_name: 'TEST_CARD',
-            } as any);
-            await handleReturnRequest();
+            const merchantOrderId = `jhp_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+            // 포트원 결제창 오픈: 결제 성공 콜백에서 실제 imp_uid/merchant_uid로 저장
+            setPortonePaymentData({
+              amount,
+              currency: 'KRW',
+              merchantOrderId,
+              customerName: String(memberInfo?.mem_name || ''),
+              customerEmail: String(memberInfo?.mem_app_id || ''),
+              customerPhone: String(memberInfo?.mem_phone || ''),
+              description: selectedType === 'return' ? '반품 배송비 결제' : '교환 배송비 결제',
+            });
+            setPortoneVisible(true);
           } catch (e) {
             showToast('결제 처리 중 오류가 발생했습니다.', 'error');
           }
@@ -881,13 +877,13 @@ const ShoppingReturn = ({route}: any) => {
             ))}
           </View>
         ) : (
-          <Text style={{color: '#202020', fontSize: scale(12), lineHeight: scale(18)}}>
+          <Text style={{fontFamily: 'Pretendard-Regular', color: '#202020', fontSize: scale(12), lineHeight: scale(18)}}>
             제품이 물류센터 도착 후, 다음날부터 영업일 기준 검수시간 1~3일 후 반품이 완료됩니다
           </Text>
         )}
       </CommonModal>
 
-      {/* <Modal
+      <Modal
         visible={portoneVisible}
         animationType="slide"
         presentationStyle="fullScreen"
@@ -901,8 +897,23 @@ const ShoppingReturn = ({route}: any) => {
           <Portone
             visible={true}
             paymentData={portonePaymentData || { amount: 0, currency: 'KRW', merchantOrderId: '', customerName: '', customerEmail: '', customerPhone: '' }}
-            onPaymentSuccess={async () => {
+            onPaymentSuccess={async (result: any) => {
               try {
+                // 실제 포트원 결제 결과로 저장
+                if (portonePaymentData) {
+                  await insertMemberPaymentApp({
+                    order_app_id: Number(item?.order_app_id) as any,
+                    mem_id: Number(memberInfo?.mem_id),
+                    payment_status: 'PAYMENT_COMPLETE' as any,
+                    payment_type: 'DELIVERY_FEE' as any,
+                    payment_method: result?.pay_method || 'card',
+                    payment_amount: Number(portonePaymentData.amount) || 0,
+                    portone_imp_uid: result?.imp_uid,
+                    portone_merchant_uid: String(portonePaymentData.merchantOrderId || ''),
+                    portone_status: 'SUCCESS',
+                    card_name: result?.card_name || 'PORTONE',
+                  } as any);
+                }
                 await handleReturnRequest();
               } finally {
                 setPortoneVisible(false);
@@ -921,7 +932,7 @@ const ShoppingReturn = ({route}: any) => {
             }}
           />
         </View>
-      </Modal> */}
+      </Modal>
     </>
   );
 };
@@ -952,11 +963,12 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: scale(16),
+    fontFamily: 'Pretendard-Regular',
     color: '#848484',
   },
   activeTabText: {
     color: '#202020',
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
   },
   contentContainer: {
     flex: 1,
@@ -978,17 +990,19 @@ const styles = StyleSheet.create({
   policyTitle: {
     fontSize: scale(12),
     color: '#848484',
+    fontFamily: 'Pretendard-Regular',
   },
   policyText: {
     marginTop: scale(5),
     fontSize: scale(9.5),
     color: '#202020',
-    fontWeight: '400',
+    fontFamily: 'Pretendard-Regular',
   },
   placeholderText: {
     fontSize: scale(14),
     color: '#848484',
     textAlign: 'center',
+    fontFamily: 'Pretendard-Regular',
   },
   checkboxContainer: {
     flexDirection: 'row',
@@ -1009,12 +1023,13 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     marginLeft: scale(5),
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
     color: '#D9D9D9',
   },
   infoText: {
     fontSize: scale(12),
     color: '#202020',
-    fontWeight: '400',
+    fontFamily: 'Pretendard-Regular',
   },
   quantityContainer: {
     marginTop: scale(20),
@@ -1022,7 +1037,7 @@ const styles = StyleSheet.create({
   quantityTitle: {
     fontSize: scale(16),
     color: '#202020',
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
   },
   returnContainer: {
     marginTop: scale(20),
@@ -1030,7 +1045,7 @@ const styles = StyleSheet.create({
   returnTitle: {
     fontSize: scale(16),
     color: '#202020',
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
   },
   returnReasonContainer: {
     marginTop: scale(15),
@@ -1046,6 +1061,7 @@ const styles = StyleSheet.create({
   },
   selectBoxText: {
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
   },
   arrowIcon: {
@@ -1069,6 +1085,7 @@ const styles = StyleSheet.create({
   dropdownText: {
     fontSize: scale(14),
     color: '#202020',
+    fontFamily: 'Pretendard-Regular',
   },
   selectedDropdownItem: {
     backgroundColor: '#EEEEEE',
@@ -1081,7 +1098,7 @@ const styles = StyleSheet.create({
   uploadTitle: {
     fontSize: scale(16),
     color: '#202020',
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     marginBottom: scale(10),
   },
   uploadDescription: {
@@ -1100,12 +1117,12 @@ const styles = StyleSheet.create({
   shippingTitle: {
     fontSize: scale(16),
     color: '#202020',
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
   },
   shippingBtn: {
     fontSize: scale(12),
     color: '#4C78E0',
-    fontWeight: '400',
+    fontFamily: 'Pretendard-Regular',
   },
   shippingAddressContainer: {
     marginTop: scale(10),
@@ -1117,7 +1134,7 @@ const styles = StyleSheet.create({
   shippingAddress: {
     fontSize: scale(12),
     color: '#848484',
-    fontWeight: '400',
+    fontFamily: 'Pretendard-Regular',
   },
   refundContainer: {
     marginTop: scale(15),
@@ -1125,22 +1142,22 @@ const styles = StyleSheet.create({
   refundTitle: {
     fontSize: scale(16),
     color: '#202020',
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
   },
   refundText: {
     fontSize: scale(12),
     color: '#848484',
-    fontWeight: '400',
+    fontFamily: 'Pretendard-Regular',
   },
   refundTotalTitle: {
     fontSize: scale(14),
     color: '#202020',
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   refundTotalAmount: {
     fontSize: scale(14),
     color: '#F04D4D',
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   requestContainer: {
     marginTop: scale(30),
@@ -1154,7 +1171,7 @@ const styles = StyleSheet.create({
   requestBtnText: {
     fontSize: scale(16),
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     textAlign: 'center',
   },
   disabledBtn: {
@@ -1179,7 +1196,7 @@ const styles = StyleSheet.create({
   exchangeProductTitle: {
     fontSize: scale(16),
     color: '#202020',
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     marginBottom: scale(10),
   },
   exchangeProductImage: {
@@ -1188,18 +1205,18 @@ const styles = StyleSheet.create({
   brandName: {
     fontSize: scale(12),
     color: '#202020',
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   productName: {
     fontSize: scale(12),
     color: '#202020',
-    fontWeight: '400',
+    fontFamily: 'Pretendard-Regular',
     marginTop: scale(3),
   },
   productPrice: {
     fontSize: scale(12),
     color: '#202020',
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   emptyContainer: {
     flex: 1,
@@ -1226,17 +1243,17 @@ const styles = StyleSheet.create({
   returnStatus: {
     fontSize: scale(16),
     color: '#202020',
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   returnDt: {
     fontSize: scale(14),
     color: '#202020',
-    fontWeight: '400',
+    fontFamily: 'Pretendard-Regular',
   },
   returnDetail: {
     fontSize: scale(12),
     color: '#202020',
-    fontWeight: '400',
+    fontFamily: 'Pretendard-Regular',
   },
   returnBtn: {
     width: '50%',
@@ -1266,7 +1283,7 @@ const styles = StyleSheet.create({
   qtyBtnText: {
     fontSize: scale(18),
     color: '#202020',
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   qtyInput: {
     flex: 1,
@@ -1277,13 +1294,14 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     color: '#202020',
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
     paddingVertical: 0,
     paddingHorizontal: 0,
   },
   returnColumnTitle: {
     backgroundColor: '#EEEEEE',
     fontSize: scale(12),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
     textAlign: 'center',
     paddingVertical: scale(10),
@@ -1314,7 +1332,7 @@ const styles = StyleSheet.create({
   },
   returnRowItemTitle: {
     fontSize: scale(12),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
     textAlign: 'center',
   },
@@ -1330,6 +1348,7 @@ const styles = StyleSheet.create({
   returnRowItemDesc: {
     fontSize: scale(12),
     color: '#202020',
+    fontFamily: 'Pretendard-Regular',
   },
 });
 

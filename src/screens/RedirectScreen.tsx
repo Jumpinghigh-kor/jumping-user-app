@@ -51,7 +51,7 @@ const RedirectScreen = (params: { type: string }) => {
         // 첫 번째 텍스트 애니메이션과 동시에 이미지 바운스 시작
         Animated.parallel([
           Animated.sequence([
-            Animated.delay(1500),
+            Animated.delay(1250),
             Animated.timing(fadeAnim1, {
               toValue: 1,
               duration: 1500,
@@ -73,7 +73,7 @@ const RedirectScreen = (params: { type: string }) => {
             // 이미지 서서히 나타나기
             Animated.timing(imageOpacity, {
               toValue: 1,
-              duration: 1000,
+              duration: 800,
               easing: Easing.out(Easing.cubic),
               useNativeDriver: true,
             }),
@@ -82,7 +82,7 @@ const RedirectScreen = (params: { type: string }) => {
         // 첫 번째 완료 후 두 번째 텍스트 애니메이션
         Animated.timing(fadeAnim2, {
           toValue: 1,
-          duration: 1500,
+          duration: 850,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
@@ -97,7 +97,7 @@ const RedirectScreen = (params: { type: string }) => {
             navigation.navigate('MainTab', { screen: 'Shopping' });
           }
           
-        }, 4000);
+        }, 2700);
       });
 
       // cleanup: 화면을 벗어날 때 하단탭 다시 보이기
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: scale(20),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     textAlign: 'center',
     color: '#FFFFFF',
   },

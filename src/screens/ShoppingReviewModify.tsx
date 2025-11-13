@@ -383,15 +383,17 @@ const styles = StyleSheet.create({
   },
   productDetail: {
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
   },
   brandName: {
     fontSize: scale(12),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
   },
   productTitle: {
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
   },
   ratingContainer: {
@@ -399,7 +401,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: scale(16),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
     marginBottom: scale(10),
   },
@@ -456,7 +458,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#FFFFFF',
     fontSize: scale(16),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
   },
   deleteButton: {
     width: '50%',
@@ -469,11 +471,12 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: '#FFFFFF',
     fontSize: scale(16),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
   },
   uploadDescription: {
     fontSize: scale(10),
     color: '#717171',
+    fontFamily: 'Pretendard-Regular',
   },
 });
 

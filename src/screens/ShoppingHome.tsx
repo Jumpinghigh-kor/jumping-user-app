@@ -42,6 +42,7 @@ const ShoppingHome: React.FC = () => {
   const [smallCategory, setSmallCategory] = useState<CommonCode[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedSmallCategory, setSelectedSmallCategory] = useState('');
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   const displayedProducts = useMemo(() => {
     return selectedSmallCategory === ''
       ? filteredProducts
@@ -166,9 +167,59 @@ const ShoppingHome: React.FC = () => {
     }
   }, [loading, productCategory]);
 
+  // 최초 진입 전체 로딩 제어: 카테고리/선택/상품 로딩이 모두 끝나면 화면 노출
+  useEffect(() => {
+    if (!loading && productCategory.length > 0 && !!selectedCategory) {
+      setInitialLoadDone(true);
+    }
+  }, [loading, productCategory, selectedCategory]);
+
   const handleProductPress = (product: ExtendedProductType) => {
     navigation.navigate('ShoppingDetail', { productParams: product } as never);
   };
+
+  // 초기 전체 로딩 상태: 최초 진입 시에만 전체 로딩 (카테고리 미준비 시)
+  // 대카테고리 전환 시에는 목록 섹션만 로딩 처리하도록 'loading'은 제외
+  const pageLoading = !initialLoadDone;
+
+  // 쇼핑홈에 진입할 때마다 전체 로딩 화면을 다시 보여줌
+  useFocusEffect(
+    React.useCallback(() => {
+      setInitialLoadDone(false);
+      return undefined;
+    }, [])
+  );
+
+  if (pageLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.topHeader}>
+          <View>
+            <Image source={IMAGES.logo.jumpingBlack} style={styles.headerLogo} />
+          </View>
+          <View style={styles.topHeaderIcons}>
+            <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('ShoppingNotice' as never)}>
+              <Image source={IMAGES.icons.bellStrokeBlack} style={styles.headerIcon} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('ShoppingOrderHistory' as never)}>
+              <Image source={IMAGES.icons.documentStrokeBlack} style={styles.headerIcon} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('ShoppingCart' as never)}>
+              <Image source={IMAGES.icons.cartStrokeBlack} style={styles.headerIcon} />
+              {memberInfo?.cart_cnt && memberInfo.cart_cnt > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>{memberInfo.cart_cnt}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={{ flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color="#43B546" />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -344,7 +395,7 @@ const styles = StyleSheet.create({
   },
   brandName: {
     fontSize: scale(18),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#333',
   },
   topHeaderIcons: {
@@ -399,7 +450,7 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: scale(16),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   selectedCategoryText: {
     color: '#43B546',
@@ -427,7 +478,8 @@ const styles = StyleSheet.create({
     height: scale(300),
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: scale(16),
+    fontFamily: 'Pretendard-Medium',
     color: '#999',
   },
   headerIcon: {
@@ -437,7 +489,7 @@ const styles = StyleSheet.create({
   },
   smallCategoryTitle: {
     fontSize: scale(16),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
     paddingHorizontal: scale(16),
     paddingVertical: scale(10),
@@ -487,7 +539,7 @@ const styles = StyleSheet.create({
   },
   cartBadgeText: {
     fontSize: scale(8),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#FFFFFF',
   },
 });

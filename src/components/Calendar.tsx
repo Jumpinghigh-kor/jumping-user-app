@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {View, StyleSheet, Text, TouchableOpacity, Image} from 'react-native';
+import {View, StyleSheet, Text, TouchableOpacity, Image, FlatList} from 'react-native';
 import { scale } from '../utils/responsive';
 import images from '../utils/images';
 
@@ -30,7 +30,7 @@ const Calendar: React.FC<CalendarProps> = ({
   const firstDayOfMonth = new Date(currentViewYear, currentViewMonth, 1).getDay();
   const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
   
-  const calendarDays = [];
+  const calendarDays: Array<{ day: number; isPrevMonth?: boolean; isCurrentMonth?: boolean; isNextMonth?: boolean; }>= [];
   
   // 이전 달 날짜 채우기
   const prevMonthLastDate = new Date(currentViewYear, currentViewMonth, 0).getDate();
@@ -44,12 +44,16 @@ const Calendar: React.FC<CalendarProps> = ({
     calendarDays.push({day: i, isCurrentMonth: true});
   }
   
-  // 다음 달 날짜 채우기
+  // 다음 달 날짜 채우기 + 6주(42칸) 고정
   const remainingDays = 7 - (calendarDays.length % 7);
   if (remainingDays < 7) {
     for (let i = 1; i <= remainingDays; i++) {
       calendarDays.push({day: i, isNextMonth: true});
     }
+  }
+  while (calendarDays.length < 42) {
+    const nextIdx = calendarDays.length - (firstDayOfMonth + lastDayOfMonth);
+    calendarDays.push({ day: nextIdx + 1, isNextMonth: true });
   }
 
   const handleDateSelect = (day: number, isCurrentMonth: boolean, isPrevMonth: boolean, isNextMonth: boolean) => {
@@ -135,7 +139,12 @@ const Calendar: React.FC<CalendarProps> = ({
         ))}
       </View>
       <View style={styles.calendarDays}>
-        {calendarDays.map((dayObj, index) => {
+        <FlatList
+          data={calendarDays}
+          keyExtractor={(_, idx) => `d_${idx}`}
+          numColumns={7}
+          scrollEnabled={false}
+          renderItem={({ item: dayObj, index }) => {
           // 현재 월의 날짜인지 확인
           const isCurrentMonth = dayObj.isCurrentMonth;
           const isPrevMonth = dayObj.isPrevMonth;
@@ -143,9 +152,8 @@ const Calendar: React.FC<CalendarProps> = ({
           const day = dayObj.day;
           
           // 오늘 날짜인지 확인
-          const isToday = isCurrentMonth && day === currentDate && 
-                         currentViewMonth === currentMonth && 
-                         currentViewYear === currentYear;
+          const isToday = isCurrentMonth && day === currentDate &&
+            currentViewMonth === currentMonth && currentViewYear === currentYear;
           
           // 과거 날짜인지 확인
           let checkPastYear = currentViewYear;
@@ -199,37 +207,39 @@ const Calendar: React.FC<CalendarProps> = ({
           const isScheduledDate = scheduledDates.includes(checkDate);
           
           return (
-            <TouchableOpacity 
-              key={index}
-              style={[styles.calendarDay]}
+            <TouchableOpacity
+              key={`k_${index}`}
+              style={styles.calendarDay}
               disabled={isPastDate || isNextMonth}
               onPress={() => handleDateSelect(day, isCurrentMonth, isPrevMonth, isNextMonth)}
             >
               <View style={[
-                styles.calendarDaysScale, 
+                styles.calendarDaysScale,
                 isSelectedDate && styles.selectedDayBackground,
                 isScheduledDate && styles.scheduledDayBackground
               ]}>
-              <Text 
-                style={[
-                  styles.calendarDayText,
-                  (index % 7 === 0) && isCurrentMonth && !isPastDate && styles.sundayText,
-                  (index % 7 === 0) && isPastDate && {color: '#8B2A2A'},
-                  (index % 7 === 0) && !isCurrentMonth && {color: '#8B2A2A'},
-                  (index % 7 === 6) && !isPastDate && isCurrentMonth && {color: '#50ABFF'},
-                  (index % 7 === 6) && isPastDate && {color: '#2A5F99'},
-                  (index % 7 === 6) && !isCurrentMonth && {color: '#2A5F99'},
-                  isPastDate && (index % 7 !== 6) && (index % 7 !== 0) && styles.pastDayText,
-                  (!isCurrentMonth) && (index % 7 !== 0) && (index % 7 !== 6) && styles.otherMonthText,
-                  isSelectedDate && {color: '#FFFFFF', fontWeight: 'bold'}
-                ]}
-              >
-                {day}
-              </Text>
+                <Text
+                  allowFontScaling={false}
+                  style={[
+                    styles.calendarDayText,
+                    (index % 7 === 0) && isCurrentMonth && !isPastDate && styles.sundayText,
+                    (index % 7 === 0) && isPastDate && { color: '#8B2A2A' },
+                    (index % 7 === 0) && !isCurrentMonth && { color: '#8B2A2A' },
+                    (index % 7 === 6) && !isPastDate && isCurrentMonth && { color: '#50ABFF' },
+                    (index % 7 === 6) && isPastDate && { color: '#2A5F99' },
+                    (index % 7 === 6) && !isCurrentMonth && { color: '#2A5F99' },
+                    isPastDate && (index % 7 !== 6) && (index % 7 !== 0) && styles.pastDayText,
+                    (!isCurrentMonth) && (index % 7 !== 0) && (index % 7 !== 6) && styles.otherMonthText,
+                    isSelectedDate && { color: '#FFFFFF', fontWeight: 'bold' }
+                  ]}
+                >
+                  {day}
+                </Text>
               </View>
             </TouchableOpacity>
           );
-        })}
+        }}
+        />
       </View>
     </View>
   );
@@ -253,8 +263,8 @@ const styles = StyleSheet.create({
   },
   calendarHeaderText: {
     color: '#FFFFFF',
+    fontFamily: 'Pretendard-SemiBold',
     fontSize: scale(14),
-    fontWeight: '500',
     textAlign: 'left',
   },
   calendarNavigation: {
@@ -275,17 +285,17 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     color: '#FFFFFF',
+    fontFamily: 'Pretendard-SemiBold',
     fontSize: scale(12),
   },
   sundayText: {
     color: '#FF6B6B',
   },
   calendarDays: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    width: '100%',
   },
   calendarDay: {
-    width: `${100 / 7}%`,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: scale(12),
@@ -298,17 +308,22 @@ const styles = StyleSheet.create({
   },
   calendarDayText: {
     color: '#F6F6F6',
+    fontFamily: 'Pretendard-Regular',
     fontSize: scale(12),
   },
   pastDayText: {
     color: '#717171',
+    fontFamily: 'Pretendard-Regular',
+    fontSize: scale(12),
   },
   selectedDayBackground: {
     backgroundColor: '#656565',
     borderRadius: scale(50),
   },
   otherMonthText: {
-    color: '#717171'
+    color: '#717171',
+    fontFamily: 'Pretendard-Regular', 
+    fontSize: scale(12),
   },
   scheduledDayBackground: {
     backgroundColor: '#40B649',

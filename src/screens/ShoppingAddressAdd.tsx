@@ -19,6 +19,7 @@ import SearchAddress from '../components/SearchAddress';
 import { useAppSelector } from '../store/hooks';
 import { insertMemberShippingAddress, updateMemberShippingAddress } from '../api/services/memberShippingAddressService';
 import CommonPopup from '../components/CommonPopup';
+import { commonStyle, layoutStyle } from '../assets/styles/common';
 
 const ShoppingAddressAdd = ({ navigation, route }) => {
   const addressData = route.params?.addressData;
@@ -204,7 +205,7 @@ const ShoppingAddressAdd = ({ navigation, route }) => {
         backgroundColor="#FFFFFF"
       />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.container}
       >
         <ScrollView>
@@ -290,15 +291,15 @@ const ShoppingAddressAdd = ({ navigation, route }) => {
               {/* 기본 배송지 체크박스 */}
               <View style={styles.checkboxContainer}>
                 <TouchableOpacity 
-                  style={styles.checkbox} 
+                  style={[styles.checkbox, layoutStyle.row]} 
                   onPress={toggleDefaultAddress}
                 >
                   <Image 
                     source={isDefaultAddress ? IMAGES.icons.checkboxGreen : IMAGES.icons.checkboxGray} 
                     style={styles.checkboxImage} 
                   />
+                  <Text style={[styles.checkboxText, commonStyle.ml5]}>기본 배송지로 설정</Text>
                 </TouchableOpacity>
-                <Text style={styles.checkboxText}>기본 배송지로 설정</Text>
               </View>
             </View>
             
@@ -479,7 +480,7 @@ const styles = StyleSheet.create({
   },
   inputTitle: {
     fontSize: scale(16),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
     marginBottom: scale(8),
   },
@@ -491,6 +492,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(12),
     fontSize: scale(14),
     color: '#848484',
+    fontFamily: 'Pretendard-Regular',
   },
   inputFilled: {
     color: '#202020',
@@ -521,7 +523,7 @@ const styles = StyleSheet.create({
   addressButtonText: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Regular',
   },
   detailAddressInput: {
     marginTop: scale(10),
@@ -542,6 +544,7 @@ const styles = StyleSheet.create({
   checkboxText: {
     fontSize: scale(12),
     color: '#202020',
+    fontFamily: 'Pretendard-Medium',
   },
   radioContainer: {
     marginTop: scale(4),
@@ -560,6 +563,7 @@ const styles = StyleSheet.create({
   radioText: {
     fontSize: scale(14),
     color: '#202020',
+    fontFamily: 'Pretendard-Regular',
   },
   helperText: {
     fontSize: scale(12),
@@ -567,6 +571,7 @@ const styles = StyleSheet.create({
     marginTop: scale(4),
     marginLeft: scale(4),
     marginBottom: scale(10),
+    fontFamily: 'Pretendard-Regular',
   },
   modalContainer: {
     height: scale(500),
@@ -590,7 +595,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: scale(16),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
     marginLeft: scale(10),
   },
@@ -611,7 +616,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: '#FFFFFF',
     fontSize: scale(16),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-SemiBold',
   },
 });
 

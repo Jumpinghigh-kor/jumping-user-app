@@ -96,7 +96,7 @@ const CouponListItem: React.FC<CouponListItemProps> = ({
             // 앞면
             <>
               <View style={[layoutStyle.rowBetween, {height: scale(30)}]}>
-                <Text style={[styles.couponItemTitle, isExpired && styles.expiredText]}>{coupon.discount_amount}{coupon.discount_type === 'PERCENT' ? '%' : '원'} 할인</Text>
+                <Text style={[styles.couponItemTitle, isExpired && styles.expiredText, {fontFamily: 'Pretendard-SemiBold'}]}>{coupon.discount_amount}{coupon.discount_type === 'PERCENT' ? '%' : '원'} 할인</Text>
                 <TouchableOpacity onPress={handleFlipCoupon}>
                   <Image source={isExpired ? IMAGES.icons.informationCircleGray : IMAGES.icons.informationCircleGreen} style={{width: scale(16), height: scale(16), resizeMode: 'contain'}} />
                 </TouchableOpacity>
@@ -141,7 +141,7 @@ const CouponListItem: React.FC<CouponListItemProps> = ({
               <Image source={isIssued ? IMAGES.icons.downloadCircleGray : IMAGES.icons.downloadCircleGreen} style={styles.downloadImg} />
             </TouchableOpacity>
             {isIssued && (
-              <Text style={{fontSize: scale(10), color: '#848484', fontWeight: '600', marginTop: scale(5)}}>발급 완료</Text>
+              <Text style={styles.issuedText}>발급 완료</Text>
             )}
           </View>
         )}
@@ -164,16 +164,18 @@ const styles = StyleSheet.create({
   },
   couponItemTitle: {
     fontSize: scale(16),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
   },
   couponItemDesc: {
     fontSize: scale(14),
     color: '#202020',
     marginTop: scale(10),
+    fontFamily: 'Pretendard-Regular',
   },
   expiredText: {
     color: '#848484',
+    fontFamily: 'Pretendard-Regular',
   },
   badgeContainer: {
     backgroundColor: '#F04D4D',
@@ -188,17 +190,24 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
     color: '#FFFFFF',
   },
   couponDt: {
     fontSize: scale(12),
     color: '#848484',
-    // marginTop: scale(40),
+    fontFamily: 'Pretendard-Regular',
   },
   downloadImg: {
     width: scale(35),
     height: scale(35),
     resizeMode: 'contain',
+  },
+  issuedText: {
+    fontSize: scale(10),
+    color: '#848484',
+    fontFamily: 'Pretendard-SemiBold',
+    marginTop: scale(5),
   },
 });
 

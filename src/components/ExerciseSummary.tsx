@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image } from 'react-native';
 import { scale } from '../utils/responsive';
 import IMAGES from '../utils/images';
 import WaveAnimation from './WaveAnimation';
-import { commonStyle } from '../assets/styles/common';
+import { commonStyle, layoutStyle } from '../assets/styles/common';
 
 interface ExerciseSummaryProps {
   data: {
@@ -54,9 +54,9 @@ const ExerciseSummary: React.FC<ExerciseSummaryProps> = ({
               {/* 파동 애니메이션 */}
               <WaveAnimation />
             </View>
-            <View style={{flexDirection: 'row', alignItems: 'flex-end'}}>
-              <Text style={styles.exerciseSummaryValue}>{data.averageHeartRate}</Text>
-              <Text style={{fontSize: scale(16), color: '#FFFFFF'}}> Bpm</Text>
+            <View style={[{flexDirection: 'row', alignItems: 'flex-end', marginBottom: scale(20)}]}>
+              <Text style={[styles.exerciseSummaryValue, {marginTop: scale(0)}]}>{data.averageHeartRate}</Text>
+              <Text style={{fontSize: scale(16), color: '#FFFFFF', fontFamily: 'Pretendard-Medium'}}> Bpm</Text>
             </View>
           </View>
         </View>
@@ -64,34 +64,38 @@ const ExerciseSummary: React.FC<ExerciseSummaryProps> = ({
         {/* 오른쪽 컨테이너 */}
         <View style={styles.exerciseSummaryRightContainer}>
           {/* 평균 필요 휴식시간 */}
-          <View style={styles.exerciseSummaryBoxSmall}>
+          <View style={[styles.exerciseSummaryBoxSmall, {height: scale(85)}]}>
             <View>
-              <View style={{flexDirection: 'row', alignItems: 'center'}}>
+              <View style={{flexDirection: 'row', alignItems: 'flex-start'}}>
                 <View style={styles.iconCircle}>
                 <Image 
                     source={IMAGES.icons.plusGreen}
                   style={styles.exerciseSummaryIcon}
                 />
                 </View>
-                <Text style={styles.exerciseSummaryTitle}>평균 필요 휴식시간</Text>
+                <View style={styles.exerciseSummaryTextCont}>
+                  <Text style={styles.exerciseSummaryTitle}>평균 필요 휴식시간</Text>
+                  <Text style={[styles.exerciseSummaryValue]}>{formatTime(data.averageRestTime)}</Text>
+                </View>
               </View>
-              <Text style={styles.exerciseSummaryValue}>{formatTime(data.averageRestTime)}</Text>
             </View>
           </View>
           
           {/* 평균 필요 수면시간 */}
-          <View style={styles.exerciseSummaryBoxSmall}>
+          <View style={[styles.exerciseSummaryBoxSmall, {height: scale(85)}]}>
             <View>
-              <View style={{flexDirection: 'row', alignItems: 'center'}}>
+              <View style={{flexDirection: 'row', alignItems: 'flex-start'}}>
                 <View style={styles.iconCircle}>
                 <Image 
                     source={IMAGES.icons.moonYellow}
                   style={styles.exerciseSummaryIcon}
                 />
                 </View>
-                <Text style={styles.exerciseSummaryTitle}>평균 필요 수면시간</Text>
+                <View style={styles.exerciseSummaryTextCont}>
+                  <Text style={styles.exerciseSummaryTitle}>평균 필요 수면시간</Text>
+                  <Text style={styles.exerciseSummaryValue}>{formatTime(data.averageSleepTime)}</Text>
+                </View>
               </View>
-              <Text style={styles.exerciseSummaryValue}>{formatTime(data.averageSleepTime)}</Text>
             </View>
           </View>
           
@@ -111,21 +115,21 @@ const ExerciseSummary: React.FC<ExerciseSummaryProps> = ({
             <Text style={styles.exerciseSummaryTitle}>총 소모 칼로리</Text>
 
             <View style={{flexDirection: 'row', alignItems: 'center', marginLeft: scale(5)}}>
-              <Text style={[{fontSize: scale(18), color: '#FFFFFF'}]}>{data.totalCalories.toLocaleString()}</Text>
-              <Text style={{fontSize: scale(18), color: '#848484'}}> Kcal</Text>
+              <Text style={[{fontSize: scale(18), color: '#FFFFFF', fontFamily: 'Pretendard-Medium'}]}>{data.totalCalories.toLocaleString()}</Text>
+              <Text style={{fontSize: scale(18), color: '#848484', fontFamily: 'Pretendard-Medium'}}> Kcal</Text>
             </View>
           </View>
           <View style={{flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'space-evenly', paddingHorizontal: scale(40)}}>
             <View style={{flexDirection: 'row', justifyContent: 'space-between', width: '100%'}}>
               <View style={{flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: scale(20)}}>
                 <Image source={IMAGES.icons.trampolineWhite} style={{width: scale(40), height: scale(40), resizeMode: 'contain'}} />
-                <Text style={[commonStyle.mv10, {fontSize: scale(12), color: '#FFFFFF'}]}>점핑 소모칼로리</Text>
-                <Text style={{fontSize: scale(16), color: '#FFFFFF'}}>{data.totalJumpingCalories.toLocaleString()} <Text style={{fontSize: scale(16), color: '#848484'}}>Kcal</Text></Text>
+                <Text style={[commonStyle.mv10, {fontSize: scale(12), color: '#FFFFFF', fontFamily: 'Pretendard-Medium'}]}>점핑 소모칼로리</Text>
+                <Text style={{fontSize: scale(16), color: '#FFFFFF'}}>{data.totalJumpingCalories.toLocaleString()} <Text style={{fontSize: scale(16), color: '#848484', fontFamily: 'Pretendard-Medium'}}>Kcal</Text></Text>
               </View>
               <View style={{flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: scale(20)}}>
                 <Image source={IMAGES.icons.runWhite} style={{width: scale(40), height: scale(40), resizeMode: 'contain'}} />
-                <Text style={[commonStyle.mv10, {fontSize: scale(12), color: '#FFFFFF'}]}>기타 소모칼로리</Text>
-                <Text style={{fontSize: scale(16), color: '#FFFFFF'}}>{data.totalOtherCalories.toLocaleString()} <Text style={{fontSize: scale(16), color: '#848484'}}>Kcal</Text></Text>
+                <Text style={[commonStyle.mv10, {fontSize: scale(12), color: '#FFFFFF', fontFamily: 'Pretendard-Medium'}]}>기타 소모칼로리</Text>
+                <Text style={{fontSize: scale(16), color: '#FFFFFF', fontFamily: 'Pretendard-Medium'}}>{data.totalOtherCalories.toLocaleString()} <Text style={{fontSize: scale(16), color: '#848484', fontFamily: 'Pretendard-Medium'}}>Kcal</Text></Text>
               </View>
             </View>
           </View>
@@ -142,7 +146,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: '#FFFFFF',
     fontSize: scale(18),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   exerciseSummaryContainer: {
     flexDirection: 'row',
@@ -156,17 +160,17 @@ const styles = StyleSheet.create({
     padding: scale(15),
     justifyContent: 'space-between',
     flexDirection: 'row',
-    maxHeight: scale(200),
+    height: scale(180),
   },
   exerciseSummaryTitle: {
     color: '#FFFFFF',
-    fontSize: scale(14),
-    fontWeight: 'bold',
+    fontSize: scale(13),
+    fontFamily: 'Pretendard-SemiBold',
   },
   exerciseSummaryValue: {
     color: '#FFFFFF',
     fontSize: scale(18),
-    marginTop: scale(14),
+    fontFamily: 'Pretendard-Medium',
   },
   exerciseSummaryIcon: {
     width: scale(12),
@@ -175,19 +179,20 @@ const styles = StyleSheet.create({
   },
   exerciseSummaryRightContainer: {
     width: '48%', 
-    height: scale(150),
+    height: scale(180),
+    flexDirection: 'column',
     justifyContent: 'space-between',
   },
   exerciseSummaryBoxSmall: {
-    marginBottom: scale(10),
     backgroundColor: '#444444',
     borderRadius: scale(15),
-    padding: scale(10),
+    padding: scale(15),
+  },
+  exerciseSummaryTextCont: {
+    flexDirection: 'column',
     justifyContent: 'space-between',
-    flexDirection: 'row',
-    minHeight: scale(95),
-    paddingVertical: scale(18),
-    paddingHorizontal: scale(15),
+    alignItems: 'flex-start',
+    height: '100%',
   },
   iconCircle: {
     width: scale(20),

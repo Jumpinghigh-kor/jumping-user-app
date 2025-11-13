@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   title: {
     color: '#000000',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   closeButton: {
     padding: scale(5),
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: '#6B7280',
     fontSize: scale(24),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   nicknameContainer: {
     flexDirection: 'row',
@@ -196,10 +196,12 @@ const styles = StyleSheet.create({
   nicknameText: {
     color: '#6B7280',
     fontSize: scale(13),
+    fontFamily: 'Pretendard-Medium',
   },
   message: {
     color: '#6B7280',
     fontSize: scale(13),
+    fontFamily: 'Pretendard-Medium',
   },
   orderScrollView: {
     marginBottom: scale(10),
@@ -227,6 +229,7 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     color: '#000000',
     marginBottom: scale(5),
+    fontFamily: 'Pretendard-Medium',
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -242,7 +245,7 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   arrowRight: {
     width: scale(15),

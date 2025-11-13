@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: scale(16),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
     marginVertical: scale(10),
     marginLeft: scale(16),
@@ -148,6 +148,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: scale(16),
     color: '#888888',
+    fontFamily: 'Pretendard-Regular',
     marginTop: scale(10),
   },
   headerRightContainer: {

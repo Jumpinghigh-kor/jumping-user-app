@@ -310,6 +310,7 @@ const styles = StyleSheet.create({
   },
   noImageText: {
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
     color: '#848484',
     marginTop: scale(10),
   },
@@ -329,7 +330,7 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: scale(16),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Regular',
     marginBottom: scale(4),
   },
   priceContainer: {
@@ -339,17 +340,18 @@ const styles = StyleSheet.create({
   },
   price: {
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   originalPrice: {
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
     color: '#CBCBCB',
     textDecorationLine: 'line-through',
   },
   discount: {
     fontSize: scale(14),
     color: '#FF3B30',
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginRight: scale(8),
   },
   ratingContainer: {
@@ -365,10 +367,12 @@ const styles = StyleSheet.create({
     fontSize: scale(12),
     marginLeft: scale(4),
     marginRight: scale(8),
+    fontFamily: 'Pretendard-Medium',
   },
-  reviewCnt: {
+  reviewCnt: {  
     fontSize: scale(12),
     color: '#848484',
+    fontFamily: 'Pretendard-Medium',
   },
   
   // 리스트 레이아웃 스타일 (ShoppingZZim용)

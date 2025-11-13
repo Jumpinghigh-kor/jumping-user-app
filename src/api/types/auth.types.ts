@@ -1,5 +1,5 @@
 export interface LoginRequest {
-  mem_email_id: string;
+  mem_app_id: string;
   mem_app_password: string;
 }
 
@@ -10,7 +10,7 @@ export interface LoginResponse {
     refresh_token?: string;
     user: {
       mem_id: number;
-      mem_email_id: string;
+      mem_app_id: string;
       mem_name: string;
       center_id: number;
       mem_app_status?: string;

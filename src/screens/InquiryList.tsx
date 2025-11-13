@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   headerRight: {
     width: scale(40),
@@ -511,12 +511,13 @@ const styles = StyleSheet.create({
   inquiryTitle: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginBottom: scale(5),
   },
   inquiryDate: {
     color: '#999999',
     fontSize: scale(10),
+    fontFamily: 'Pretendard-Medium',
   },
   statusContainer: {
     borderWidth: 1,
@@ -526,6 +527,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: scale(12), 
+    fontFamily: 'Pretendard-Medium',
   },
   emptyContainer: {
     justifyContent: 'center',
@@ -535,13 +537,14 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#848484',
     fontSize: scale(14),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-Medium',
   },
   emptyDesc: {
     color: '#848484',
     fontSize: scale(12),
     textAlign: 'center',
     marginTop: scale(10),
+    fontFamily: 'Pretendard-Medium',
   },
   createButton: {
     position: 'absolute',
@@ -562,7 +565,7 @@ const styles = StyleSheet.create({
   createButtonText: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -582,11 +585,11 @@ const styles = StyleSheet.create({
   tabButtonText: {
     color: '#848484',
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   activeTabButtonText: {
     color: '#FFFFFF',
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   tabUnderline: {
     position: 'absolute',
@@ -616,7 +619,7 @@ const styles = StyleSheet.create({
   createInquiryButtonText: {
     color: '#FFFFFF',
     fontSize: scale(16),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   formContainer: {
     flex: 1,
@@ -632,7 +635,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: scale(12),
     marginBottom: scale(8),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   titleInputContainer: {
     flexDirection: 'row',
@@ -649,6 +652,7 @@ const styles = StyleSheet.create({
     padding: scale(12),
     color: '#FFFFFF',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
     height: scale(44),
     textAlignVertical: 'center',
   },
@@ -656,6 +660,7 @@ const styles = StyleSheet.create({
     paddingRight: scale(12),
     color: '#717171',
     fontSize: scale(11),
+    fontFamily: 'Pretendard-Medium',
   },
   contentInput: {
     backgroundColor: '#373737',
@@ -666,6 +671,7 @@ const styles = StyleSheet.create({
     minHeight: scale(200),
     borderWidth: 1,
     borderColor: '#D9D9D9',
+    fontFamily: 'Pretendard-Medium',
   },
   counter: {
     color: '#717171',
@@ -673,6 +679,7 @@ const styles = StyleSheet.create({
     marginRight: scale(12),
     textAlign: 'right',
     marginTop: scale(7),
+    fontFamily: 'Pretendard-Medium',
   },
   submitButton: {
     backgroundColor: '#40B649',
@@ -683,7 +690,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#F6F6F6',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   disabledButton: {
     opacity: 0.7,
@@ -717,7 +724,7 @@ const styles = StyleSheet.create({
   typeSelectorText: {
     color: '#FFFFFF',
     fontSize: scale(12),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   typeSelectorArrow: {
     width: scale(12),
@@ -755,9 +762,10 @@ const styles = StyleSheet.create({
   typeDropdownText: {
     color: '#FFFFFF',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
   },
   typeDropdownTextSelected: {
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#43B546',
   },
 });

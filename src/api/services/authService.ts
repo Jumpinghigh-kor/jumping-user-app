@@ -9,7 +9,7 @@ interface ErrorResponse {
 }
 
 interface LoginCredentials {
-  mem_email_id: string;
+  mem_app_id: string;
   mem_app_password: string;
 }
 

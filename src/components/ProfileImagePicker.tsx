@@ -46,6 +46,7 @@ const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
   const [hasExistingImage, setHasExistingImage] = useState(false);
   const [existingImageId, setExistingImageId] = useState<number | null>(null);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   // 컴포넌트 마운트 시 회원의 이미지 정보 조회
   useFocusEffect(
@@ -79,6 +80,11 @@ const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
       };
     }, [memId])
   );
+
+  useEffect(() => {
+    // 새 이미지가 설정될 때마다 로드 상태 초기화
+    setImageLoaded(false);
+  }, [currentImageUrl]);
 
   const handleOpenGallery = async () => {
     // 갤러리가 이미 열려있는 경우 중복 실행 방지
@@ -317,29 +323,38 @@ const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
         style={styles.profileImageContainer}
         disabled={loading}
       >
-        {loading ? (
-          <ActivityIndicator size="large" color="#6BC46A" />
-        ) : (
-          <>
-            <View style={styles.imageContainer}>
-              <Image 
-                source={currentImageUrl ? { uri: currentImageUrl } : IMAGES.icons.profileGray} 
-                style={[
-                  styles.profileImage,
-                  currentImageUrl && { width: '100%', height: '100%', resizeMode: 'cover' }
-                ]} 
+        <>
+          <View style={styles.imageContainer}>
+            <Image
+              source={IMAGES.icons.profileGray}
+              style={styles.placeholderIcon}
+            />
+            {currentImageUrl ? (
+              <Image
+                source={{ uri: currentImageUrl }}
+                style={[styles.profileImageFull, { zIndex: 1 }]}
+                onLoadEnd={() => setImageLoaded(true)}
+                // @ts-ignore Android-only prop
+                fadeDuration={0}
               />
-            </View>
-            {showEditIcon && (
-              <View style={styles.editIconContainer}>
-                <Image 
-                  source={IMAGES.icons.editCircleBlue}
-                  style={styles.editIcon}
-                />
+            ) : (
+              <View style={[styles.profileImageFull, { zIndex: 1 }]} />
+            )}
+            {loading && (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="small" color="#6BC46A" />
               </View>
             )}
-          </>
-        )}
+          </View>
+          {showEditIcon && (
+            <View style={styles.editIconContainer}>
+              <Image 
+                source={IMAGES.icons.editCircleBlue}
+                style={styles.editIcon}
+              />
+            </View>
+          )}
+        </>
       </TouchableOpacity>
       
       <Modal
@@ -435,6 +450,18 @@ const styles = StyleSheet.create({
     height: scale(40),
     resizeMode: 'contain',
   },
+  profileImageFull: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  placeholderIcon: {
+    width: scale(40),
+    height: scale(40),
+    resizeMode: 'contain',
+    position: 'absolute',
+    zIndex: 0,
+  },
   editIconContainer: {
     position: 'absolute',
     bottom: 0,
@@ -466,10 +493,21 @@ const styles = StyleSheet.create({
     fontSize: scale(12),
     color: '#FFFFFF',
     marginLeft: scale(10),
+    fontFamily: 'Pretendard-Medium',
   },
   bottomModalOptionImage: {
     width: scale(14),
     height: scale(14),
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
 });
 

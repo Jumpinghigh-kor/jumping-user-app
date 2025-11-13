@@ -21,6 +21,7 @@ import { getMemberOrderAppList, updateOrderStatus, insertMemberOrderDetailApp, u
 import { updateMemberOrderAddressUseYn, deleteMemberOrderAddress } from '../api/services/memberOrderAddressService';
 import ShoppingThumbnailImg from '../components/ShoppingThumbnailImg';
 import CommonPopup from '../components/CommonPopup';
+import CustomToast from '../components/CustomToast';
 import { usePopup } from '../hooks/usePopup';
 import { cancelPayment } from '../api/services/portoneService';
 import { insertMemberReturnApp, updateMemberReturnAppCancelYn, updateMemberReturnApp, updateMemberReturnAppOrderAddressId } from '../api/services/memberReturnAppService';
@@ -32,6 +33,7 @@ import { getTargetMemberShippingAddress, ShippingAddressItem } from '../api/serv
 import Clipboard from '@react-native-clipboard/clipboard';
 import Portone from '../components/Portone';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { insertInquiryShoppingApp } from '../api/services/inquiryShoppingAppService';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 
 export const ORDER_STATUS_BADGE_COLOR: Record<string, string> = {
@@ -96,19 +98,25 @@ const ShoppingOrderHistory = () => {
   const [returnReasonDetail, setReturnReasonDetail] = useState<string>('');
   const [pendingOrderItem, setPendingOrderItem] = useState<any | null>(null);
   const [cancelQuantity, setCancelQuantity] = useState<string>('');
+  const [inquiryModalVisible, setInquiryModalVisible] = useState(false);
+  const [inquiryText, setInquiryText] = useState('');
+  const [inquiryTargetItem, setInquiryTargetItem] = useState<any | null>(null);
   const [pointPopupVisible, setPointPopupVisible] = useState(false);
   const [givePoint, setGivePoint] = useState(0);
   const [orderAddressData, setOrderAddressData] = useState<null>(null);
   const [portoneVisible, setPortoneVisible] = useState(false);
   const [portonePaymentData, setPortonePaymentData] = useState<any | null>(null);
   const [confirmingMap, setConfirmingMap] = useState<Record<number, boolean>>({});
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [inquiryError, setInquiryError] = useState('');
   // refreshing은 공통 훅 반환값 사용
   // ORDER_STATUS_TYPE 라벨 매핑
   const getOrderStatusLabel = (value: string) => {
     const found = orderStatusTypes.find(t => t.value === value);
     return found ? found.label : value;
   };
-
+  
   // 공통코드: 주문상태 타입 로드
   useEffect(() => {
     const loadOrderStatusTypes = async () => {
@@ -377,7 +385,7 @@ const ShoppingOrderHistory = () => {
       const cancelQty = Number(cancelQuantity);
 
       if (!cancelQty || cancelQty < 1 || cancelQty > originalQty) {
-        showWarningPopup(`유효한 취소 수량(1~${originalQty})을 입력하세요.`);
+        showWarningPopup(`유효한 취소 수량을 입력하세요.`);
         return;
       }
 
@@ -531,7 +539,7 @@ const ShoppingOrderHistory = () => {
           const amount = toNum((firstItem as any)?.total_delivery_fee_amount);
           const deliveryFeePaymentAppId = Number((firstItem as any)?.delivery_fee_payment_app_id);
           const merchantUid = String((firstItem as any)?.delivery_fee_portone_merchant_uid || '').trim();
-          await cancelPayment({ imp_uid: impUid, merchant_uid: merchantUid, reason: '반품/교환 접수 취소 환불', refundAmount: amount, payment_app_id: deliveryFeePaymentAppId, mod_id: Number(memberInfo?.mem_id) } as any);
+          await cancelPayment({ imp_uid: impUid, merchant_uid: merchantUid, reason: '반품/교환 접수 취소 환불', amount: amount, payment_app_id: deliveryFeePaymentAppId, mod_id: Number(memberInfo?.mem_id) } as any);
         }
       } catch (e) {
         // 환불 실패는 이후 복구 흐름을 막지 않음
@@ -613,6 +621,56 @@ const ShoppingOrderHistory = () => {
     }
   };
   
+  const handleBackPress = () => {
+    const state = (navigation as any)?.getState?.();
+    const prevRouteName = state?.routes?.[(state?.index ?? 0) - 1]?.name;
+    if (prevRouteName === 'ShoppingMypage' || prevRouteName === 'MyPage') {
+      (navigation as any)?.goBack?.();
+    } else {
+      (navigation as any)?.navigate?.('MainTab', { screen: 'Shopping' });
+    }
+  };
+
+  const displayUnit = (unit: any) => {
+    try {
+      const u = String(unit ?? '');
+      if (!u || u === 'NONE_UNIT') return '';
+      if (u.startsWith('SIZE_')) return u.replace(/^SIZE_/, '');
+      return u;
+    } catch {
+      return String(unit ?? '');
+    }
+  };
+
+  const handleSubmitInquiry = async () => {
+    try {
+      if (!inquiryText.trim()) {
+        setInquiryError('의견을 입력한 후 버튼을 눌러주세요');
+        return;
+      }
+      if (!inquiryTargetItem?.product_app_id) return;
+      const res = await insertInquiryShoppingApp({
+        product_app_id: Number(inquiryTargetItem.product_app_id),
+        content: inquiryText,
+        mem_id: memberInfo?.mem_id ? Number(memberInfo.mem_id) : undefined
+      } as any);
+      if (res?.success) {
+        setInquiryText('');
+        setToastMessage('소중한 의견이 반영되었습니다.');
+        setToastVisible(true);
+      } else {
+        showWarningPopup('데이터 전송이 실패하였습니다.');
+      }
+    } catch (e) {
+      showWarningPopup('데이터 전송이 실패하였습니다.');
+    }
+  };
+
+  useEffect(() => {
+    // 모달 열고 닫을 때 에러 문구 초기화
+    setInquiryError('');
+  }, [inquiryModalVisible]);
+
   return (
     <>
       <CommonHeader 
@@ -620,7 +678,7 @@ const ShoppingOrderHistory = () => {
         titleColor="#202020"
         backIcon={IMAGES.icons.arrowLeftBlack}
         backgroundColor="#FFFFFF"
-        onBackPress={() => navigation.navigate('ShoppingMypage')}
+        onBackPress={handleBackPress}
       />
       <View style={styles.container}>
         {loading ? (
@@ -736,6 +794,13 @@ const ShoppingOrderHistory = () => {
                         return false;
                       }
                     })();
+                    const groupHasReturnPickup = (() => {
+                      try {
+                        return (group as any[]).some((it: any) => !!it?.return_goodsflow_id);
+                      } catch {
+                        return false;
+                      }
+                    })();
 
                     return (
                       <View key={`pay_${first.payment_app_id}`} style={styles.orderItem}>
@@ -745,9 +810,9 @@ const ShoppingOrderHistory = () => {
                             <View
                               style={[
                                 styles.orderStatusContainer
-                                , {backgroundColor: ORDER_STATUS_BADGE_COLOR[first.order_status] || '#BDBDBD'}
+                                , {backgroundColor: groupHasReturnPickup ? '#000000' : (ORDER_STATUS_BADGE_COLOR[first.order_status] || '#BDBDBD')}
                               ]}>
-                              <Text style={styles.orderStatusText}>{getOrderStatusLabel(first.order_status)}</Text>
+                              <Text style={styles.orderStatusText}>{groupHasReturnPickup ? '반품 수거중' : getOrderStatusLabel(first.order_status)}</Text>
                             </View>
                           )}
                         </View>
@@ -772,15 +837,15 @@ const ShoppingOrderHistory = () => {
                                     <View style={[layoutStyle.rowStart, {alignItems: 'center'}]}>
                                       <Text style={styles.productName}>{gi.brand_name}</Text>
                                       {isSplitGroup && (
-                                        <View style={[styles.orderStatusContainer, {marginLeft: scale(6), backgroundColor: ORDER_STATUS_BADGE_COLOR[gi.order_status] || '#BDBDBD'}]}>
-                                          <Text style={styles.orderStatusText}>{getOrderStatusLabel(gi.order_status)}</Text>
+                                        <View style={[styles.orderStatusContainer, {marginLeft: scale(6), backgroundColor: gi?.return_goodsflow_id ? '#000000' : (ORDER_STATUS_BADGE_COLOR[gi.order_status] || '#BDBDBD')}]}>
+                                          <Text style={styles.orderStatusText}>{gi?.return_goodsflow_id ? '반품 수거중' : getOrderStatusLabel(gi.order_status)}</Text>
                                         </View>
                                       )}
                                     </View>
                                     <View style={[layoutStyle.rowStart, {alignItems: 'center'}]}>
                                       <Text style={styles.productTitle} numberOfLines={2} ellipsizeMode="tail">{gi.product_title}</Text>
                                     </View>
-                                    <Text style={styles.productInfo}>{gi.option_amount ? gi.option_amount : ''}{gi.option_unit !== 'NONE_UNIT' ? gi.option_unit + ' ' : ''}{gi.option_gender ? (gi.option_gender == 'W' ? '여성' : gi.option_gender == 'M' ? '남성' : '공용') : ''} / {gi.order_quantity}개</Text>
+                                    <Text style={styles.productInfo}>{gi.option_amount ? gi.option_amount : ''}{gi.option_unit !== 'NONE_UNIT' ? displayUnit(gi.option_unit) + ' ' : ''}{gi.option_gender ? (gi.option_gender == 'W' ? '여성' : gi.option_gender == 'M' ? '남성' : '공용') : ''} / {gi.order_quantity}개</Text>
                                   </View>
                                 </TouchableOpacity>
                                 </View>
@@ -829,7 +894,7 @@ const ShoppingOrderHistory = () => {
                                 )}
 
                                 <View style={[layoutStyle.rowCenter, commonStyle.mt10]}>
-                                  {gi.order_status === 'PAYMENT_COMPLETE' ? (
+                                  {gi?.return_goodsflow_id ? null : gi.order_status === 'PAYMENT_COMPLETE' ? (
                                     <>
                                       <TouchableOpacity
                                         style={[styles.bottomBtnContainer, commonStyle.mr5]}
@@ -838,17 +903,16 @@ const ShoppingOrderHistory = () => {
                                           setSelectedReturnReason('');
                                           setReturnReasonDetail('');
                                           setShowReasonDropdown(false);
-                                          setCancelQuantity('');
+                                          setCancelQuantity('1');
                                           showConfirmPopup('결제를 취소하시겠습니까?', () => {}, () => {});
                                         }}
                                       >
                                         <Text style={styles.bottomBtnText}>결제 취소 접수</Text>
                                       </TouchableOpacity>
                                       <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
-                                        const phone = gi?.inquiry_phone_number || '';
-                                        if (phone) {
-                                          Clipboard.setString(String(phone));
-                                        }
+                                        setInquiryTargetItem(gi);
+                                        setInquiryText('');
+                                        setInquiryModalVisible(true);
                                       }}>
                                         <Text style={styles.bottomBtnText}>문의하기</Text>
                                       </TouchableOpacity>
@@ -862,10 +926,9 @@ const ShoppingOrderHistory = () => {
                                         <Text style={styles.bottomBtnText}>배송 현황</Text>
                                       </TouchableOpacity>
                                       <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
-                                        const phone = gi?.inquiry_phone_number || '';
-                                        if (phone) {
-                                          Clipboard.setString(String(phone));
-                                        }
+                                        setInquiryTargetItem(gi);
+                                        setInquiryText('');
+                                        setInquiryModalVisible(true);
                                       }}>
                                         <Text style={styles.bottomBtnText}>문의하기</Text>
                                       </TouchableOpacity>
@@ -933,14 +996,13 @@ const ShoppingOrderHistory = () => {
                                           onPress={() => navigation.navigate('ShoppingReturn' as never, { item: gi, maxQuantity: gi.order_quantity } as never)}
                                         >
                                           <Text style={styles.bottomBtnText}>반품/교환 요청</Text>
-                                          <Text style={[styles.bottomBtnText, {fontSize: scale(10)}]}>(3일 이내 가능)</Text>
+                                          <Text style={[styles.bottomBtnText, {fontSize: scale(10), fontFamily: 'Pretendard-Regular'}]}>(3일 이내 가능)</Text>
                                         </TouchableOpacity>
                                       )}
                                       <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
-                                        const phone = gi?.inquiry_phone_number || '';
-                                        if (phone) {
-                                          Clipboard.setString(String(phone));
-                                        }
+                                        setInquiryTargetItem(gi);
+                                        setInquiryText('');
+                                        setInquiryModalVisible(true);
                                       }}>
                                         <Text style={styles.bottomBtnText}>문의하기</Text>
                                       </TouchableOpacity>
@@ -954,10 +1016,9 @@ const ShoppingOrderHistory = () => {
                                         <Text style={styles.bottomBtnText}>{gi.order_status === 'EXCHANGE_APPLY' ? '교환접수 취소' : '반품접수 취소'}</Text>
                                       </TouchableOpacity>
                                       <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
-                                        const phone = gi?.inquiry_phone_number || '';
-                                        if (phone) {
-                                          Clipboard.setString(String(phone));
-                                        }
+                                        setInquiryTargetItem(gi);
+                                        setInquiryText('');
+                                        setInquiryModalVisible(true);
                                       }}>
                                         <Text style={styles.bottomBtnText}>문의하기</Text>
                                       </TouchableOpacity>
@@ -971,10 +1032,9 @@ const ShoppingOrderHistory = () => {
                                         <Text style={styles.bottomBtnText}>결제 취소 접수 철회</Text>
                                       </TouchableOpacity>
                                       <TouchableOpacity style={[styles.bottomBtnContainer, commonStyle.ml5]} onPress={() => {
-                                        const phone = gi?.inquiry_phone_number || '';
-                                        if (phone) {
-                                          Clipboard.setString(String(phone));
-                                        }
+                                        setInquiryTargetItem(gi);
+                                        setInquiryText('');
+                                        setInquiryModalVisible(true);
                                       }}>
                                         <Text style={styles.bottomBtnText}>문의하기</Text>
                                       </TouchableOpacity>
@@ -1090,7 +1150,7 @@ const ShoppingOrderHistory = () => {
           const maxQty = Number(pendingOrderItem?.order_quantity ?? 0);
           const qtyNum = Number(cancelQuantity);
           if (!qtyNum || qtyNum < 1 || qtyNum > maxQty) {
-            showWarningPopup(`유효한 취소 수량(1~${maxQty})을 입력하세요.`);
+            showWarningPopup(`유효한 취소 수량을 입력하세요.`);
             return;
           }
           if (pendingOrderItem) {
@@ -1099,9 +1159,9 @@ const ShoppingOrderHistory = () => {
               setPortonePaymentData({
                 amount: extraFee,
                 currency: 'KRW',
-                merchantOrderId: `extra_ship_${pendingOrderItem.payment_app_id}_${Date.now()}`,
+                merchantOrderId: `jhp_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`,
                 customerName: String((memberInfo as any)?.mem_name || ''),
-                customerEmail: String((memberInfo as any)?.mem_email || ''),
+                customerEmail: String((memberInfo as any)?.mem_app_id || ''),
                 customerPhone: String((memberInfo as any)?.mem_phone || ''),
                 description: '취소에 따른 추가 배송비 결제',
               });
@@ -1141,7 +1201,7 @@ const ShoppingOrderHistory = () => {
               justifyContent: 'space-between',
             }}
           >
-            <Text style={{ color: '#202020', fontSize: scale(12) }}>
+            <Text style={{ color: '#202020', fontSize: scale(12), fontFamily: 'Pretendard-Regular' }}>
               {selectedReturnReason
                 ? (returnReasons.find(r => r.value === selectedReturnReason)?.label || '사유 선택')
                 : '사유를 선택하세요'}
@@ -1165,7 +1225,7 @@ const ShoppingOrderHistory = () => {
                   }}
                   style={{ paddingVertical: scale(10), paddingHorizontal: scale(12) }}
                 >
-                  <Text style={{ color: '#202020', fontSize: scale(13) }}>{reason.label}</Text>
+                  <Text style={{ color: '#202020', fontSize: scale(13), fontFamily: 'Pretendard-Regular' }}>{reason.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -1194,35 +1254,54 @@ const ShoppingOrderHistory = () => {
           {/* 취소 수량 입력 */}
           {pendingOrderItem && (
             <View style={{ marginTop: scale(8), marginBottom: scale(14) }}>
-              <Text style={{ marginBottom: scale(6), color: '#202020', fontSize: scale(12) }}>
-                취소 수량 (최대 {pendingOrderItem?.order_quantity}개)
+              <Text style={{ marginBottom: scale(6), color: '#202020', fontSize: scale(12), fontFamily: 'Pretendard-Regular' }}>
+                취소 수량
               </Text>
-              <TextInput
-                value={cancelQuantity}
-                onChangeText={(t) => {
-                  const digits = t.replace(/[^0-9]/g, '');
-                  if (!digits) {
-                    setCancelQuantity('');
-                    return;
-                  }
-                  const num = Number(digits);
-                  const max = Number(pendingOrderItem?.order_quantity ?? 0);
-                  const clamped = num > max ? max : num;
-                  setCancelQuantity(String(clamped));
-                }}
-                placeholder={`취소 수량을 입력해주세요`}
-                placeholderTextColor="#9E9E9E"
-                keyboardType="number-pad"
-                style={{
-                  borderWidth: 1,
-                  borderColor: '#D9D9D9',
-                  borderRadius: scale(6),
-                  paddingVertical: scale(10),
-                  paddingHorizontal: scale(12),
-                  backgroundColor: '#FFFFFF',
-                  fontSize: scale(12),
-                }}
-              />
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: '#D9D9D9',
+                borderRadius: scale(6),
+                overflow: 'hidden',
+                height: scale(36),
+                backgroundColor: '#FFFFFF',
+                alignSelf: 'flex-start'
+              }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    const max = Number(pendingOrderItem?.order_quantity ?? 0);
+                    const current = Math.min(max, Math.max(1, Number(cancelQuantity || '1')));
+                    const next = Math.max(1, current - 1);
+                    setCancelQuantity(String(next));
+                  }}
+                  style={{
+                    width: scale(36), height: '100%',
+                    alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: '#FFFFFF'
+                  }}
+                >
+                  <Text style={{ fontSize: scale(18), color: '#202020', fontFamily: 'Pretendard-Regular' }}>-</Text>
+                </TouchableOpacity>
+                <View style={{ minWidth: scale(60), paddingHorizontal: scale(12), alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: scale(14), color: '#202020', fontFamily: 'Pretendard-Regular' }}>{cancelQuantity || '1'}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    const max = Number(pendingOrderItem?.order_quantity ?? 0);
+                    const current = Math.min(max, Math.max(1, Number(cancelQuantity || '1')));
+                    const next = Math.min(max, current + 1);
+                    setCancelQuantity(String(next));
+                  }}
+                  style={{
+                    width: scale(36), height: '100%',
+                    alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: '#FFFFFF'
+                  }}
+                >
+                  <Text style={{ fontSize: scale(18), color: '#202020', fontFamily: 'Pretendard-Regular' }}>+</Text>
+                </TouchableOpacity>
+              </View>
               {/* 무료배송 기준 하락 시 경고 문구 */}
               {(() => {
                 try {
@@ -1231,7 +1310,7 @@ const ShoppingOrderHistory = () => {
                   const extraFee = computeExtraShippingFeeForCancel(pendingOrderItem, qtyNum);
                   if (extraFee > 0) {
                     return (
-                      <Text style={{ color: '#FF3B30', fontSize: scale(12), marginTop: scale(8) }}>
+                      <Text style={{ color: '#FF3B30', fontSize: scale(12), marginTop: scale(8), fontFamily: 'Pretendard-Regular' }}>
                         현재 상품 가격은 무료배송비용보다 적습니다. 취소를 계속 진행할 경우 배송비 추가 결제가 필요합니다.
                       </Text>
                     );
@@ -1245,6 +1324,89 @@ const ShoppingOrderHistory = () => {
           )}
         </View>
       </CommonPopup>
+
+      {/* 문의하기 팝업 (ShoppingDetail 퍼블리싱 기반) */}
+      <Modal
+        visible={inquiryModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setInquiryModalVisible(false)}
+      >
+        <View style={styles.inquiryOverlay}>
+          <View style={styles.inquiryContainer}>
+            <TouchableOpacity style={styles.inquiryCloseIconBtn} onPress={() => setInquiryModalVisible(false)}>
+              <Text style={styles.inquiryCloseIconText}>×</Text>
+            </TouchableOpacity>
+            <Text style={styles.inquiryTitle}>이 상품에 대해{"\n"}궁금한 점이 있으신가요?</Text>
+            <View style={styles.inquiryInputWrapper}>
+              <TextInput
+                value={inquiryText}
+                onChangeText={(t) => {
+                  if (t.length <= 3000) {
+                    setInquiryText(t);
+                    if (inquiryError && t.trim()) setInquiryError('');
+                  }
+                }}
+                placeholder={'소중한 의견을 적어주세요.'}
+                placeholderTextColor="#848484"
+                multiline
+                numberOfLines={4}
+                style={styles.inquiryInput}
+              />
+              <TouchableOpacity style={styles.inquirySubmitButton} onPress={handleSubmitInquiry}>
+                <Text style={styles.inquirySubmitText}>입력완료</Text>
+              </TouchableOpacity>
+              <View style={styles.inquiryFooterRow}>
+                <Text style={styles.inquiryErrorText}>{inquiryError}</Text>
+                <Text style={styles.inquiryCounter}>
+                  <Text style={{ color: '#4C78ED' }}>{inquiryText.length} </Text>/ 3000
+                </Text>
+              </View>
+            </View>
+            <View>
+              <Text style={styles.inquiryDesc}>
+                위에 쓴 소중한 의견은 쇼핑몰 개선을 위해 사용됩니다.
+                  {'\n'}{'\n'}문의를 원하시면
+                  {'\n'}아래의&nbsp;
+                <Text style={{ fontFamily: 'Pretendard-SemiBold' }}>
+                  전화번호로 직접 문의
+                </Text>
+                해주세요.
+              </Text>
+            </View>
+            {Boolean(inquiryTargetItem?.inquiry_phone_number) && (
+              <View style={styles.inquiryPhoneContainer}>
+                <TouchableOpacity style={styles.inquiryPhoneBtn}
+                  onPress={() => {
+                    const phone = String(inquiryTargetItem?.inquiry_phone_number || '');
+                    if (phone) {
+                      Clipboard.setString(phone);
+                      setToastMessage('전화번호가 복사되었습니다.');
+                      setToastVisible(true);
+                    }
+                  }}
+                >
+                  <View style={styles.inquiryClickBadge}>
+                    <Text style={styles.inquiryClickText}>click</Text>
+                  </View>
+                  <Text style={styles.inquiryPhoneText}>{String(inquiryTargetItem?.inquiry_phone_number || '')}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            <View style={styles.inquiryCloseContainer}>
+              <TouchableOpacity onPress={() => setInquiryModalVisible(false)} style={styles.inquiryCloseBtn}>
+                <Text style={styles.inquiryCloseText}>닫기</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+        <CustomToast
+          visible={toastVisible}
+          message={toastMessage}
+          onHide={() => setToastVisible(false)}
+          position="bottom"
+        />
+      </Modal>
 
       {/* 포인트 발급 안내 팝업 */}
       <CommonPopup
@@ -1325,7 +1487,7 @@ const styles = StyleSheet.create({
   searchText: {
     fontSize: scale(14),
     color: '#202020',
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   searchInputContainer: {
     flexDirection: 'row',
@@ -1344,11 +1506,12 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     color: '#202020',
     paddingVertical: 0,
+    fontFamily: 'Pretendard-Regular',
   },
   cancelText: {
     fontSize: scale(12),
     color: '#848484',
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   loadingContainer: {
     flex: 1,
@@ -1369,7 +1532,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: scale(14),
     color: '#CBCBCB',
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginTop: scale(10),
   },
   orderItem: {
@@ -1381,7 +1544,7 @@ const styles = StyleSheet.create({
   orderDate: {
     fontSize: scale(18),
     color: '#202020',
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
   },
   orderStatusContainer: {
     backgroundColor: 'transparent',
@@ -1407,11 +1570,13 @@ const styles = StyleSheet.create({
   },
   productTitle: {
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
   },
   productInfo: {
     fontSize: scale(12),
     color: '#848484',
+    fontFamily: 'Pretendard-Regular',
   },
   productPrice: {
     fontSize: scale(12),
@@ -1434,7 +1599,7 @@ const styles = StyleSheet.create({
   bottomBtnText: {
     fontSize: scale(12),
     color: '#202020',
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     textAlign: 'center',
   },
   yearContainer: {
@@ -1463,11 +1628,13 @@ const styles = StyleSheet.create({
   },
   yearOptionText: {
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
     textAlign: 'center',
   },
   selectedYearOptionText: {
     color: '#202020',
+    fontFamily: 'Pretendard-Regular',
   },
   searchYearContainer: {
     borderWidth: 1,
@@ -1486,6 +1653,131 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
+  },
+  inquiryOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  inquiryContainer: {
+    width: '90%',
+    borderRadius: scale(12),
+    backgroundColor: '#FFFFFF',
+    padding: scale(16),
+  },
+  inquiryCloseIconBtn: {
+    position: 'absolute',
+    right: scale(10),
+    top: scale(10),
+    padding: scale(6),
+    zIndex: 1,
+  },
+  inquiryCloseIconText: {
+    color: '#202020',
+    fontSize: scale(20),
+    fontFamily: 'Pretendard-SemiBold',
+  },
+  inquiryTitle: {
+    fontSize: scale(16),
+    fontFamily: 'Pretendard-SemiBold',
+    color: '#202020',
+    textAlign: 'center',
+  },
+  inquiryInputWrapper: {
+    position: 'relative',
+    width: '100%',
+  },
+  inquiryInput: {
+    height: scale(130),
+    borderWidth: 1,
+    borderColor: '#202020',
+    borderRadius: scale(10),
+    padding: scale(16),
+    marginTop: scale(16),
+    textAlignVertical: 'top',
+    backgroundColor: '#FFFFFF',
+    fontSize: scale(12),
+  },
+  inquirySubmitButton: {
+    position: 'absolute',
+    bottom: scale(30),
+    left: '50%',
+    transform: [{ translateX: -scale(30) }],
+    backgroundColor: '#000000',
+    padding: scale(8),
+    borderRadius: scale(10),
+  },
+  inquirySubmitText: {
+    color: '#FFFFFF',
+    fontSize: scale(12),
+    fontFamily: 'Pretendard-SemiBold',
+  },
+  inquiryCounter: {
+    fontSize: scale(12),
+    color: '#717171',
+    fontFamily: 'Pretendard-Regular',
+  },
+  inquiryFooterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: scale(6),
+  },
+  inquiryErrorText: {
+    color: '#F04D4D',
+    fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
+  },
+  inquiryDesc: {
+    fontSize: scale(14),
+    color: '#202020',
+    marginTop: scale(30),
+    textAlign: 'center',
+    fontFamily: 'Pretendard-Regular',
+  },
+  inquiryPhoneContainer: {
+    marginTop: scale(20),
+    alignItems: 'center',
+  },
+  inquiryPhoneBtn: {
+    backgroundColor: '#202020',
+    borderRadius: scale(12),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(8),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inquiryClickBadge: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: scale(20),
+    paddingVertical: scale(1),
+    width: scale(38),
+    marginBottom: scale(5),
+  },
+  inquiryClickText: {
+    fontSize: scale(12),
+    color: '#000000',
+    textAlign: 'center',
+    fontFamily: 'Pretendard-Regular',
+  },
+  inquiryPhoneText: {
+    fontSize: scale(12),
+    color: '#FFFFFF',
+    fontFamily: 'Pretendard-Regular',
+  },
+  inquiryCloseContainer: {
+    marginTop: scale(16),
+  },
+  inquiryCloseBtn: {
+    alignSelf: 'center',
+    paddingVertical: scale(6),
+    paddingHorizontal: scale(12),
+  },
+  inquiryCloseText: {
+    color: '#848484',
+    fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
   },
 });
 

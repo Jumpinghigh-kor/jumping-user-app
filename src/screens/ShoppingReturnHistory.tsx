@@ -287,6 +287,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
     paddingVertical: 0,
     marginLeft: scale(6),
@@ -307,7 +308,7 @@ const styles = StyleSheet.create({
   searchText: {
     fontSize: scale(12),
     color: '#202020',
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Regular',
   },
   yearContainer: {
     flexDirection: 'row',
@@ -335,11 +336,13 @@ const styles = StyleSheet.create({
   },
   yearOptionText: {
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
     color: '#202020',
     textAlign: 'center',
   },
   selectedYearOptionText: {
     color: '#202020',
+    fontFamily: 'Pretendard-Regular',
   },
   searchYearContainer: {
     borderWidth: 1,
@@ -373,6 +376,7 @@ const styles = StyleSheet.create({
   returnHistoryItemText: {
     fontSize: scale(14),
     color: '#202020',
+    fontFamily: 'Pretendard-Regular',
   },
   imgContainer: {
     width: scale(80),
@@ -441,7 +445,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: scale(16),
     color: '#CBCBCB',
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginTop: scale(10),
   },
 });

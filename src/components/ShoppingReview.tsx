@@ -74,6 +74,7 @@ const styles = StyleSheet.create({
   },
   commentText: {
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
     color: '#848484',
   },
   starIcon: {

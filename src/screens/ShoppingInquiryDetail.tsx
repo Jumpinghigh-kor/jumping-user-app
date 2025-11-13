@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: '#202020',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   headerRight: {
     width: scale(40),
@@ -401,12 +401,13 @@ const styles = StyleSheet.create({
   inquiryTitle: {
     color: '#202020',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginBottom: scale(5),
   },
   inquiryDate: {
     color: '#202020',
     fontSize: scale(10),
+    fontFamily: 'Pretendard-Regular',
   },
   statusContainer: {
     borderWidth: 1,
@@ -418,6 +419,7 @@ const styles = StyleSheet.create({
     statusText: {
     color: '#B4B4B4',
     fontSize: scale(12), 
+    fontFamily: 'Pretendard-Regular',
   },
   emptyContainer: {
     flex: 1,
@@ -427,6 +429,7 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#202020',
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
   },
   createButton: {
     position: 'absolute',
@@ -447,7 +450,7 @@ const styles = StyleSheet.create({
   createButtonText: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -467,11 +470,11 @@ const styles = StyleSheet.create({
   tabButtonText: {
     color: '#848484',
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   activeTabButtonText: {
     color: '#202020',
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   tabUnderline: {
     position: 'absolute',
@@ -501,7 +504,7 @@ const styles = StyleSheet.create({
   createInquiryButtonText: {
     color: '#202020',
     fontSize: scale(16),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   formContainer: {
     flex: 1,
@@ -517,7 +520,7 @@ const styles = StyleSheet.create({
     color: '#202020',
     fontSize: scale(12),
     marginBottom: scale(8),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   titleInputContainer: {
     flexDirection: 'row',
@@ -533,11 +536,13 @@ const styles = StyleSheet.create({
     padding: scale(12),
     color: '#202020',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
   },
   titleCounter: {
     paddingRight: scale(12),
     color: '#717171',
     fontSize: scale(11),
+    fontFamily: 'Pretendard-Regular',
   },
   contentInput: {
     backgroundColor: 'transparent',
@@ -548,6 +553,7 @@ const styles = StyleSheet.create({
     minHeight: scale(200),
     borderWidth: 1,
     borderColor: '#D9D9D9',
+    fontFamily: 'Pretendard-Regular',
   },
   counter: {
     color: '#717171',
@@ -555,6 +561,7 @@ const styles = StyleSheet.create({
     marginRight: scale(12),
     textAlign: 'right',
     marginTop: scale(7),
+    fontFamily: 'Pretendard-Regular',
   },
   bottomButtonContainer: {
     flexDirection: 'row',
@@ -573,7 +580,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#F6F6F6',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     textAlign: 'center',
   },
   deleteButton: {
@@ -587,7 +594,7 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     textAlign: 'center',
   },
   disabledButton: {
@@ -612,7 +619,7 @@ const styles = StyleSheet.create({
   answerLabel: {
     color: '#FFFFFF',
     fontSize: scale(12),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginBottom: scale(8),
   },
   answerContent: {
@@ -624,12 +631,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: scale(12),
     lineHeight: scale(18),
+    fontFamily: 'Pretendard-Regular',
   },
   answerDate: {
     color: '#717171',
     fontSize: scale(11),
     marginTop: scale(8),
     textAlign: 'right',
+    fontFamily: 'Pretendard-Regular',
   },
   typeSelectorContainer: {
     flexDirection: 'row',
@@ -648,7 +657,7 @@ const styles = StyleSheet.create({
   typeSelectorText: {
     color: '#202020',
     fontSize: scale(12),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   typeSelectorArrow: {
     width: scale(12),
@@ -684,9 +693,10 @@ const styles = StyleSheet.create({
   typeDropdownText: {
     color: '#202020',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
   },
   typeDropdownTextSelected: {
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
   },
 });

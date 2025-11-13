@@ -64,11 +64,12 @@ const ShoppingPostList = () => {
 
   const currentList = activeTab === 'allPostList' ? postList : notReadList;
 
-  const { displayedItems, loadingMore, handleLoadMore } = useInfiniteScroll<PostAppType>({
+  const { displayedItems, loadingMore, handleLoadMore, handleScroll, footerStyle, contentContainerStyleEnhancer } = useInfiniteScroll<PostAppType>({
     items: currentList,
     pageSize: 5,
     isLoading: loading,
     resetDeps: [activeTab],
+    contentPaddingBottom: scale(24),
   });
 
   const { refreshing, onRefresh } = usePullToRefresh(async () => {
@@ -159,10 +160,13 @@ const ShoppingPostList = () => {
                   <FlatList
                     data={listForRender}
                     keyExtractor={(item) => String(item.post_app_id)}
-                    contentContainerStyle={styles.listContainer}
+                    contentContainerStyle={[styles.listContainer, contentContainerStyleEnhancer]}
                     showsVerticalScrollIndicator={false}
                     bounces={true}
                     alwaysBounceVertical={true}
+                    ListFooterComponentStyle={footerStyle}
+                    onScroll={handleScroll}
+                    scrollEventThrottle={16}
                     refreshControl={
                       <RefreshControl
                         refreshing={refreshing}
@@ -251,10 +255,12 @@ const ShoppingPostList = () => {
                       </TouchableOpacity>
                     )}
                     ListFooterComponent={
-                      (loadingMore && (listForRender.length < totalLength)) ? (
-                        <View style={styles.loadMoreContainer}>
+                      (listForRender.length < totalLength) ? (
+                        loadingMore ? (
                           <ActivityIndicator size="small" color="#43B546" />
-                        </View>
+                        ) : (
+                          <View />
+                        )
                       ) : null
                     }
                   />

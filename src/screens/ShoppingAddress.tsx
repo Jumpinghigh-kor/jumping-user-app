@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ const ShoppingAddress = ({ navigation, route }) => {
   const [addressIdToDelete, setAddressIdToDelete] = useState<number | null>(null);
   const params = route?.params;
   const [selectedAddressId, setSelectedAddressId] = useState(params?.shippingAddressId);
+  const navigatedToEditRef = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -38,10 +39,28 @@ const ShoppingAddress = ({ navigation, route }) => {
           if (response.success && response.data) {
             setAddressesList(response.data);
             
-            // 기본배송지가 있으면 자동으로 선택
-            const defaultAddress = response.data.find(addr => addr.default_yn === 'Y');
-            if (defaultAddress) {
-              // setSelectedAddressId(defaultAddress.shipping_address_id);
+            // 선택 우선순위 계산 (간결화)
+            const addresses: any[] = response.data;
+            const getId = (pred: (a: any) => boolean) => {
+              const found = addresses.find(pred);
+              return found ? found.shipping_address_id : undefined;
+            };
+            const serverSelectedId = getId(a => a.select_yn === 'Y');
+            const defaultId = getId(a => a.default_yn === 'Y');
+            const fromPayment = params?.screen === 'ShoppingPayment';
+            const passedId = params?.shippingAddressId;
+
+            let nextSelectedId = selectedAddressId;
+            if (navigatedToEditRef.current && defaultId) {
+              nextSelectedId = defaultId;
+            } else if (fromPayment && passedId) {
+              nextSelectedId = passedId;
+            } else {
+              nextSelectedId = serverSelectedId ?? defaultId ?? passedId ?? selectedAddressId;
+            }
+            navigatedToEditRef.current = false;
+            if (nextSelectedId && nextSelectedId !== selectedAddressId) {
+              setSelectedAddressId(nextSelectedId);
             }
           } 
         } catch (error) {
@@ -130,9 +149,12 @@ const ShoppingAddress = ({ navigation, route }) => {
                     </TouchableOpacity>
                     <TouchableOpacity 
                       style={styles.editContainer}
-                      onPress={() => navigation.navigate('ShoppingAddressAdd', {
-                        addressData: address
-                      })}
+                      onPress={() => {
+                        navigatedToEditRef.current = true;
+                        navigation.navigate('ShoppingAddressAdd', {
+                          addressData: address
+                        });
+                      }}
                     >
                       <Text style={styles.editText}>수정</Text>
                     </TouchableOpacity>
@@ -202,6 +224,7 @@ const styles = StyleSheet.create({
   addText: {
     fontSize: scale(12),
     color: '#202020',
+    fontFamily: 'Pretendard-Medium',
   },
   defaultContainer: {
     borderColor: '#42B649',
@@ -214,25 +237,29 @@ const styles = StyleSheet.create({
   defaultText: {
     fontSize: scale(10),
     color: '#202020',
+    fontFamily: 'Pretendard-Regular',
   },
   receiverName: {
     fontSize: scale(14),
     color: '#202020',
     marginBottom: scale(3),
+    fontFamily: 'Pretendard-Regular',
   },
   addressText: {
     fontSize: scale(16),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
   },
   addressDetailText: {
     fontSize: scale(12),
     color: '#202020',
+    fontFamily: 'Pretendard-Regular',
   },
   phoneText: {
     marginTop: scale(5),
     fontSize: scale(12),
     color: '#202020',
+    fontFamily: 'Pretendard-Regular',
   },
   deleteContainer: {
     borderColor: '#D9D9D9',
@@ -244,6 +271,7 @@ const styles = StyleSheet.create({
   deleteText: {
     fontSize: scale(12),
     color: '#202020',
+    fontFamily: 'Pretendard-Medium',
   },
   editContainer: {
     borderColor: '#D9D9D9',
@@ -256,6 +284,7 @@ const styles = StyleSheet.create({
   editText: {
     fontSize: scale(12),
     color: '#202020',
+    fontFamily: 'Pretendard-Medium',
   },
   emptyContainer: {
     justifyContent: 'center',
@@ -271,6 +300,7 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     color: '#CBCBCB',
     marginTop: scale(10),
+    fontFamily: 'Pretendard-Medium',
   }
 });
 

@@ -35,6 +35,7 @@ const MyPage = () => {
   const [hasUnreadInquiry, setHasUnreadInquiry] = useState(false);
   const [hasUnreadPost, setHasUnreadPost] = useState(false);
   const [isPushEnabled, setIsPushEnabled] = useState(false);
+  const [isUpdatingPush, setIsUpdatingPush] = useState(false);
   const [isCompanyInfoVisible, setIsCompanyInfoVisible] = useState(false);
 
   // 읽지 않은 알림이 있는지 체크
@@ -114,13 +115,16 @@ const MyPage = () => {
         
         if (response.success) {
           await AsyncStorage.setItem('@push_enabled', enabled.toString());
-          setIsPushEnabled(enabled);
         } else {
           console.error('푸시 설정 업데이트 실패:', response.message);
+          // 실패 시 UI 되돌림
+          setIsPushEnabled(prev => !enabled);
         }
       }
     } catch (error) {
       console.error('푸시 설정 저장 실패:', error);
+      // 오류 시 UI 되돌림
+      setIsPushEnabled(prev => !enabled);
     }
   };
 
@@ -161,12 +165,9 @@ const MyPage = () => {
             currentImageUrl={profileImageUrl}
             onImageUpdate={loadProfileImage}
           />
-          <View style={{marginVertical: scale(10)}}>
-            <Text style={styles.nickname}>{memberInfo?.mem_nickname}{ memberInfo?.mem_role === 'ADMIN' ? '(관리자)' : memberInfo?.mem_role === 'FRANCHISEE' ? '(가맹점주)' : ''}</Text>
-            <Text style={styles.centerName}>{memberInfo?.center_name}</Text>
+          <View style={{marginTop: scale(20), marginBottom: scale(10)}}>
+            <Text style={styles.nickname}>{memberInfo?.mem_nickname}</Text>
           </View>
-          <Text style={styles.emailId}>회원번호 : {memberInfo?.mem_checkin_number}</Text>
-          <Text style={styles.emailId}>{memberInfo?.mem_email_id}</Text>
         </View>
 
         <Text style={styles.sectionTitle}>고객센터</Text>
@@ -273,9 +274,16 @@ const MyPage = () => {
               trackColor={{ false: '#767577', true: '#43B546' }}
               thumbColor={isPushEnabled ? '#FFFFFF' : '#f4f3f4'}
               ios_backgroundColor="#3e3e3e"
-              onValueChange={savePushSetting}
+              onValueChange={(next) => {
+                if (isUpdatingPush) return;
+                setIsUpdatingPush(true);
+                // Optimistic UI 업데이트로 안드로이드 토글 깜빡임 방지
+                setIsPushEnabled(next);
+                Promise.resolve(savePushSetting(next)).finally(() => setIsUpdatingPush(false));
+              }}
               value={isPushEnabled}
               style={styles.switchButton}
+              disabled={isUpdatingPush}
             />
           </View>
 
@@ -308,7 +316,7 @@ const MyPage = () => {
             <Text style={styles.companyInfo}>대표 : 윤하이</Text>
             <Text style={styles.companyInfo}>주소 : (07798)서울특별시 강서구 마곡서로 133 704동 2층</Text>
             <Text style={styles.companyInfo}>사업자등록번호 : 894-81-00990</Text>
-            <Text style={styles.companyInfo}>이메일 : high@jumping.or.kr</Text>
+            <Text style={styles.companyInfo}>아이디 : high@jumping.or.kr</Text>
             <Text style={styles.companyInfo}>통신판매업신고 : 제 2019-서울영등포-0932호</Text>
             <Text style={styles.companyInfo}>고객센터 : 02-1661-0042</Text>
             <Text style={styles.companyInfo}>개인정보보호책임자 : 신주섭</Text>
@@ -321,7 +329,7 @@ const MyPage = () => {
         title={modalTitle}
         content={
           modalTitle === '현재 버전' && updateInfo
-            ? `${modalContent}\n${updateInfo.reg_dt}`
+            ? `\n${modalContent}\n\n\n${updateInfo.reg_dt}`
             : modalContent
         }
         onClose={() => setModalVisible(false)}
@@ -344,32 +352,14 @@ const styles = StyleSheet.create({
   },
   nickname: {
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#FFFFFF',
     textAlign: 'center',
-  },
-  centerName: {
-    fontSize: scale(12),
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
-  emailId: {
-    color: '#aaaaaa',
-    fontSize: scale(12),
-  },
-  editIconContainer: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-  },
-  editIcon: {
-    width: scale(24),
-    height: scale(24),
   },
   sectionTitle: {
     color: '#ffffff',
-    fontSize: scale(14),
-    fontWeight: 'bold',
+    fontSize: scale(16),
+    fontFamily: 'Pretendard-SemiBold',
     marginTop: scale(25),
     marginBottom: scale(15),
   },
@@ -391,7 +381,8 @@ const styles = StyleSheet.create({
   },
   menuText: {
     color: '#ffffff',
-    fontSize: scale(12),
+    fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
   },
   notificationDot: {
     width: scale(12),
@@ -400,11 +391,13 @@ const styles = StyleSheet.create({
   },
   versionText: {
     color: '#999999',
-    fontSize: scale(12),
+    fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
   },
   updateVersionText: {
     color: '#43B546',
-    fontSize: scale(12),
+    fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
   },
   menuArrow: {
     width: scale(16),
@@ -424,14 +417,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: scale(10),
   },
-  settingsMenuText: {
-    color: '#ffffff',
-    fontSize: scale(12),
-  },
   companyInfo: {
     color: '#848484',
     fontSize: scale(10),
     marginBottom: scale(2),
+    fontFamily: 'Pretendard-Medium',
   },
   companyInfoArrow: {
     width: scale(14),

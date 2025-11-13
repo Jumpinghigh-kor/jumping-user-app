@@ -86,13 +86,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: scale(16),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
     marginBottom: scale(20),
   },
   settingText: {
     flex: 1,
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
   },
   arrowIcon: {
     width: scale(12),

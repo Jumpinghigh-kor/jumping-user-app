@@ -15,7 +15,8 @@ import {
   PanResponder,
   Animated,
   TextInput,
-  ToastAndroid
+  ToastAndroid,
+  Keyboard
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -87,7 +88,7 @@ const ReviewItem = ({ review }) => {
       
       {review.admin_del_yn === 'Y' ? (
         <View>
-          <Text style={[styles.reviewText, {color: '#848484', fontSize: scale(12)}]}>관리자에 의해 삭제된 댓글입니다.</Text>
+          <Text style={[styles.reviewText, {color: '#848484', fontSize: scale(12), fontFamily: 'Pretendard-Medium'}]}>관리자에 의해 삭제된 댓글입니다.</Text>
         </View>
       ) : (
         <>
@@ -134,6 +135,8 @@ const ShoppingDetail = ({route, navigation}) => {
   const [showPhotoReviewOnly, setShowPhotoReviewOnly] = useState(false);
   const [showMoreDetailImages, setShowMoreDetailImages] = useState(false);
   const [inquiryText, setInquiryText] = useState('');
+  const [androidKeyboardVisible, setAndroidKeyboardVisible] = useState(false);
+  const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
   const [couponData, setCouponData] = useState([]);
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [memberCouponData, setMemberCouponData] = useState([]);
@@ -142,8 +145,10 @@ const ShoppingDetail = ({route, navigation}) => {
   const [showInquiryPopup, setShowInquiryPopup] = useState(false);
   const [productDetailData, setProductDetailData] = useState([]);
   const [returnExchangePolicy, setReturnExchangePolicy] = useState([]);
+  const [inquiryError, setInquiryError] = useState('');
   const memberInfo = useAppSelector(state => state.member.memberInfo);
   const scrollViewRef = useRef(null);
+  const pageScrollRef = useRef<ScrollView | null>(null);
   const sortModalPan = useRef(new Animated.ValueXY()).current;
   const couponModalPan = useRef(new Animated.ValueXY()).current;
 
@@ -386,9 +391,42 @@ const ShoppingDetail = ({route, navigation}) => {
     }
   }, [selectedSort, showPhotoReviewOnly]);
 
+  // 문의 탭으로 전환 시 화면 맨 아래로 스크롤
+  useEffect(() => {
+    if (activeTab === 'inquiry') {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          try {
+            pageScrollRef.current?.scrollToEnd({ animated: true });
+          } catch {}
+        }, 0);
+      });
+    }
+  }, [activeTab]);
+
   useEffect(() => {
     checkWishStatus();
   }, [memberInfo?.mem_id]);
+
+  // Android: 키보드 표시 시 하단 구매 바가 따라 올라오지 않도록(키보드 높이만큼 역보정)
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setAndroidKeyboardVisible(true);
+      setAndroidKeyboardHeight(e?.endCoordinates?.height || 0);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setAndroidKeyboardVisible(false);
+      setAndroidKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // 초기 전체 로딩 상태: 주요 데이터가 준비될 때까지 전체 로딩 화면 노출
+  const pageLoading = loading || !(productDetailData && productDetailData.length > 0);
 
   // 장바구니 버튼 핸들러
   const handleCartPress = () => {
@@ -495,7 +533,7 @@ const ShoppingDetail = ({route, navigation}) => {
                     html: `
                       <html>
                         <head>
-                          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
                           <style>
                             body { margin: 0; padding: 0; }
                             img { 
@@ -515,6 +553,7 @@ const ShoppingDetail = ({route, navigation}) => {
                               user-drag: none;
                               pointer-events: none;
                             }
+                            html, body { touch-action: manipulation; }
                             ::-webkit-scrollbar { display: none; }
                             body { -ms-overflow-style: none; scrollbar-width: none; }
                           </style>
@@ -528,16 +567,74 @@ const ShoppingDetail = ({route, navigation}) => {
                     `
                   }}
                   style={{ 
-                    height: showMoreDetailImages ? (Platform.OS === 'ios' ? Math.max(webViewHeight, screenHeight) : webViewHeight) : scale(400), 
+                    height: showMoreDetailImages ? Math.max(webViewHeight, screenHeight) : scale(400), 
                     width: '100%' 
                   }}
                   javaScriptEnabled={true}
                   domStorageEnabled={true}
+                  originWhitelist={['*']}
+                  mixedContentMode="always"
                   scrollEnabled={false}
                   injectedJavaScript={`
-                    setTimeout(function() {
-                      window.ReactNativeWebView.postMessage(document.body.scrollHeight);
-                    }, 500);
+                    (function() {
+                      // Disable pinch-zoom/gesture zoom
+                      try {
+                        var vp = document.querySelector('meta[name="viewport"]');
+                        if (!vp) {
+                          vp = document.createElement('meta');
+                          vp.setAttribute('name', 'viewport');
+                          document.head.appendChild(vp);
+                        }
+                        vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover');
+                        document.addEventListener('gesturestart', function(e){ e.preventDefault(); }, { passive: false });
+                        document.addEventListener('gesturechange', function(e){ e.preventDefault(); }, { passive: false });
+                        document.addEventListener('gestureend', function(e){ e.preventDefault(); }, { passive: false });
+                        document.addEventListener('touchmove', function(e){ if (e.scale && e.scale !== 1) { e.preventDefault(); } }, { passive: false });
+                      } catch (e) {}
+
+                      function sendHeight() {
+                        try {
+                          var h = Math.max(
+                            document.body.scrollHeight || 0,
+                            document.documentElement.scrollHeight || 0
+                          );
+                          window.ReactNativeWebView && window.ReactNativeWebView.postMessage(String(h));
+                        } catch (e) {}
+                      }
+                      var lastH = 0;
+                      function maybeSend() {
+                        try {
+                          var h = Math.max(
+                            document.body.scrollHeight || 0,
+                            document.documentElement.scrollHeight || 0
+                          );
+                          if (h !== lastH) {
+                            lastH = h;
+                            window.ReactNativeWebView && window.ReactNativeWebView.postMessage(String(h));
+                          }
+                        } catch (e) {}
+                      }
+                      // Initial
+                      sendHeight();
+                      // On window load
+                      window.addEventListener('load', sendHeight);
+                      // Images load
+                      try {
+                        Array.prototype.forEach.call(document.images || [], function(img) {
+                          if (!img.complete) {
+                            img.addEventListener('load', maybeSend);
+                            img.addEventListener('error', maybeSend);
+                          }
+                        });
+                      } catch (e) {}
+                      // Mutation observer
+                      try {
+                        var mo = new MutationObserver(function() { setTimeout(maybeSend, 50); });
+                        mo.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
+                      } catch (e) {}
+                      // Periodic fallback
+                      setInterval(maybeSend, 500);
+                    })();
                   `}
                   onMessage={handleWebViewMessage}
                 />
@@ -547,14 +644,14 @@ const ShoppingDetail = ({route, navigation}) => {
                     style={styles.moreButtonContainer}
                     onPress={() => setShowMoreDetailImages(true)}
                   >
-                    <Text style={styles.moreButtonText}>상세이미지 더보기</Text>
+                    <Text style={[styles.moreButtonText, {fontFamily: 'Pretendard-Medium'}]}>상세이미지 더보기</Text>
                   </TouchableOpacity>
                 )}
               </View>
             ) : (
               <View style={styles.noTabContainer}>
                 <Image source={IMAGES.icons.sadFaceGray} style={styles.noTabIcon} />
-                <Text style={styles.noTabText}>상품 상세 이미지가 없어요</Text>
+                <Text style={[styles.noTabText, {fontFamily: 'Pretendard-Medium'}]}>상품 상세 이미지가 없어요</Text>
               </View>
             )}
 
@@ -591,7 +688,7 @@ const ShoppingDetail = ({route, navigation}) => {
                     style={{width: scale(16), height: scale(16), resizeMode: 'contain'}} 
                   />
                 </TouchableOpacity>
-                <Text style={{fontSize: scale(12), color: '#202020'}}>사진 리뷰만 보기({reviewData.filter(review => review.review_img_count > 0).length})</Text>
+                <Text style={{fontSize: scale(12), color: '#202020', fontFamily: 'Pretendard-Medium'}}>사진 리뷰만 보기({reviewData.filter(review => review.review_img_count > 0).length})</Text>
               </View>
               <View style={[layoutStyle.rowCenter]}>
                 <TouchableOpacity 
@@ -599,7 +696,7 @@ const ShoppingDetail = ({route, navigation}) => {
                   onPress={() => setShowSortModal(true)}
                 >
                   <Image source={IMAGES.icons.filterGray} style={{width: scale(12), height: scale(12), resizeMode: 'contain'}} />
-                  <Text style={{fontSize: scale(12), color: '#202020'}}>{selectedSort === 'new' ? '최신순' : selectedSort === 'high_star' ? '별점높은순' : '별점낮은순'}</Text>
+                  <Text style={{fontSize: scale(12), color: '#202020', fontFamily: 'Pretendard-Medium'}}>{selectedSort === 'new' ? '최신순' : selectedSort === 'high_star' ? '별점높은순' : '별점낮은순'}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -616,7 +713,7 @@ const ShoppingDetail = ({route, navigation}) => {
               ) : (
                 <View style={styles.noTabContainer}>
                   <Image source={IMAGES.icons.speechGray} style={styles.noTabIcon} />
-                  <Text style={styles.noTabText}>작성된 리뷰가 없어요</Text>
+                  <Text style={[styles.noTabText, {fontFamily: 'Pretendard-Medium'}]}>작성된 리뷰가 없어요</Text>
                 </View>
               );
             })()}
@@ -635,25 +732,31 @@ const ShoppingDetail = ({route, navigation}) => {
                   multiline={true}
                   numberOfLines={4}
                   value={inquiryText}
-                  onChangeText={setInquiryText}
+                  onChangeText={(t) => {
+                    setInquiryText(t);
+                    if (inquiryError && t.trim()) setInquiryError('');
+                  }}
                   maxLength={3000}
                 />
                 <TouchableOpacity style={styles.inquiryInputButton} onPress={handleInquirySubmit}>
                   <Text style={styles.inquiryInputButtonText}>입력완료</Text>
                 </TouchableOpacity>
-                <Text style={styles.inquiryInputCount}>
-                  <Text style={{color: '#4C78ED'}}>{inquiryText.length} </Text>
-                  / 3000
-                </Text>
+                <View style={styles.inquiryFooterRow}>
+                  <Text style={styles.inquiryErrorText}>{inquiryError}</Text>
+                  <Text style={styles.inquiryInputCount}>
+                    <Text style={{color: '#4C78ED'}}>{inquiryText.length} </Text>
+                    / 3000
+                  </Text>
+                </View>
               </View>
               <Text style={styles.inquiryDesc}>
-                여러분의 문의는 더 나은 서비스를 제공하기
-                {'\n'}위한 소중한 자료가 됩니다.
-                {'\n'}{'\n'}해당 의견에는 개별 답변은 드리지 않지만,
-                {'\n'}서비스 개선을 위한 소중한 자료로 반영됩니다.
-                {'\n'}{'\n'}함께 만들어가는 쇼핑 경험,
-                {'\n'}작은 목소리도 크게 반영하겠습니다.
-                {'\n'}{'\n'}아래의 전화번호로 문의해주세요.
+                위에 쓴 소중한 의견은 쇼핑몰 개선을 위해 사용됩니다.
+                {'\n'}{'\n'}문의를 원하시면
+                {'\n'}아래의&nbsp;
+                <Text style={{ fontFamily: 'Pretendard-SemiBold' }}>
+                  전화번호로 직접 문의
+                </Text>
+                해주세요.
               </Text>
               <View style={styles.inquiryButtonContainer}>
                 <TouchableOpacity style={styles.inquiryButton} onPress={() => {
@@ -746,7 +849,7 @@ const ShoppingDetail = ({route, navigation}) => {
   const handleInquirySubmit = async () => {
     try {
       if (!inquiryText.trim()) {
-        setShowInquiryPopup(true);
+        setInquiryError('의견을 입력한 후 버튼을 눌러주세요');
         return;
       }
 
@@ -764,12 +867,29 @@ const ShoppingDetail = ({route, navigation}) => {
         setCustomToastMessage('데이터 전송이 실패하였습니다.');
         setShowCustomToast(true);
       }
-    } catch (error) {
-      console.error('등록 실패:', error.response.data.message);
+    } catch (error: any) {
+      try {
+        console.error('등록 실패:', error?.response?.data?.message || error?.message || String(error));
+      } catch {}
       setCustomToastMessage('데이터 전송이 실패하였습니다.');
       setShowCustomToast(true);
     }
   };
+
+  if (pageLoading) {
+    return (
+      <>
+        <CommonHeader 
+          title=""
+          backIcon={IMAGES.icons.arrowLeftBlack}
+          backgroundColor="#FFFFFF"
+        />
+        <View style={{ flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color="#43B546" />
+        </View>
+      </>
+    );
+  }
 
   return (
     <>
@@ -790,6 +910,7 @@ const ShoppingDetail = ({route, navigation}) => {
       <View style={{ flex: 1 }}>
         <ScrollView
           style={styles.container}
+          ref={pageScrollRef}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{paddingBottom: scale(80)}}
         >
@@ -842,7 +963,7 @@ const ShoppingDetail = ({route, navigation}) => {
                     style={styles.starIcon} 
                   />
                 ))}
-                <Text style={styles.rating}>{avgStarPoint}</Text>
+                {parseFloat(avgStarPoint) > 0 ? <Text style={styles.rating}>{avgStarPoint}</Text> : null}
               </View>
             )}
             
@@ -864,7 +985,7 @@ const ShoppingDetail = ({route, navigation}) => {
                       style={[commonStyle.pv10, layoutStyle.rowStart, {borderWidth: 1, borderColor: '#5588FF', borderRadius: scale(8), paddingHorizontal: scale(5), paddingVertical: scale(5)}]}
                       onPress={() => setShowCouponModal(true)}
                     >
-                      <Text style={{fontSize: scale(12), color: '#5588FF'}}>쿠폰 받기</Text>
+                      <Text style={{fontSize: scale(12), color: '#5588FF', fontFamily: 'Pretendard-Regular'}}>쿠폰 받기</Text>
                       <Image source={IMAGES.icons.downloadBlue} style={{width: scale(12), height: scale(12), resizeMode: 'contain', marginLeft: scale(5)}} />
                     </TouchableOpacity>
                   )}
@@ -883,7 +1004,7 @@ const ShoppingDetail = ({route, navigation}) => {
                   {(productDetailData[0]?.free_shipping_amount && productDetailData[0]?.free_shipping_amount !== "0") && <Text>({productDetailData[0]?.free_shipping_amount}원 이상 구매 시 무료배송)</Text>}
                 </View>
                 <View>
-                  <Text style={{fontSize: scale(12), color: '#848484'}}>제주 및 도서지역 추가 {parseInt(productDetailData[0]?.remote_delivery_fee?.toString().replace(/,/g, '') || '0').toLocaleString()}원</Text>
+                  <Text style={{fontSize: scale(12), color: '#848484', fontFamily: 'Pretendard-Regular'}}>제주 및 도서지역 추가 {parseInt(productDetailData[0]?.remote_delivery_fee?.toString().replace(/,/g, '') || '0').toLocaleString()}원</Text>
                 </View>
                 <Text style={styles.deliveryDate}>
                   {productDetailData[0]?.today_send_yn === 'Y' ? (
@@ -921,8 +1042,11 @@ const ShoppingDetail = ({route, navigation}) => {
           </View>
         </ScrollView>
         
-        {/* 하단 구매/찜 버튼 */}
-        <View style={styles.bottomBar}>
+        {/* 하단 구매/찜 버튼 (Android 키보드 시에도 고정: 키보드 높이만큼 역보정) */}
+        <View style={[
+          styles.bottomBar,
+          Platform.OS === 'android' && androidKeyboardVisible ? { bottom: -androidKeyboardHeight } : null,
+        ]}>
           <TouchableOpacity 
             style={styles.wishButton} 
             onPress={handleWishButtonClick}
@@ -1039,7 +1163,7 @@ const ShoppingDetail = ({route, navigation}) => {
                   ))
                 ) : (
                   <View style={[styles.couponItemContainer, {borderWidth: 0, alignItems: 'center', justifyContent: 'center', padding: scale(16), paddingTop: scale(80)}]}>
-                    <Text style={{fontSize: scale(14), fontWeight: '600', color: '#848484'}}>사용 가능한 쿠폰이 없어요</Text>
+                    <Text style={{fontSize: scale(14), fontFamily: 'Pretendard-SemiBold', color: '#848484'}}>사용 가능한 쿠폰이 없어요</Text>
                   </View>
                 )}
               </ScrollView>
@@ -1121,7 +1245,7 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: scale(22),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginBottom: scale(10),
   },
   ratingContainer: {
@@ -1130,7 +1254,7 @@ const styles = StyleSheet.create({
   },
   rating: {
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     marginLeft: scale(4),
     marginRight: scale(10),
   },
@@ -1143,7 +1267,7 @@ const styles = StyleSheet.create({
   },
   price: {
     fontSize: scale(24),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginRight: scale(10),
     marginTop: scale(5),
   },
@@ -1247,7 +1371,7 @@ const styles = StyleSheet.create({
   },
   cartBadgeText: {
     fontSize: scale(8),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#FFFFFF',
   },
   dotsContainer: {
@@ -1283,7 +1407,7 @@ const styles = StyleSheet.create({
   },
   tabButtonText: {
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
   },
   activeTabButtonText: {
@@ -1329,7 +1453,7 @@ const styles = StyleSheet.create({
   },
   reviewerName: {
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   reviewStarsRow: {
     flexDirection: 'row',
@@ -1338,15 +1462,17 @@ const styles = StyleSheet.create({
   },
   reviewTitle: {
     fontSize: scale(16),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     marginBottom: scale(10),
   },
   reviewText: {
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
   },
   reviewDate: {
     fontSize: scale(12),
     color: '#999',
+    fontFamily: 'Pretendard-Regular',
   },
   starsRow: {
     flexDirection: 'row',
@@ -1365,7 +1491,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#848484',
     fontSize: scale(14),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     marginTop: scale(10),
   },
   deliveryContainer: {
@@ -1382,6 +1508,7 @@ const styles = StyleSheet.create({
   deliveryText: {
     fontSize: scale(14),
     color: '#202020',
+    fontFamily: 'Pretendard-Regular',
   },
   deliveryInfoIcon: {
     width: scale(14),
@@ -1393,6 +1520,7 @@ const styles = StyleSheet.create({
     marginTop: scale(5),
     fontSize: scale(14),
     color: '#848484',
+    fontFamily: 'Pretendard-Regular',
   },
   noImageContainer: {
     flexDirection: 'column',
@@ -1410,6 +1538,7 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     color: '#848484',
     marginTop: scale(10),
+    fontFamily: 'Pretendard-Medium',
   },
   noTabContainer: {
     flexDirection: 'column',
@@ -1427,6 +1556,7 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     color: '#848484',
     marginTop: scale(10),
+    fontFamily: 'Pretendard-Medium',
   },
   inquiryContainer: {
     padding: scale(16),
@@ -1435,7 +1565,7 @@ const styles = StyleSheet.create({
   },
   inquiryTitle: {
     fontSize: scale(16),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     textAlign: 'center',
     color: '#202020',
     marginTop: scale(16),
@@ -1445,7 +1575,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   inquiryInput: {
-    height: scale(200),
+    height: scale(150),
     borderWidth: 1,
     borderColor: '#202020',
     borderRadius: scale(10),
@@ -1464,7 +1594,7 @@ const styles = StyleSheet.create({
   },
   inquiryInputButtonText: {
     fontSize: scale(12),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#FFFFFF',
   },
   inquiryInputCount: {
@@ -1473,12 +1603,25 @@ const styles = StyleSheet.create({
     marginTop: scale(5),
     marginRight: scale(10),
     textAlign: 'right',
+    fontFamily: 'Pretendard-Regular',
+  },
+  inquiryFooterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: scale(5),
+  },
+  inquiryErrorText: {
+    color: '#F04D4D',
+    fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
   },
   inquiryDesc: {
     fontSize: scale(14),
     color: '#202020',
     marginTop: scale(30),
     textAlign: 'center',
+    fontFamily: 'Pretendard-Regular',
   },
   inquiryButtonContainer: {
     marginTop: scale(40),
@@ -1507,6 +1650,7 @@ const styles = StyleSheet.create({
   inquiryButtonText: {
     fontSize: scale(12),
     color: '#FFFFFF',
+    fontFamily: 'Pretendard-Regular',
   },
   sortModalOverlay: {
     flex: 1,
@@ -1563,7 +1707,7 @@ const styles = StyleSheet.create({
   },
   returnTitle: {
     fontSize: scale(18),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#202020',
     marginBottom: scale(10),
   },
@@ -1577,7 +1721,7 @@ const styles = StyleSheet.create({
   },
   moreButtonText: {
     fontSize: scale(14),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#FFFFFF',
     marginRight: scale(5),
     textAlign: 'center',
@@ -1585,7 +1729,7 @@ const styles = StyleSheet.create({
   returnColumnTitle: {
     backgroundColor: '#EEEEEE',
     fontSize: scale(12),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
     textAlign: 'center',
     paddingVertical: scale(10),
@@ -1617,7 +1761,7 @@ const styles = StyleSheet.create({
   },
   returnRowItemTitle: {
     fontSize: scale(12),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
     textAlign: 'center',
   },
@@ -1633,6 +1777,7 @@ const styles = StyleSheet.create({
   returnRowItemDesc: {
     fontSize: scale(12),
     color: '#202020',
+    fontFamily: 'Pretendard-Regular',
   },
 });
 

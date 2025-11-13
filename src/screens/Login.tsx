@@ -68,7 +68,7 @@ const Login = () => {
     const isAutoLoginAttempt = !!(emailParam && passwordParam); // 자동로그인 시도인지 확인
     
     if (!emailToUse || !passwordToUse) {
-      setError('이메일과 비밀번호를 입력해주세요.');
+      setError('아이디와 비밀번호를 입력해주세요.');
       setErrorPopup(true);
       return;
     }
@@ -78,7 +78,7 @@ const Login = () => {
       setError(null);
 
       const response = await authService.login({
-        mem_email_id: emailToUse,
+        mem_app_id: emailToUse,
         mem_app_password: passwordToUse,
       });
       
@@ -108,7 +108,7 @@ const Login = () => {
           ['mem_id', response.data.user.mem_id.toString()],
           ['center_id', response.data.user.center_id.toString()],
           ['mem_name', response.data.user.mem_name],
-          ['mem_email_id', response.data.user.mem_email_id],
+          ['mem_app_id', response.data.user.mem_app_id],
         ]);
         
         // 사용자 상태에 따라 다른 화면으로 이동
@@ -130,6 +130,7 @@ const Login = () => {
           });
         }
       } else {
+        console.error(response);
         const message = response?.data?.message || '로그인에 실패했습니다.';
         setError(message);
         setErrorPopup(true);
@@ -158,7 +159,7 @@ const Login = () => {
         <View>
           <TextInput
             style={styles.input}
-            placeholder="이메일"
+            placeholder="아이디"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -195,9 +196,10 @@ const Login = () => {
             onPress={() => setAutoLogin(!autoLogin)}
             disabled={loading}
           >
-            <View style={[styles.checkbox, autoLogin && styles.checkboxChecked]}>
-              {autoLogin && <Text style={styles.checkmark}>✓</Text>}
-            </View>
+            <Image
+              source={autoLogin ? IMAGES.icons.checkboxGreen : IMAGES.icons.checkboxGray}
+              style={styles.checkboxImage}
+            />
             <Text style={styles.autoLoginText}>자동로그인 설정</Text>
           </TouchableOpacity>
         </View>
@@ -279,6 +281,7 @@ const styles = StyleSheet.create({
     padding: scale(15),
     marginBottom: scale(15),
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Medium',
     color: '#FFFFFF',
     height: scale(50),
   },
@@ -296,6 +299,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: scale(15),
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Medium',
     color: '#FFFFFF',
     height: scale(50),
   },
@@ -323,7 +327,7 @@ const styles = StyleSheet.create({
   loginButtonText: {
     color: '#ffffff',
     fontSize: scale(14),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-Medium',
   },
   forgotContainer: {
     alignItems: 'center',
@@ -337,6 +341,7 @@ const styles = StyleSheet.create({
     color: '#848484',
     fontSize: scale(12),
     textAlign: 'center',
+    fontFamily: 'Pretendard-Medium',
   },
   autoLoginContainer: {
     flexDirection: 'row',
@@ -358,14 +363,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#40B649',
     borderColor: '#40B649',
   },
+  checkboxImage: {
+    width: scale(16),
+    height: scale(16),
+    resizeMode: 'contain',
+    marginRight: scale(8),
+  },
   checkmark: {
     color: '#FFFFFF',
     fontSize: scale(12),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   autoLoginText: {
     color: '#848484',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
   },
   signUpButton: {
     backgroundColor: '#FFFFFF',
@@ -378,7 +390,7 @@ const styles = StyleSheet.create({
   signUpButtonText: {
     color: '#000000',
     fontSize: scale(14),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-Medium',
   },
 });
 

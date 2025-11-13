@@ -264,6 +264,7 @@ const styles = StyleSheet.create({
   desc: {
     color: '#FFFFFF',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
     marginTop: scale(20),
     marginBottom: scale(30),
   },
@@ -274,7 +275,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: scale(14),
     marginBottom: scale(8),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   passwordContainer: {
     flexDirection: 'row',
@@ -287,6 +288,7 @@ const styles = StyleSheet.create({
     paddingVertical: scale(12),
     color: '#FFFFFF',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
   },
   eyeIcon: {
     padding: scale(5),
@@ -305,11 +307,13 @@ const styles = StyleSheet.create({
     color: '#F04D4D',
     fontSize: scale(10),
     marginTop: scale(4),
+    fontFamily: 'Pretendard-Medium',
   },
   helperText: {
     color: '#B4B4B4',
     fontSize: scale(10),
     marginTop: scale(4),
+    fontFamily: 'Pretendard-Medium',
   },
   submitButton: {
     backgroundColor: '#40B649',
@@ -325,7 +329,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
 });
 

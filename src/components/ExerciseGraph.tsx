@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity, Image, PixelRatio } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { scale } from '../utils/responsive';
 import IMAGES from '../utils/images';
@@ -94,6 +94,7 @@ const ExerciseGraph: React.FC<ExerciseGraphProps> = ({
   const [showExercisePopup, setShowExercisePopup] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [internalExerciseData, setInternalExerciseData] = useState<any[]>(exerciseData);
+  const [bottomLabelsHeight, setBottomLabelsHeight] = useState<number>(scale(46));
 
   // 내부 그래프 데이터 생성
   const graphData = useMemo(() => {
@@ -193,7 +194,7 @@ const ExerciseGraph: React.FC<ExerciseGraphProps> = ({
         yearData.push({
           id: `year-${year}`,
           date: year,
-          day: `${year}`,
+          // day: `${year}`,
           isToday: isCurrentYear,
           isPast: isPastYear,
           isCheckedIn: false,
@@ -508,41 +509,39 @@ const ExerciseGraph: React.FC<ExerciseGraphProps> = ({
         if (activeCategory === '칼로리') {
           // Y축: 1500, 1200, 900, 600, 300, 0 (6단계)
           // 300 칼로리는 전체 높이의 1/5 지점에 위치해야 함
-          heightPercent = (value / 1500) * 150;
+          heightPercent = (value / 1500) * 143;
         } else {
           // 심박수: Y축 최대값 250
-          heightPercent = (value / 250) * 150;
+          heightPercent = (value / 250) * 143;
         }
         break;
       case '주':
         if (activeCategory === '칼로리') {
-          heightPercent = (value / 6000) * 150;
+          heightPercent = (value / 6000) * 143;
         } else {
           // 심박수: Y축 최대값 250
-          heightPercent = (value / 250) * 150;
+          heightPercent = (value / 250) * 143;
         }
         break;
       case '월':
         if (activeCategory === '칼로리') {
-          heightPercent = (value / 50000) * 150;
+          heightPercent = (value / 50000) * 143;
         } else {
           // 심박수: Y축 최대값 250
-          heightPercent = (value / 250) * 150;
+          heightPercent = (value / 250) * 143;
         }
         break;
       case '연':
         if (activeCategory === '칼로리') {
-          heightPercent = (value / 500000) * 150;
+          heightPercent = (value / 500000) * 143;
         } else {
           // 심박수: Y축 최대값 250
-          heightPercent = (value / 250) * 150;
+          heightPercent = (value / 250) * 143;
         }
         break;
     }
-    
-    // 초록 막대를 살짝 늘려서 노란선과 맞춤
-    const adjustedHeight = Platform.OS === 'ios' ? Math.min(heightPercent, 150) + scale(2) : Math.min(heightPercent, 150) + -scale(1);
-    return adjustedHeight;
+    // OS 보정 제거, 상한 클램프 후 반환
+    return Math.min(heightPercent, 150);
   };
 
   const generateDateString = (item: any): string => {
@@ -915,7 +914,7 @@ const ExerciseGraph: React.FC<ExerciseGraphProps> = ({
                     {actualValue > 0 && (
                       <View style={[
                         styles.graphBarContainer, 
-                        { height: scale(actualHeight) },
+                        { height: PixelRatio.roundToNearestPixel(scale(actualHeight)) },
                         isGreenBarAlone && {
                           borderRadius: scale(10)
                         },
@@ -951,10 +950,10 @@ const ExerciseGraph: React.FC<ExerciseGraphProps> = ({
                         style={[
                           styles.graphBarContainer, 
                           { 
-                            height: scale(otherHeight), 
+                            height: PixelRatio.roundToNearestPixel(scale(otherHeight)), 
                             backgroundColor: '#FFA95E',
                             position: 'absolute',
-                            bottom: actualValue > 0 ? scale(actualHeight) : 0,
+                            bottom: actualValue > 0 ? PixelRatio.roundToNearestPixel(scale(actualHeight)) : 0,
                             zIndex: 1,
                           },
                           isOrangeBarAlone && {
@@ -970,10 +969,22 @@ const ExerciseGraph: React.FC<ExerciseGraphProps> = ({
                       />
                     )}
                   </View>
-                  <Text style={styles.graphDateLabel}>{item.date}</Text>
-                  <Text style={styles.graphXLabel}>
-                    {item.day || ''}
-                  </Text>
+                  <View 
+                    style={styles.bottomLabelsContainer}
+                    onLayout={(e) => {
+                      const h = e.nativeEvent.layout.height;
+                      if (h > 0 && h !== bottomLabelsHeight) {
+                        setBottomLabelsHeight(h);
+                      }
+                    }}
+                  >
+                    <View style={styles.barToDateSpacer} />
+                    <Text allowFontScaling={false} style={styles.graphDateLabel}>{item.date}</Text>
+                    <View style={styles.dateToWeekSpacer} />
+                    <Text allowFontScaling={false} style={styles.graphXLabel}>
+                      {item.day || ''}
+                    </Text>
+                  </View>
                 </View>
               );
             })}
@@ -1069,7 +1080,7 @@ const ExerciseGraph: React.FC<ExerciseGraphProps> = ({
                   {actualValue > 0 && (
                     <View style={[
                       styles.graphBarContainer, 
-                      { height: scale(actualHeight) },
+                      { height: PixelRatio.roundToNearestPixel(scale(actualHeight)) },
                       isGreenBarAlone && {
                         borderRadius: scale(10)
                       },
@@ -1105,10 +1116,10 @@ const ExerciseGraph: React.FC<ExerciseGraphProps> = ({
                       style={[
                         styles.graphBarContainer, 
                         { 
-                          height: scale(otherHeight), 
+                          height: PixelRatio.roundToNearestPixel(scale(otherHeight)), 
                           backgroundColor: '#FFA95E',
                           position: 'absolute',
-                          bottom: actualValue > 0 ? scale(actualHeight) : 0,
+                          bottom: actualValue > 0 ? PixelRatio.roundToNearestPixel(scale(actualHeight)) : 0,
                           zIndex: 1,
                         },
                         isOrangeBarAlone && {
@@ -1124,10 +1135,22 @@ const ExerciseGraph: React.FC<ExerciseGraphProps> = ({
                     />
                   )}
                 </View>
-                <Text style={styles.graphDateLabel}>{item.date}</Text>
-                <Text style={styles.graphXLabel}>
-                  {item.day || ''}
-                </Text>
+                <View 
+                  style={styles.bottomLabelsContainer}
+                  onLayout={(e) => {
+                    const h = e.nativeEvent.layout.height;
+                    if (h > 0 && h !== bottomLabelsHeight) {
+                      setBottomLabelsHeight(h);
+                    }
+                  }}
+                >
+                  <View style={styles.barToDateSpacer} />
+                  <Text allowFontScaling={false} style={styles.graphDateLabel}>{item.date}</Text>
+                  <View style={styles.dateToWeekSpacer} />
+                  <Text allowFontScaling={false} style={styles.graphXLabel}>
+                    {item.day || ''}
+                  </Text>
+                </View>
               </View>
             );
           })}
@@ -1141,16 +1164,16 @@ const ExerciseGraph: React.FC<ExerciseGraphProps> = ({
     let heightPercent = 0;
     switch(selectedPeriod) {
       case '일':
-        heightPercent = (goalCalories / 1500) * 150;
+        heightPercent = (goalCalories / 1500) * 143;
         break;
       case '주':
-        heightPercent = (goalCalories / 6000) * 150;
+        heightPercent = (goalCalories / 6000) * 143;
         break;
       case '월':
-        heightPercent = (goalCalories / 50000) * 150;
+        heightPercent = (goalCalories / 50000) * 143;
         break;
       case '연':
-        heightPercent = (goalCalories / 500000) * 150;
+        heightPercent = (goalCalories / 500000) * 143;
         break;
     }
     return Math.min(heightPercent, 150);
@@ -1248,9 +1271,15 @@ const ExerciseGraph: React.FC<ExerciseGraphProps> = ({
       {/* 그래프 */}
       <View style={styles.graphContainer}>
         <View style={styles.graphYAxis}>
-          {getYAxisLabels().map((label, index) => (
-            <Text key={index} style={styles.graphYLabel}>{label}</Text>
-          ))}
+          <View style={styles.graphYAxisLabelsContainer}>
+            {getYAxisLabels().map((label, index) => (
+              <Text key={index} style={styles.graphYLabel}>{label}</Text>
+            ))}
+          </View>
+          <View style={[
+            styles.yAxisBottomSpacer,
+            { height: Math.max(0, bottomLabelsHeight - scale(11)) }
+          ]} />
         </View>
         <View style={styles.graphContentWrapper}>
           {/* 목표 칼로리 점선 */}
@@ -1258,7 +1287,7 @@ const ExerciseGraph: React.FC<ExerciseGraphProps> = ({
             <View style={[
               styles.goalLineContainer,
               {
-                bottom: (selectedPeriod === '주' || selectedPeriod === '연' ? scale(41) : scale(40)) + scale(calculateGoalLinePosition(goalCalories)),
+                bottom: PixelRatio.roundToNearestPixel(bottomLabelsHeight) + PixelRatio.roundToNearestPixel(scale(calculateGoalLinePosition(goalCalories))) - PixelRatio.roundToNearestPixel(scale(1)),
                 width: selectedPeriod === '주' || selectedPeriod === '연' ? scale(265) : undefined,
               }
             ]}>
@@ -1399,14 +1428,20 @@ const styles = StyleSheet.create({
   graphYAxis: {
     width: scale(30),
     height: '100%',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     paddingVertical: scale(5),
-    paddingBottom: scale(35),
+  },
+  graphYAxisLabelsContainer: {
+    flex: 1,
+    justifyContent: 'space-between',
   },
   graphYLabel: {
     color: '#999999',
     fontSize: scale(10),
     textAlign: 'right',
+  },
+  yAxisBottomSpacer: {
+    height: scale(38), // 46 - paddingVertical(5) = 41
   },
   graphContentWrapper: {
     flexDirection: 'row',
@@ -1445,7 +1480,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#43B546',
     borderRadius: scale(10),
     overflow: 'hidden',
-    marginBottom: scale(5),
   },
   graphBarGradient: {
     width: '100%',
@@ -1459,11 +1493,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     width: scale(36),
     flexWrap: 'nowrap',
+    height: scale(18),
+    lineHeight: scale(18),
+    includeFontPadding: Platform.OS === 'android' ? false : undefined,
+    textAlignVertical: Platform.OS === 'android' ? 'center' : undefined,
   },
   graphDateLabel: {
     color: '#FFFFFF',
     fontSize: scale(12),
-    marginBottom: scale(5),
+    height: scale(18),
+    lineHeight: scale(18),
+    includeFontPadding: Platform.OS === 'android' ? false : undefined,
+    textAlignVertical: Platform.OS === 'android' ? 'center' : undefined,
+  },
+  bottomLabelsContainer: {
+    alignItems: 'center',
+  },
+  barToDateSpacer: {
+    height: scale(5),
+  },
+  dateToWeekSpacer: {
+    height: scale(5),
   },
   goalLineContainer: {
     position: 'absolute',

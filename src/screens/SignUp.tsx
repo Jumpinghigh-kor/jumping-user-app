@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: scale(20),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#FFFFFF',
     marginTop: scale(20),
   },
@@ -326,6 +326,7 @@ const styles = StyleSheet.create({
   input: {
     color: '#FFFFFF',
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Regular',
   },
   underline: {
     borderBottomWidth: 0.5,
@@ -350,15 +351,18 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#FF0000',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
   },
   agreementTitle: {
     color: '#FFFFFF',
     fontSize: scale(14),
     marginTop: scale(10),
+    fontFamily: 'Pretendard-Regular',
   },
   agreementDescription: {
     color: '#D9D9D9',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
   },
   checkboxRow: {
     flexDirection: 'row',
@@ -375,14 +379,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: scale(12),
     flex: 1,
+    fontFamily: 'Pretendard-Regular',
   },
   allCheckboxText: {
     color: '#FFFFFF',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
   },
   viewText: {
     color: '#848484',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Regular',
   },
   agreementTextContainer: {
   },
@@ -401,7 +408,7 @@ const styles = StyleSheet.create({
   signUpButtonText: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: '600',
+    fontFamily: 'Pretendard-SemiBold',
     textAlign: 'center',
   },
 });

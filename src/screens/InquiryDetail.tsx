@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   headerRight: {
     width: scale(40),
@@ -427,12 +427,8 @@ const styles = StyleSheet.create({
   inquiryTitle: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginBottom: scale(5),
-  },
-  inquiryDate: {
-    color: '#999999',
-    fontSize: scale(10),
   },
   statusContainer: {
     borderWidth: 1,
@@ -440,94 +436,6 @@ const styles = StyleSheet.create({
     borderRadius: scale(20),
     paddingHorizontal: scale(10),
     paddingVertical: scale(3),
-  },
-    statusText: {
-    color: '#B4B4B4',
-    fontSize: scale(12), 
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: '#999999',
-    fontSize: scale(14),
-  },
-  createButton: {
-    position: 'absolute',
-    bottom: scale(20),
-    right: scale(20),
-    backgroundColor: '#43B546',
-    width: scale(120),
-    height: scale(45),
-    borderRadius: scale(25),
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  createButtonText: {
-    color: '#FFFFFF',
-    fontSize: scale(14),
-    fontWeight: 'bold',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    marginVertical: scale(10),
-    borderBottomWidth: 1,
-    borderBottomColor: '#373737',
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: scale(10),
-    alignItems: 'center',
-    position: 'relative',
-  },
-  activeTabButton: {
-    // 배경색 제거
-  },
-  tabButtonText: {
-    color: '#848484',
-    fontSize: scale(14),
-    fontWeight: '500',
-  },
-  activeTabButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  tabUnderline: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: '#373737',
-  },
-  activeTabUnderline: {
-    backgroundColor: '#FFFFFF',
-  },
-  createInquiryContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: scale(20),
-  },
-  createInquiryButton: {
-    backgroundColor: '#43B546',
-    width: '100%',
-    height: scale(50),
-    borderRadius: scale(10),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  createInquiryButtonText: {
-    color: '#FFFFFF',
-    fontSize: scale(16),
-    fontWeight: 'bold',
   },
   formContainer: {
     flex: 1,
@@ -543,7 +451,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: scale(12),
     marginBottom: scale(8),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
   titleInputContainer: {
     flexDirection: 'row',
@@ -559,11 +467,13 @@ const styles = StyleSheet.create({
     padding: scale(12),
     color: '#FFFFFF',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
   },
   titleCounter: {
     paddingRight: scale(12),
     color: '#717171',
     fontSize: scale(11),
+    fontFamily: 'Pretendard-Medium',
   },
   contentInput: {
     backgroundColor: '#373737',
@@ -574,6 +484,7 @@ const styles = StyleSheet.create({
     minHeight: scale(200),
     borderWidth: 1,
     borderColor: '#D9D9D9',
+    fontFamily: 'Pretendard-Medium',
   },
   counter: {
     color: '#717171',
@@ -581,6 +492,7 @@ const styles = StyleSheet.create({
     marginRight: scale(12),
     textAlign: 'right',
     marginTop: scale(7),
+    fontFamily: 'Pretendard-Medium',
   },
   bottomButtonContainer: {
     flexDirection: 'row',
@@ -599,7 +511,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#F6F6F6',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     textAlign: 'center',
   },
   deleteButton: {
@@ -613,7 +525,7 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: '#FFFFFF',
     fontSize: scale(14),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     textAlign: 'center',
   },
   disabledButton: {
@@ -638,7 +550,7 @@ const styles = StyleSheet.create({
   answerLabel: {
     color: '#FFFFFF',
     fontSize: scale(12),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginBottom: scale(8),
   },
   answerContent: {
@@ -650,12 +562,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: scale(12),
     lineHeight: scale(18),
+    fontFamily: 'Pretendard-Medium',
   },
   answerDate: {
     color: '#717171',
     fontSize: scale(11),
     marginTop: scale(8),
     textAlign: 'right',
+    fontFamily: 'Pretendard-Medium',
   },
   typeSelectorContainer: {
     flexDirection: 'row',
@@ -674,7 +588,7 @@ const styles = StyleSheet.create({
   typeSelectorText: {
     color: '#FFFFFF',
     fontSize: scale(12),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
   },
   typeSelectorArrow: {
     width: scale(12),
@@ -712,9 +626,10 @@ const styles = StyleSheet.create({
   typeDropdownText: {
     color: '#FFFFFF',
     fontSize: scale(12),
+    fontFamily: 'Pretendard-Medium',
   },
   typeDropdownTextSelected: {
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: '#43B546',
   },
   disabledOpacity: {

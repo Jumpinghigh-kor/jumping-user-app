@@ -85,7 +85,7 @@ const ShoppingMypage: React.FC = () => {
         <View style={styles.infoSection}>
           <View style={styles.profileUserContainer}>
             <Text style={styles.profileUserName}>
-              <Text style={{fontWeight: 'bold', fontSize: scale(18)}}>{memberInfo?.mem_name}님 </Text>
+              <Text style={{fontFamily: 'Pretendard-SemiBold', fontSize: scale(18)}}>{memberInfo?.mem_name}님 </Text>
                 점핑하이와 함께{'\n'}즐거운 쇼핑되세요!
               </Text>
           </View>
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   },
   profileUserName: {
     fontSize: scale(16),
-    fontWeight: '400',
+    fontFamily: 'Pretendard-Regular',
     color: '#FFFFFF',
     lineHeight: scale(22),
   },
@@ -232,15 +232,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bellContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: scale(15),
-    height: scale(100),
-    paddingHorizontal: scale(10),
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '30%',
-  },
   inventoryContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -248,7 +239,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFE291',
     borderRadius: scale(15),
     height: scale(100),
-    width: '66.5%',
+    width: '65%',
     paddingHorizontal: scale(20),
   },
   inventoryImg: {
@@ -259,7 +250,7 @@ const styles = StyleSheet.create({
   },
   inventoryText: {
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
   },
   infoIcon: {
@@ -270,7 +261,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
   },
   contentSection: {
@@ -295,7 +286,7 @@ const styles = StyleSheet.create({
   },
   menuText: {
     fontSize: scale(14),
-    fontWeight: '500',
+    fontFamily: 'Pretendard-Medium',
     color: '#202020',
   },
   homeBtn: {
@@ -324,7 +315,7 @@ const styles = StyleSheet.create({
   notificationDotText: {
     color: '#FFFFFF',
     fontSize: scale(9),
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
 });
 

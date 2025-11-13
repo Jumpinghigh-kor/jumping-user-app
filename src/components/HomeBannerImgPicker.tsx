@@ -265,6 +265,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#FFFFFF',
     fontSize: scale(14),
+    fontFamily: 'Pretendard-Medium',
     textAlign: 'center',
   },
   skeletonDot: {
