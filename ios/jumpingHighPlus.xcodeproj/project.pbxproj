@@ -10,12 +10,12 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		36CB59EC41F34AE09B974C12 /* Pretendard-ExtraBold.otf in Resources */ = {isa = PBXBuildFile; fileRef = BAF2C441D40E4D359C369A5F /* Pretendard-ExtraBold.otf */; };
 		42E00EF0B0B24917B60D518D /* Pretendard-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = 9251454B74B643BFB5E470AC /* Pretendard-Regular.otf */; };
+		437F89BAD00F9E94CB863E56 /* libPods-jumpingHighPlus.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE5B26E9B80AE1514F3F3901 /* libPods-jumpingHighPlus.a */; };
 		5F0AA250D11240D99447A9E6 /* Pretendard-SemiBold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 9C17974FD39841BEB472B8E0 /* Pretendard-SemiBold.otf */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		88456DB4E58C45FCB60DDD4B /* Pretendard-Thin.otf in Resources */ = {isa = PBXBuildFile; fileRef = 8EF1F6899C814DA1BAE14B0B /* Pretendard-Thin.otf */; };
 		9819611C07034F809CF1D4BC /* Pretendard-Medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = 4DB20482C4134C1E91BA5E0C /* Pretendard-Medium.otf */; };
-		A20F2DC58FBAED99481C63DF /* libPods-jumpingUserApp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 92C585224BA5D88B300F7869 /* libPods-jumpingUserApp.a */; };
 		B6C4B322E420034F42E4A961 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		BB2D73B7AF784EEB8EB18312 /* Pretendard-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 8519FEB16A7A4CDD92B43931 /* Pretendard-Bold.otf */; };
 		C436F3C8469B4C1883891F7D /* Pretendard-Light.otf in Resources */ = {isa = PBXBuildFile; fileRef = F183A6BFAA74444B92472636 /* Pretendard-Light.otf */; };
@@ -25,24 +25,26 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		13B07F961A680F5B00A75B9A /* jumpingUserApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = jumpingUserApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = jumpingUserApp/Images.xcassets; sourceTree = "<group>"; };
-		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = jumpingUserApp/Info.plist; sourceTree = "<group>"; };
-		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = jumpingUserApp/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		13B07F961A680F5B00A75B9A /* jumpingHighPlus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = jumpingHighPlus.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = jumpingHighPlus/Images.xcassets; sourceTree = "<group>"; };
+		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = jumpingHighPlus/Info.plist; sourceTree = "<group>"; };
+		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = jumpingHighPlus/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		2A5BA7A2E426106619BA17AA /* Pods-jumpingHighPlus.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-jumpingHighPlus.release.xcconfig"; path = "Target Support Files/Pods-jumpingHighPlus/Pods-jumpingHighPlus.release.xcconfig"; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-jumpingUserApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-jumpingUserApp.debug.xcconfig"; path = "Target Support Files/Pods-jumpingUserApp/Pods-jumpingUserApp.debug.xcconfig"; sourceTree = "<group>"; };
 		4DB20482C4134C1E91BA5E0C /* Pretendard-Medium.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Pretendard-Medium.otf"; path = "../src/assets/fonts/pretendard/Pretendard-Medium.otf"; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-jumpingUserApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-jumpingUserApp.release.xcconfig"; path = "Target Support Files/Pods-jumpingUserApp/Pods-jumpingUserApp.release.xcconfig"; sourceTree = "<group>"; };
 		66A4EE5ABEEE4AA188DD480B /* Pretendard-ExtraLight.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Pretendard-ExtraLight.otf"; path = "../src/assets/fonts/pretendard/Pretendard-ExtraLight.otf"; sourceTree = "<group>"; };
-		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = jumpingUserApp/AppDelegate.swift; sourceTree = "<group>"; };
-		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = jumpingUserApp/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = jumpingHighPlus/AppDelegate.swift; sourceTree = "<group>"; };
+		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = jumpingHighPlus/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		8519FEB16A7A4CDD92B43931 /* Pretendard-Bold.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Pretendard-Bold.otf"; path = "../src/assets/fonts/pretendard/Pretendard-Bold.otf"; sourceTree = "<group>"; };
 		8EF1F6899C814DA1BAE14B0B /* Pretendard-Thin.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Pretendard-Thin.otf"; path = "../src/assets/fonts/pretendard/Pretendard-Thin.otf"; sourceTree = "<group>"; };
 		9251454B74B643BFB5E470AC /* Pretendard-Regular.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Pretendard-Regular.otf"; path = "../src/assets/fonts/pretendard/Pretendard-Regular.otf"; sourceTree = "<group>"; };
-		92C585224BA5D88B300F7869 /* libPods-jumpingUserApp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-jumpingUserApp.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9456365CF903423C8C3731A0 /* Pretendard-Black.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Pretendard-Black.otf"; path = "../src/assets/fonts/pretendard/Pretendard-Black.otf"; sourceTree = "<group>"; };
+		94F0970522D62F4CD3273BBF /* Pods-jumpingHighPlus.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-jumpingHighPlus.debug.xcconfig"; path = "Target Support Files/Pods-jumpingHighPlus/Pods-jumpingHighPlus.debug.xcconfig"; sourceTree = "<group>"; };
 		9C17974FD39841BEB472B8E0 /* Pretendard-SemiBold.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Pretendard-SemiBold.otf"; path = "../src/assets/fonts/pretendard/Pretendard-SemiBold.otf"; sourceTree = "<group>"; };
 		BAF2C441D40E4D359C369A5F /* Pretendard-ExtraBold.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Pretendard-ExtraBold.otf"; path = "../src/assets/fonts/pretendard/Pretendard-ExtraBold.otf"; sourceTree = "<group>"; };
 		CA2535862DF0269C00A2E936 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		CE5B26E9B80AE1514F3F3901 /* libPods-jumpingHighPlus.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-jumpingHighPlus.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F183A6BFAA74444B92472636 /* Pretendard-Light.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Pretendard-Light.otf"; path = "../src/assets/fonts/pretendard/Pretendard-Light.otf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -52,14 +54,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A20F2DC58FBAED99481C63DF /* libPods-jumpingUserApp.a in Frameworks */,
+				437F89BAD00F9E94CB863E56 /* libPods-jumpingHighPlus.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		13B07FAE1A68108700A75B9A /* jumpingUserApp */ = {
+		13B07FAE1A68108700A75B9A /* jumpingHighPlus */ = {
 			isa = PBXGroup;
 			children = (
 				CA2535862DF0269C00A2E936 /* GoogleService-Info.plist */,
@@ -69,7 +71,7 @@
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
 			);
-			name = jumpingUserApp;
+			name = jumpingHighPlus;
 			sourceTree = "<group>";
 		};
 		206256633D3D4D2CADDB8180 /* Resources */ = {
@@ -92,7 +94,7 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				92C585224BA5D88B300F7869 /* libPods-jumpingUserApp.a */,
+				CE5B26E9B80AE1514F3F3901 /* libPods-jumpingHighPlus.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -107,7 +109,7 @@
 		83CBB9F61A601CBA00E9B192 = {
 			isa = PBXGroup;
 			children = (
-				13B07FAE1A68108700A75B9A /* jumpingUserApp */,
+				13B07FAE1A68108700A75B9A /* jumpingHighPlus */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
@@ -122,7 +124,7 @@
 		83CBBA001A601CBA00E9B192 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				13B07F961A680F5B00A75B9A /* jumpingUserApp.app */,
+				13B07F961A680F5B00A75B9A /* jumpingHighPlus.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -132,6 +134,8 @@
 			children = (
 				3B4392A12AC88292D35C810B /* Pods-jumpingUserApp.debug.xcconfig */,
 				5709B34CF0A7D63546082F79 /* Pods-jumpingUserApp.release.xcconfig */,
+				94F0970522D62F4CD3273BBF /* Pods-jumpingHighPlus.debug.xcconfig */,
+				2A5BA7A2E426106619BA17AA /* Pods-jumpingHighPlus.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -158,7 +162,7 @@
 			);
 			name = jumpingHighPlus;
 			productName = jumpingUserApp;
-			productReference = 13B07F961A680F5B00A75B9A /* jumpingUserApp.app */;
+			productReference = 13B07F961A680F5B00A75B9A /* jumpingHighPlus.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -174,7 +178,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "jumpingUserApp" */;
+			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "jumpingHighPlus" */;
 			compatibilityVersion = "Xcode 12.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -238,15 +242,15 @@
 			files = (
 			);
 			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-jumpingUserApp/Pods-jumpingUserApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+				"${PODS_ROOT}/Target Support Files/Pods-jumpingHighPlus/Pods-jumpingHighPlus-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-jumpingUserApp/Pods-jumpingUserApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+				"${PODS_ROOT}/Target Support Files/Pods-jumpingHighPlus/Pods-jumpingHighPlus-frameworks-${CONFIGURATION}-output-files.xcfilelist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-jumpingUserApp/Pods-jumpingUserApp-frameworks.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-jumpingHighPlus/Pods-jumpingHighPlus-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		4071E46A31AA9137DD6D945C /* [CP-User] [RNFB] Core Configuration */ = {
@@ -277,7 +281,7 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-jumpingUserApp-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-jumpingHighPlus-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -290,15 +294,15 @@
 			files = (
 			);
 			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-jumpingUserApp/Pods-jumpingUserApp-resources-${CONFIGURATION}-input-files.xcfilelist",
+				"${PODS_ROOT}/Target Support Files/Pods-jumpingHighPlus/Pods-jumpingHighPlus-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-jumpingUserApp/Pods-jumpingUserApp-resources-${CONFIGURATION}-output-files.xcfilelist",
+				"${PODS_ROOT}/Target Support Files/Pods-jumpingHighPlus/Pods-jumpingHighPlus-resources-${CONFIGURATION}-output-files.xcfilelist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-jumpingUserApp/Pods-jumpingUserApp-resources.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-jumpingHighPlus/Pods-jumpingHighPlus-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -317,20 +321,20 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 3B4392A12AC88292D35C810B /* Pods-jumpingUserApp.debug.xcconfig */;
+			baseConfigurationReference = 94F0970522D62F4CD3273BBF /* Pods-jumpingHighPlus.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Q9QTY4WWR5;
 				ENABLE_BITCODE = NO;
-				INFOPLIST_FILE = jumpingUserApp/Info.plist;
+				INFOPLIST_FILE = jumpingHighPlus/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -338,7 +342,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.jumpinghigh.jumpingHighPlus;
-				PRODUCT_NAME = jumpingUserApp;
+				PRODUCT_NAME = jumpingHighPlus;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -347,19 +351,19 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 5709B34CF0A7D63546082F79 /* Pods-jumpingUserApp.release.xcconfig */;
+			baseConfigurationReference = 2A5BA7A2E426106619BA17AA /* Pods-jumpingHighPlus.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Q9QTY4WWR5;
-				INFOPLIST_FILE = jumpingUserApp/Info.plist;
+				INFOPLIST_FILE = jumpingHighPlus/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -367,7 +371,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
 				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.jumpinghigh.jumpingHighPlus;
-				PRODUCT_NAME = jumpingUserApp;
+				PRODUCT_NAME = jumpingHighPlus;
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -553,7 +557,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "jumpingUserApp" */ = {
+		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "jumpingHighPlus" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,

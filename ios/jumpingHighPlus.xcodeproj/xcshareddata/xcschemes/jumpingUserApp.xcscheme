@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "jumpingUserApp.app"
+               BuildableName = "jumpingHighPlus.app"
                BlueprintName = "jumpingHighPlus"
-               ReferencedContainer = "container:jumpingUserApp.xcodeproj">
+               ReferencedContainer = "container:jumpingHighPlus.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "jumpingUserAppTests.xctest"
-               BlueprintName = "jumpingUserAppTests"
-               ReferencedContainer = "container:jumpingUserApp.xcodeproj">
+               BuildableName = "jumpingHighPlusTests.xctest"
+               BlueprintName = "jumpingHighPlusTests"
+               ReferencedContainer = "container:jumpingHighPlus.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "jumpingUserApp.app"
+            BuildableName = "jumpingHighPlus.app"
             BlueprintName = "jumpingHighPlus"
-            ReferencedContainer = "container:jumpingUserApp.xcodeproj">
+            ReferencedContainer = "container:jumpingHighPlus.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "jumpingUserApp.app"
+            BuildableName = "jumpingHighPlus.app"
             BlueprintName = "jumpingHighPlus"
-            ReferencedContainer = "container:jumpingUserApp.xcodeproj">
+            ReferencedContainer = "container:jumpingHighPlus.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
