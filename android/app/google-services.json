@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:748017416417:android:80c46f54c12969b1495fa0",
+        "android_client_info": {
+          "package_name": "com.jumpinghighplus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDPie80KAkcilNJpgEKiY3zbT9NFluL3Ig"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:748017416417:android:e8969f4b6503fbf6495fa0",
         "android_client_info": {
           "package_name": "com.jumpinguserapp"

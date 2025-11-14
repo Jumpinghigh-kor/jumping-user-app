@@ -1053,6 +1053,7 @@ const styles = StyleSheet.create({
   scrollViewContent: {
     flexGrow: 1,
     paddingHorizontal: scale(16),
+    paddingTop: scale(16),
   },
   header: {
     flexDirection: 'row',
